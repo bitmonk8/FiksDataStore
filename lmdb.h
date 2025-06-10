@@ -1637,6 +1637,16 @@ int	mdb_reader_list(MDB_env *env, MDB_msg_func *func, void *ctx);
 	 * @return 0 on success, non-zero on failure.
 	 */
 int	mdb_reader_check(MDB_env *env, int *dead);
+
+#if MDB_DEBUG
+/** Display a key in hexadecimal and return the address of the result.
+ * @param[in] key the key to display
+ * @param[in] buf the buffer to write into. Should always be #DKBUF.
+ * @return The key in hexadecimal form.
+ */
+char* mdb_dkey(MDB_val *key, char *buf);
+#endif
+
 /**	@} */
 
 #ifdef __cplusplus

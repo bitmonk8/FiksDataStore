@@ -13,7 +13,12 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef _WIN32
+#include "getopt.h"
+#else
 #include <unistd.h>
+#endif
+
 #include <time.h>
 #include <string.h>
 #include <ctype.h>

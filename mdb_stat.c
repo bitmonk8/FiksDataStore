@@ -14,7 +14,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include "getopt.h"
+#include <io.h>
+#include <windows.h>
+typedef SSIZE_T	ssize_t;
+#else
 #include <unistd.h>
+#endif
+
 #include "lmdb.h"
 
 #define Z	MDB_FMT_Z
