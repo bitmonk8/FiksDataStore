@@ -1,2 +1,16 @@
-- name: setup xmake
-  uses: xmake-io/github-action-setup-xmake@v1
+name: Build
+on:
+  push:
+    branches:
+      - mdb.master
+  pull_request:
+    branches:
+      - mdb.master
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up XMake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: latest
