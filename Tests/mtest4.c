@@ -18,11 +18,18 @@
 #include <string.h>
 #include <time.h>
 #include "lmdb.h"
+#include <sys/stat.h>
+#include <errno.h>
+
+#ifdef _WIN32
+#include <direct.h>
+#define mkdir(dir, mode) _mkdir(dir)
+#endif
 
 #define E(expr) CHECK((rc = (expr)) == MDB_SUCCESS, #expr)
 #define RES(err, expr) ((rc = expr) == (err) || (CHECK(!rc, #expr), 0))
 #define CHECK(test, msg) ((test) ? (void)0 : ((void)fprintf(stderr, \
-	"%s:%d: %s: %s\n", __FILE__, __LINE__, msg, mdb_strerror(rc)), abort()))
+	"TEST FAILED: %s:%d: %s: %s\n", __FILE__, __LINE__, msg, mdb_strerror(rc)), abort()))
 
 int main(int argc,char * argv[])
 {
@@ -37,6 +44,8 @@ int main(int argc,char * argv[])
 	int *values;
 	char sval[8];
 	char kval[sizeof(int)];
+    struct stat st = {0};
+    if (stat("./testdb", &st) == -1) mkdir("./testdb", 0700);
 
 	memset(sval, 0, sizeof(sval));
 

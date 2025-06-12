@@ -1,4 +1,4 @@
-/* mtest2.c - memory-mapped database tester/toy */
+/* mtest5.c - memory-mapped database tester/toy */
 /*
  * Copyright 2011-2021 Howard Chu, Symas Corp.
  * All rights reserved.
@@ -12,17 +12,24 @@
  * <http://www.OpenLDAP.org/license.html>.
  */
 
-/* Just like mtest.c, but using a subDB instead of the main DB */
-
+/* Tests for sorted duplicate DBs using cursor_put */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include "lmdb.h"
+#include <sys/stat.h>
+#include <errno.h>
+
+#ifdef _WIN32
+#include <direct.h>
+#define mkdir(dir, mode) _mkdir(dir)
+#endif
 
 #define E(expr) CHECK((rc = (expr)) == MDB_SUCCESS, #expr)
 #define RES(err, expr) ((rc = expr) == (err) || (CHECK(!rc, #expr), 0))
 #define CHECK(test, msg) ((test) ? (void)0 : ((void)fprintf(stderr, \
-	"%s:%d: %s: %s\n", __FILE__, __LINE__, msg, mdb_strerror(rc)), abort()))
+	"TEST FAILED: %s:%d: %s: %s\n", __FILE__, __LINE__, msg, mdb_strerror(rc)), abort()))
 
 int main(int argc,char * argv[])
 {
@@ -35,9 +42,14 @@ int main(int argc,char * argv[])
 	MDB_cursor *cursor;
 	int count;
 	int *values;
-	char sval[32] = "";
+	char sval[32];
+	char kval[sizeof(int)];
+    struct stat st = {0};
+    if (stat("./testdb", &st) == -1) mkdir("./testdb", 0700);
 
 	srand(time(NULL));
+
+	memset(sval, 0, sizeof(sval));
 
 	count = (rand()%384) + 64;
 	values = (int *)malloc(count*sizeof(int));
@@ -47,26 +59,29 @@ int main(int argc,char * argv[])
 	}
 
 	E(mdb_env_create(&env));
-	E(mdb_env_set_maxreaders(env, 1));
 	E(mdb_env_set_mapsize(env, 10485760));
 	E(mdb_env_set_maxdbs(env, 4));
 	E(mdb_env_open(env, "./testdb", MDB_FIXEDMAP|MDB_NOSYNC, 0664));
 
 	E(mdb_txn_begin(env, NULL, 0, &txn));
-	E(mdb_dbi_open(txn, "id1", MDB_CREATE, &dbi));
-   
+	E(mdb_dbi_open(txn, "id2", MDB_CREATE|MDB_DUPSORT, &dbi));
+	E(mdb_cursor_open(txn, dbi, &cursor));
+
 	key.mv_size = sizeof(int);
-	key.mv_data = sval;
+	key.mv_data = kval;
+	data.mv_size = sizeof(sval);
+	data.mv_data = sval;
 
 	printf("Adding %d values\n", count);
-	for (i=0;i<count;i++) {	
+	for (i=0;i<count;i++) {
+		if (!(i & 0x0f))
+			sprintf(kval, "%03x", values[i]);
 		sprintf(sval, "%03x %d foo bar", values[i], values[i]);
-		data.mv_size = sizeof(sval);
-		data.mv_data = sval;
-		if (RES(MDB_KEYEXIST, mdb_put(txn, dbi, &key, &data, MDB_NOOVERWRITE)))
+		if (RES(MDB_KEYEXIST, mdb_cursor_put(cursor, &key, &data, MDB_NODUPDATA)))
 			j++;
 	}
 	if (j) printf("%d duplicates skipped\n", j);
+	mdb_cursor_close(cursor);
 	E(mdb_txn_commit(txn));
 	E(mdb_env_stat(env, &mst));
 
@@ -82,13 +97,18 @@ int main(int argc,char * argv[])
 	mdb_txn_abort(txn);
 
 	j=0;
-	key.mv_data = sval;
+
 	for (i= count - 1; i > -1; i-= (rand()%5)) {
 		j++;
 		txn=NULL;
 		E(mdb_txn_begin(env, NULL, 0, &txn));
-		sprintf(sval, "%03x ", values[i]);
-		if (RES(MDB_NOTFOUND, mdb_del(txn, dbi, &key, NULL))) {
+		sprintf(kval, "%03x", values[i & ~0x0f]);
+		sprintf(sval, "%03x %d foo bar", values[i], values[i]);
+		key.mv_size = sizeof(int);
+		key.mv_data = kval;
+		data.mv_size = sizeof(sval);
+		data.mv_data = sval;
+		if (RES(MDB_NOTFOUND, mdb_del(txn, dbi, &key, &data))) {
 			j--;
 			mdb_txn_abort(txn);
 		} else {

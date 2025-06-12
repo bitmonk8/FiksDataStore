@@ -1,4 +1,4 @@
-/* mtest6.c - memory-mapped database tester/toy */
+/* mtest3.c - memory-mapped database tester/toy */
 /*
  * Copyright 2011-2021 Howard Chu, Symas Corp.
  * All rights reserved.
@@ -12,35 +12,51 @@
  * <http://www.OpenLDAP.org/license.html>.
  */
 
-/* Tests for DB splits and merges */
+/* Tests for sorted duplicate DBs */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include "lmdb.h"
+#include <sys/stat.h>
+#include <errno.h>
+
+#ifdef _WIN32
+#include <direct.h>
+#define mkdir(dir, mode) _mkdir(dir)
+#endif
 
 #define E(expr) CHECK((rc = (expr)) == MDB_SUCCESS, #expr)
 #define RES(err, expr) ((rc = expr) == (err) || (CHECK(!rc, #expr), 0))
 #define CHECK(test, msg) ((test) ? (void)0 : ((void)fprintf(stderr, \
-	"%s:%d: %s: %s\n", __FILE__, __LINE__, msg, mdb_strerror(rc)), abort()))
-
-char dkbuf[1024];
+	"TEST FAILED: %s:%d: %s: %s\n", __FILE__, __LINE__, msg, mdb_strerror(rc)), abort()))
 
 int main(int argc,char * argv[])
 {
 	int i = 0, j = 0, rc;
 	MDB_env *env;
 	MDB_dbi dbi;
-	MDB_val key, data, sdata;
+	MDB_val key, data;
 	MDB_txn *txn;
 	MDB_stat mst;
 	MDB_cursor *cursor;
 	int count;
 	int *values;
-	long kval;
-	char *sval;
+	char sval[32];
+	char kval[sizeof(int)];
+    struct stat st = {0};
+    if (stat("./testdb", &st) == -1) mkdir("./testdb", 0700);
 
 	srand(time(NULL));
+
+	memset(sval, 0, sizeof(sval));
+
+	count = (rand()%384) + 64;
+	values = (int *)malloc(count*sizeof(int));
+
+	for(i = 0;i<count;i++) {
+		values[i] = rand()%1024;
+	}
 
 	E(mdb_env_create(&env));
 	E(mdb_env_set_mapsize(env, 10485760));
@@ -48,49 +64,36 @@ int main(int argc,char * argv[])
 	E(mdb_env_open(env, "./testdb", MDB_FIXEDMAP|MDB_NOSYNC, 0664));
 
 	E(mdb_txn_begin(env, NULL, 0, &txn));
-	E(mdb_dbi_open(txn, "id6", MDB_CREATE|MDB_INTEGERKEY, &dbi));
+	E(mdb_dbi_open(txn, "id2", MDB_CREATE|MDB_DUPSORT, &dbi));
+
+	key.mv_size = sizeof(int);
+	key.mv_data = kval;
+	data.mv_size = sizeof(sval);
+	data.mv_data = sval;
+
+	printf("Adding %d values\n", count);
+	for (i=0;i<count;i++) {
+		if (!(i & 0x0f))
+			sprintf(kval, "%03x", values[i]);
+		sprintf(sval, "%03x %d foo bar", values[i], values[i]);
+		if (RES(MDB_KEYEXIST, mdb_put(txn, dbi, &key, &data, MDB_NODUPDATA)))
+			j++;
+	}
+	if (j) printf("%d duplicates skipped\n", j);
+	E(mdb_txn_commit(txn));
+	E(mdb_env_stat(env, &mst));
+
+	E(mdb_txn_begin(env, NULL, MDB_RDONLY, &txn));
 	E(mdb_cursor_open(txn, dbi, &cursor));
-	E(mdb_stat(txn, dbi, &mst));
-
-	sval = calloc(1, mst.ms_psize / 4);
-	key.mv_size = sizeof(long);
-	key.mv_data = &kval;
-	sdata.mv_size = mst.ms_psize / 4 - 30;
-	sdata.mv_data = sval;
-
-	printf("Adding 12 values, should yield 3 splits\n");
-	for (i=0;i<12;i++) {
-		kval = i*5;
-		sprintf(sval, "%08x", kval);
-		data = sdata;
-		(void)RES(MDB_KEYEXIST, mdb_cursor_put(cursor, &key, &data, MDB_NOOVERWRITE));
-	}
-	printf("Adding 12 more values, should yield 3 splits\n");
-	for (i=0;i<12;i++) {
-		kval = i*5+4;
-		sprintf(sval, "%08x", kval);
-		data = sdata;
-		(void)RES(MDB_KEYEXIST, mdb_cursor_put(cursor, &key, &data, MDB_NOOVERWRITE));
-	}
-	printf("Adding 12 more values, should yield 3 splits\n");
-	for (i=0;i<12;i++) {
-		kval = i*5+1;
-		sprintf(sval, "%08x", kval);
-		data = sdata;
-		(void)RES(MDB_KEYEXIST, mdb_cursor_put(cursor, &key, &data, MDB_NOOVERWRITE));
-	}
-	E(mdb_cursor_get(cursor, &key, &data, MDB_FIRST));
-
-	do {
-		printf("key: %p %s, data: %p %.*s\n",
-			key.mv_data,  mdb_dkey(&key, dkbuf),
+	while ((rc = mdb_cursor_get(cursor, &key, &data, MDB_NEXT)) == 0) {
+		printf("key: %p %.*s, data: %p %.*s\n",
+			key.mv_data,  (int) key.mv_size,  (char *) key.mv_data,
 			data.mv_data, (int) data.mv_size, (char *) data.mv_data);
-	} while ((rc = mdb_cursor_get(cursor, &key, &data, MDB_NEXT)) == 0);
+	}
 	CHECK(rc == MDB_NOTFOUND, "mdb_cursor_get");
 	mdb_cursor_close(cursor);
-	mdb_txn_commit(txn);
+	mdb_txn_abort(txn);
 
-#if 0
 	j=0;
 
 	for (i= count - 1; i > -1; i-= (rand()%5)) {
@@ -134,8 +137,6 @@ int main(int argc,char * argv[])
 	mdb_txn_abort(txn);
 
 	mdb_dbi_close(env, dbi);
-#endif
 	mdb_env_close(env);
-
 	return 0;
 }

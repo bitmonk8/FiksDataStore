@@ -1,4 +1,4 @@
-name: Build
+name: Build and test
 on:
   push:
     branches:
@@ -22,4 +22,7 @@ jobs:
           build-cache: true
 
       - name: Run xmake build
-        run: xmake build
+        run: |
+          xmake
+          xmake build
+          xmake test
