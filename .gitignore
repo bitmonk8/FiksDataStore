@@ -22,3 +22,6 @@ core.*
 valgrind.*
 man/
 html/
+.vscode/
+.xmake/
+build/
