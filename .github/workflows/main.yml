@@ -25,4 +25,4 @@ jobs:
         run: |
           xmake
           xmake build
-          xmake test -j1
+          xmake test -vD -j1
