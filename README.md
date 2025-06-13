@@ -82,29 +82,34 @@ The original LMDB C code is being systematically converted to modern C++. The cu
 ### Prerequisites
 
 - Modern C++ compiler (GCC 9+, Clang 10+, MSVC 2019+)
-- CMake 3.15+ (planned)
+- XMake 2.5+
 - Git
 
-### Current Build (Legacy C)
+### Current Build
 
-The project currently uses the original LMDB build system:
+The project uses XMake as the build system:
 
 ```bash
-# On Unix/Linux/macOS
-make
+# Build the project
+xmake
 
-# On Windows with Visual Studio
-# Use the provided project files or build with MinGW
+# Build and run tests
+xmake build tests
+xmake run tests
+
+# Clean build artifacts
+xmake clean
 ```
 
-### Future Build (Modern C++)
+### Configuration
 
 ```bash
-# Planned modern build system
-mkdir build
-cd build
-cmake ..
-make -j$(nproc)
+# Configure build options
+xmake config --mode=debug    # Debug build
+xmake config --mode=release  # Release build
+
+# Show configuration
+xmake show
 ```
 
 ## Usage Example
@@ -165,11 +170,14 @@ for (const auto& [key, value] : db) {
 The project includes the original LMDB test suite:
 
 ```bash
-# Run tests
-cd Tests
-make
-./mtest
-./mtest2
+# Build and run all tests
+xmake build tests
+xmake run tests
+
+# Run individual tests
+xmake run mtest
+xmake run mtest2
+xmake run mtest3
 # ... etc
 ```
 
