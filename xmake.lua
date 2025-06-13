@@ -18,6 +18,7 @@ target("lmdb")
     add_defines("MDB_DEBUG=0")
     add_includedirs(".", {public = true})
 
+local testdir1 = path.join(os.tmpdir(), "test1")
 target("mtest")
     set_kind("binary")
     add_files("Tests/mtest.c")
@@ -26,8 +27,21 @@ target("mtest")
         add_syslinks("advapi32")
     end
     add_defines("MDB_DEBUG=0")
-    add_tests("test1")
+    add_tests("test1", {
+        rundir = testdir1,
+        fail_outputs = "TEST FAILED: ", 
+        plain = true
+    })
+    before_test(function (target)
+        os.mkdir(testdir1)
+    end)
+    after_test(function (target)
+        if os.isdir(testdir1) then
+            os.rmdir(testdir1)
+        end
+    end)    
 
+local testdir2 = path.join(os.tmpdir(), "test2")
 target("mtest2")
     set_kind("binary")
     add_files("Tests/mtest2.c")
@@ -36,8 +50,21 @@ target("mtest2")
         add_syslinks("advapi32")
     end
     add_defines("MDB_DEBUG=0")
-    add_tests("test2")
+    add_tests("test2", {
+        rundir = testdir2,
+        fail_outputs = "TEST FAILED: ", 
+        plain = true
+    })
+    before_test(function (target)
+        os.mkdir(testdir2)
+    end)
+    after_test(function (target)
+        if os.isdir(testdir2) then
+            os.rmdir(testdir2)
+        end
+    end)    
 
+local testdir3 = path.join(os.tmpdir(), "test3")
 target("mtest3")
     set_kind("binary")
     add_files("Tests/mtest3.c")
@@ -46,8 +73,21 @@ target("mtest3")
         add_syslinks("advapi32")
     end
     add_defines("MDB_DEBUG=0")
-    add_tests("test3")
+    add_tests("test3", {
+        rundir = testdir3,
+        fail_outputs = "TEST FAILED: ", 
+        plain = true
+    })
+    before_test(function (target)
+        os.mkdir(testdir3)
+    end)
+    after_test(function (target)
+        if os.isdir(testdir3) then
+            os.rmdir(testdir3)
+        end
+    end)    
 
+local testdir4 = path.join(os.tmpdir(), "test4")
 target("mtest4")
     set_kind("binary")
     add_files("Tests/mtest4.c")
@@ -56,8 +96,21 @@ target("mtest4")
         add_syslinks("advapi32")
     end
     add_defines("MDB_DEBUG=0")
-    add_tests("test4")
+    add_tests("test4", {
+        rundir = testdir4,
+        fail_outputs = "TEST FAILED: ", 
+        plain = true
+    })
+    before_test(function (target)
+        os.mkdir(testdir4)
+    end)
+    after_test(function (target)
+        if os.isdir(testdir4) then
+            os.rmdir(testdir4)
+        end
+    end)    
 
+local testdir5 = path.join(os.tmpdir(), "test5")
 target("mtest5")
     set_kind("binary")
     add_files("Tests/mtest5.c")
@@ -66,8 +119,21 @@ target("mtest5")
         add_syslinks("advapi32")
     end
     add_defines("MDB_DEBUG=0")
-    add_tests("test5")
+    add_tests("test5", {
+        rundir = testdir5,
+        fail_outputs = "TEST FAILED: ", 
+        plain = true
+    })
+    before_test(function (target)
+        os.mkdir(testdir5)
+    end)
+    after_test(function (target)
+        if os.isdir(testdir5) then
+            os.rmdir(testdir5)
+        end
+    end)    
 
+local testdir6 = path.join(os.tmpdir(), "test6")
 target("mtest6")
     set_kind("binary")
     add_files("Tests/mtest6.c")
@@ -77,6 +143,19 @@ target("mtest6")
     end
     add_defines("MDB_DEBUG=0")
     add_tests("test6", {fail_outputs = "TEST FAILED: ", plain = true})
+    add_tests("test6", {
+        rundir = testdir6,
+        fail_outputs = "TEST FAILED: ", 
+        plain = true
+    })
+    before_test(function (target)
+        os.mkdir(testdir6)
+    end)
+    after_test(function (target)
+        if os.isdir(testdir6) then
+            os.rmdir(testdir6)
+        end
+    end)    
 
 target("mdb_copy")
     set_kind("binary")
