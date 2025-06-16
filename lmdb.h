@@ -1,10 +1,10 @@
 /** @file lmdb.h
- *	@brief Lightning memory-mapped database library
+ *	@brief FiksStore memory-mapped database library
  *
- *	@mainpage	Lightning Memory-Mapped Database Manager (LMDB)
+ *	@mainpage	FiksStore Memory-Mapped Database Manager
  *
  *	@section intro_sec Introduction
- *	LMDB is a Btree-based database management library modeled loosely on the
+ *	FiksStore is a Btree-based database management library modeled loosely on the
  *	BerkeleyDB API, but much simplified. The entire database is exposed
  *	in a memory map, and all data fetches return data directly
  *	from the mapped memory, so no malloc's or memcpy's occur during
@@ -14,6 +14,11 @@
  *	full ACID semantics, and when the memory map is read-only, the
  *	database integrity cannot be corrupted by stray pointer writes from
  *	application code.
+ *
+ *	FiksStore is built upon the foundation of LMDB (Lightning Memory-Mapped Database),
+ *	originally created by Howard Chu at Symas Corporation. We gratefully acknowledge
+ *	their contributions. For the original LMDB project, please visit
+ *	https://github.com/LMDB/lmdb.
  *
  *	The library is fully thread-aware and supports concurrent read/write
  *	access from multiple processes and threads. Data pages use a copy-on-
@@ -26,10 +31,10 @@
  *	readers, and readers don't block writers.
  *
  *	Unlike other well-known database mechanisms which use either write-ahead
- *	transaction logs or append-only data writes, LMDB requires no maintenance
+ *	transaction logs or append-only data writes, FiksStore requires no maintenance
  *	during operation. Both write-ahead loggers and append-only databases
  *	require periodic checkpointing and/or compaction of their log or database
- *	files otherwise they grow without bound. LMDB tracks free pages within
+ *	files otherwise they grow without bound. FiksStore tracks free pages within
  *	the database and re-uses them for new write operations, so the database
  *	size does not grow without bound in normal use.
  *
@@ -78,7 +83,7 @@
  *	  access to locks and lock file. Exceptions: On read-only filesystems
  *	  or with the #MDB_NOLOCK flag described under #mdb_env_open().
  *
- *	- An LMDB configuration will often reserve considerable \b unused
+ *	- A FiksStore configuration will often reserve considerable \b unused
  *	  memory address space and maybe file size for future growth.
  *	  This does not use actual memory or disk space, but users may need
  *	  to understand the difference so they won't be scared off.
@@ -99,7 +104,7 @@
  *
  *	- Use an MDB_env* in the process which opened it, not after fork().
  *
- *	- Do not have open an LMDB database twice in the same process at
+ *	- Do not have open a FiksStore database twice in the same process at
  *	  the same time.  Not even from a plain open() call - close()ing it
  *	  breaks fcntl() advisory locking.  (It is OK to reopen it after
  *	  fork() - exec*(), since the lockfile has FD_CLOEXEC set.)
@@ -126,7 +131,7 @@
  *	- If you do that anyway, do a periodic check for stale readers. Or
  *	  close the environment once in a while, so the lockfile can get reset.
  *
- *	- Do not use LMDB databases on remote filesystems, even between
+ *	- Do not use FiksStore databases on remote filesystems, even between
  *	  processes on the same host.  This breaks flock() on some OSes,
  *	  possibly memory map sync, and certainly sync between programs
  *	  on different hosts.
@@ -217,9 +222,9 @@ typedef	void *mdb_filehandle_t;
 typedef int mdb_filehandle_t;
 #endif
 
-/** @defgroup mdb LMDB API
+/** @defgroup mdb FiksStore API
  *	@{
- *	@brief OpenLDAP Lightning Memory-Mapped Database Manager
+ *	@brief FiksStore Memory-Mapped Database Manager
  */
 /** @defgroup Version Version Macros
  *	@{
@@ -242,7 +247,7 @@ typedef int mdb_filehandle_t;
 #define MDB_VERSION_DATE	"December 19, 2015"
 
 /** A stringifier for the version info */
-#define MDB_VERSTR(a,b,c,d)	"LMDB " #a "." #b "." #c ": (" d ")"
+#define MDB_VERSTR(a,b,c,d)	"FiksStore " #a "." #b "." #c ": (" d ")"
 
 /** A helper for the stringifier macro */
 #define MDB_VERFOO(a,b,c,d)	MDB_VERSTR(a,b,c,d)
@@ -445,7 +450,7 @@ typedef enum MDB_cursor_op {
 #define MDB_PANIC		(-30795)
 	/** Environment version mismatch */
 #define MDB_VERSION_MISMATCH	(-30794)
-	/** File is not a valid LMDB file */
+	/** File is not a valid FiksStore file */
 #define MDB_INVALID	(-30793)
 	/** Environment mapsize reached */
 #define MDB_MAP_FULL	(-30792)
@@ -507,7 +512,7 @@ typedef struct MDB_envinfo {
 	unsigned int me_numreaders;		/**< max reader slots used in the environment */
 } MDB_envinfo;
 
-	/** @brief Return the LMDB library version information.
+	/** @brief Return the FiksStore library version information.
 	 *
 	 * @param[out] major if non-NULL, the library major version number is copied here
 	 * @param[out] minor if non-NULL, the library minor version number is copied here
@@ -521,14 +526,14 @@ char *mdb_version(int *major, int *minor, int *patch);
 	 * This function is a superset of the ANSI C X3.159-1989 (ANSI C) strerror(3)
 	 * function. If the error code is greater than or equal to 0, then the string
 	 * returned by the system function strerror(3) is returned. If the error code
-	 * is less than 0, an error string corresponding to the LMDB library error is
-	 * returned. See @ref errors for a list of LMDB-specific error codes.
+	 * is less than 0, an error string corresponding to the FiksStore library error is
+	 * returned. See @ref errors for a list of FiksStore-specific error codes.
 	 * @param[in] err The error code
 	 * @retval "error message" The description of the error
 	 */
 char *mdb_strerror(int err);
 
-	/** @brief Create an LMDB environment handle.
+	/** @brief Create a FiksStore environment handle.
 	 *
 	 * This function allocates memory for a #MDB_env structure. To release
 	 * the allocated memory and discard the handle, call #mdb_env_close().
@@ -561,15 +566,15 @@ int  mdb_env_create(MDB_env **env);
 	 *		how the operating system has allocated memory to shared libraries and other uses.
 	 *		The feature is highly experimental.
 	 *	<li>#MDB_NOSUBDIR
-	 *		By default, LMDB creates its environment in a directory whose
+	 *		By default, FiksStore creates its environment in a directory whose
 	 *		pathname is given in \b path, and creates its data and lock files
 	 *		under that directory. With this option, \b path is used as-is for
 	 *		the database main data file. The database lock file is the \b path
 	 *		with "-lock" appended.
 	 *	<li>#MDB_RDONLY
 	 *		Open the environment in read-only mode. No write operations will be
-	 *		allowed. LMDB will still modify the lock file - except on read-only
-	 *		filesystems, where LMDB does not use locks.
+	 *		allowed. FiksStore will still modify the lock file - except on read-only
+	 *		filesystems, where FiksStore does not use locks.
 	 *	<li>#MDB_WRITEMAP
 	 *		Use a writeable memory map unless MDB_RDONLY is set. This uses
 	 *		fewer mallocs but loses protection from application bugs
@@ -615,7 +620,7 @@ int  mdb_env_create(MDB_env **env);
 	 *		the user synchronizes its use. Applications that multiplex many
 	 *		user threads over individual OS threads need this option. Such an
 	 *		application must also serialize the write transactions in an OS
-	 *		thread, since LMDB's write locking is unaware of the user threads.
+	 *		thread, since FiksStore's write locking is unaware of the user threads.
 	 *	<li>#MDB_NOLOCK
 	 *		Don't do any locking. If concurrent access is anticipated, the
 	 *		caller must manage all concurrency itself. For proper operation
@@ -660,7 +665,7 @@ int  mdb_env_create(MDB_env **env);
 	 * @return A non-zero error value on failure and 0 on success. Some possible
 	 * errors are:
 	 * <ul>
-	 *	<li>#MDB_VERSION_MISMATCH - the version of the LMDB library doesn't match the
+	 *	<li>#MDB_VERSION_MISMATCH - the version of the FiksStore library doesn't match the
 	 *	version that created the database environment.
 	 *	<li>#MDB_INVALID - the environment file headers are corrupted.
 	 *	<li>ENOENT - the directory specified by the path parameter doesn't exist.
@@ -670,7 +675,7 @@ int  mdb_env_create(MDB_env **env);
 	 */
 int  mdb_env_open(MDB_env *env, const char *path, unsigned int flags, mdb_mode_t mode);
 
-	/** @brief Copy an LMDB environment to the specified path.
+	/** @brief Copy a FiksStore environment to the specified path.
 	 *
 	 * This function may be used to make a backup of an existing environment.
 	 * No lockfile is created, since it gets recreated at need.
@@ -686,7 +691,7 @@ int  mdb_env_open(MDB_env *env, const char *path, unsigned int flags, mdb_mode_t
 	 */
 int  mdb_env_copy(MDB_env *env, const char *path);
 
-	/** @brief Copy an LMDB environment to the specified file descriptor.
+	/** @brief Copy a FiksStore environment to the specified file descriptor.
 	 *
 	 * This function may be used to make a backup of an existing environment.
 	 * No lockfile is created, since it gets recreated at need.
@@ -701,7 +706,7 @@ int  mdb_env_copy(MDB_env *env, const char *path);
 	 */
 int  mdb_env_copyfd(MDB_env *env, mdb_filehandle_t fd);
 
-	/** @brief Copy an LMDB environment to the specified path, with options.
+	/** @brief Copy a FiksStore environment to the specified path, with options.
 	 *
 	 * This function may be used to make a backup of an existing environment.
 	 * No lockfile is created, since it gets recreated at need.
@@ -726,7 +731,7 @@ int  mdb_env_copyfd(MDB_env *env, mdb_filehandle_t fd);
 	 */
 int  mdb_env_copy2(MDB_env *env, const char *path, unsigned int flags);
 
-	/** @brief Copy an LMDB environment to the specified file descriptor,
+	/** @brief Copy a FiksStore environment to the specified file descriptor,
 	 *	with options.
 	 *
 	 * This function may be used to make a backup of an existing environment.
@@ -745,7 +750,7 @@ int  mdb_env_copy2(MDB_env *env, const char *path, unsigned int flags);
 	 */
 int  mdb_env_copyfd2(MDB_env *env, mdb_filehandle_t fd, unsigned int flags);
 
-	/** @brief Return statistics about the LMDB environment.
+	/** @brief Return statistics about the FiksStore environment.
 	 *
 	 * @param[in] env An environment handle returned by #mdb_env_create()
 	 * @param[out] stat The address of an #MDB_stat structure
@@ -753,7 +758,7 @@ int  mdb_env_copyfd2(MDB_env *env, mdb_filehandle_t fd, unsigned int flags);
 	 */
 int  mdb_env_stat(MDB_env *env, MDB_stat *stat);
 
-	/** @brief Return information about the LMDB environment.
+	/** @brief Return information about the FiksStore environment.
 	 *
 	 * @param[in] env An environment handle returned by #mdb_env_create()
 	 * @param[out] stat The address of an #MDB_envinfo structure
@@ -764,7 +769,7 @@ int  mdb_env_info(MDB_env *env, MDB_envinfo *stat);
 	/** @brief Flush the data buffers to disk.
 	 *
 	 * Data is always written to disk when #mdb_txn_commit() is called,
-	 * but the operating system may keep it buffered. LMDB always flushes
+	 * but the operating system may keep it buffered. FiksStore always flushes
 	 * the OS buffers upon commit as well, unless the environment was
 	 * opened with #MDB_NOSYNC or in part #MDB_NOMETASYNC. This call is
 	 * not valid if the environment was opened with #MDB_RDONLY.
@@ -1652,8 +1657,8 @@ char* mdb_dkey(MDB_val *key, char *buf);
 #ifdef __cplusplus
 }
 #endif
-/** @page tools LMDB Command Line Tools
-	The following describes the command line tools that are available for LMDB.
+/** @page tools FiksStore Command Line Tools
+	The following describes the command line tools that are available for FiksStore.
 	\li \ref mdb_copy_1
 	\li \ref mdb_dump_1
 	\li \ref mdb_load_1

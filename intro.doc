@@ -12,13 +12,18 @@
  */
 /** @page starting Getting Started
 
-LMDB is compact, fast, powerful, and robust and implements a simplified
+FiksStore is compact, fast, powerful, and robust and implements a simplified
 variant of the BerkeleyDB (BDB) API. (BDB is also very powerful, and verbosely
 documented in its own right.) After reading this page, the main
 \ref mdb documentation should make sense. Thanks to Bert Hubert
 for creating the
 <a href="https://github.com/ahupowerdns/ahutils/blob/master/lmdb-semantics.md">
 initial version</a> of this writeup.
+
+FiksStore is built upon the foundation of LMDB (Lightning Memory-Mapped Database),
+originally created by Howard Chu at Symas Corporation. We gratefully acknowledge
+their contributions. For the original LMDB project, please visit
+<a href="https://github.com/LMDB/lmdb">https://github.com/LMDB/lmdb</a>.
 
 Everything starts with an environment, created by #mdb_env_create().
 Once created, this environment must also be opened with #mdb_env_open().
@@ -59,7 +64,7 @@ A key/value pair is expressed as two #MDB_val structures. This struct
 has two fields, \c mv_size and \c mv_data. The data is a \c void pointer to
 an array of \c mv_size bytes.
 
-Because LMDB is very efficient (and usually zero-copy), the data returned
+Because FiksStore is very efficient (and usually zero-copy), the data returned
 in an #MDB_val structure may be memory-mapped straight from disk. In
 other words <b>look but do not touch</b> (or free() for that matter).
 Once a transaction is closed, the values can no longer be used, so
@@ -101,10 +106,10 @@ Got it?
 
 @section thrproc Threads and Processes
 
-LMDB uses POSIX locks on files, and these locks have issues if one
+FiksStore uses POSIX locks on files, and these locks have issues if one
 process opens a file multiple times. Because of this, do not
 #mdb_env_open() a file multiple times from a single process. Instead,
-share the LMDB environment that has opened the file across all threads.
+share the FiksStore environment that has opened the file across all threads.
 Otherwise, if a single process opens the same environment multiple times,
 closing it once will remove all the locks held on it, and the other
 instances will be vulnerable to corruption from other processes.

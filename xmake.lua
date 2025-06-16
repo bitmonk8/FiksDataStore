@@ -12,7 +12,7 @@ if is_mode("release") then
     set_strip("all")
 end
 
-target("lmdb")
+target("fiksstore")
     set_kind("static")
     add_files("mdb.c", "midl.c")
     add_defines("MDB_DEBUG=0")
@@ -22,7 +22,7 @@ local testdir1 = path.join(os.tmpdir(), "test1")
 target("mtest")
     set_kind("binary")
     add_files("Tests/mtest.cpp")
-    add_deps("lmdb")
+    add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
@@ -46,7 +46,7 @@ local testdir2 = path.join(os.tmpdir(), "test2")
 target("mtest2")
     set_kind("binary")
     add_files("Tests/mtest2.cpp")
-    add_deps("lmdb")
+    add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
@@ -70,7 +70,7 @@ local testdir3 = path.join(os.tmpdir(), "test3")
 target("mtest3")
     set_kind("binary")
     add_files("Tests/mtest3.cpp")
-    add_deps("lmdb")
+    add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
@@ -94,7 +94,7 @@ local testdir4 = path.join(os.tmpdir(), "test4")
 target("mtest4")
     set_kind("binary")
     add_files("Tests/mtest4.c")
-    add_deps("lmdb")
+    add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
@@ -117,7 +117,7 @@ local testdir5 = path.join(os.tmpdir(), "test5")
 target("mtest5")
     set_kind("binary")
     add_files("Tests/mtest5.c")
-    add_deps("lmdb")
+    add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
@@ -140,7 +140,7 @@ local testdir6 = path.join(os.tmpdir(), "test6")
 target("mtest6")
     set_kind("binary")
     add_files("Tests/mtest6.c")
-    add_deps("lmdb")
+    add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
@@ -163,7 +163,7 @@ target("mtest6")
 target("mdb_copy")
     set_kind("binary")
     add_files("Tools/mdb_copy.c")
-    add_deps("lmdb")
+    add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
@@ -172,7 +172,7 @@ target("mdb_copy")
 target("mdb_drop")
     set_kind("binary")
     add_files("Tools/mdb_drop.c", "getopt.c")
-    add_deps("lmdb")
+    add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
@@ -181,7 +181,7 @@ target("mdb_drop")
 target("mdb_dump")
     set_kind("binary")
     add_files("Tools/mdb_dump.c", "getopt.c")
-    add_deps("lmdb")
+    add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
@@ -190,7 +190,7 @@ target("mdb_dump")
 target("mdb_load")
     set_kind("binary")
     add_files("Tools/mdb_load.c", "getopt.c")
-    add_deps("lmdb")
+    add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
@@ -199,7 +199,7 @@ target("mdb_load")
 target("mdb_stat")
     set_kind("binary")
     add_files("Tools/mdb_stat.c", "getopt.c")
-    add_deps("lmdb")
+    add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end

@@ -1,8 +1,8 @@
-.TH MDB_LOAD 1 "2015/09/30" "LMDB 0.9.17"
+.TH MDB_LOAD 1 "2015/09/30" "FiksStore 0.9.17"
 .\" Copyright 2014-2021 Howard Chu, Symas Corp. All Rights Reserved.
 .\" Copying restrictions apply.  See COPYRIGHT/LICENSE.
 .SH NAME
-mdb_load \- LMDB environment import tool
+mdb_load \- FiksStore environment import tool
 .SH SYNOPSIS
 .B mdb_load
 [\c
@@ -26,7 +26,7 @@ mdb_load \- LMDB environment import tool
 The
 .B mdb_load
 utility reads from the standard input and loads it into the
-LMDB environment
+FiksStore environment
 .BR envpath .
 
 The input to
@@ -52,7 +52,7 @@ on a database that uses custom compare functions.
 Read from the specified file instead of from the standard input.
 .TP
 .BR \-n
-Load an LMDB database which does not use subdirectories.
+Load a FiksStore database which does not use subdirectories.
 .TP
 .BR \-s \ subdb
 Load a specific subdatabase. If no database is specified, data is loaded into the main database.
