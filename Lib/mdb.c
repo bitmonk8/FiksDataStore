@@ -180,7 +180,6 @@ typedef SSIZE_T	ssize_t;
 #include <pthread.h>
 #include <signal.h>
 #ifdef MDB_USE_POSIX_SEM
-# define MDB_USE_HASH		1
 #include <semaphore.h>
 #elif defined(MDB_USE_SYSV_SEM)
 #include <sys/ipc.h>
@@ -244,6 +243,7 @@ union semun {
 #endif
 
 #include "lmdb.h"
+#include "mdb_hash.h"
 #include "midl.h"
 
 #if (BYTE_ORDER == LITTLE_ENDIAN) == (BYTE_ORDER == BIG_ENDIAN)
@@ -347,7 +347,6 @@ union semun {
 #endif
 
 #ifdef _WIN32
-#define MDB_USE_HASH	1
 #define MDB_PIDLOCK	0
 #define THREAD_RET	DWORD
 #define pthread_t	HANDLE
@@ -748,7 +747,6 @@ txnid_t mdb_debug_start;
 	 */
 typedef uint16_t	 indx_t;
 
-typedef unsigned long long	mdb_hash_t;
 
 	/**	Default size of memory map.
 	 *	This is certainly too small for any actual applications. Apps should always set
@@ -5262,77 +5260,6 @@ mdb_env_excl_lock(MDB_env *env, int *excl)
 	return rc;
 }
 
-#ifdef MDB_USE_HASH
-/*
- * hash_64 - 64 bit Fowler/Noll/Vo-0 FNV-1a hash code
- *
- * @(#) $Revision: 5.1 $
- * @(#) $Id: hash_64a.c,v 5.1 2009/06/30 09:01:38 chongo Exp $
- * @(#) $Source: /usr/local/src/cmd/fnv/RCS/hash_64a.c,v $
- *
- *	  http://www.isthe.com/chongo/tech/comp/fnv/index.html
- *
- ***
- *
- * Please do not copyright this code.  This code is in the public domain.
- *
- * LANDON CURT NOLL DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
- * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
- * EVENT SHALL LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
- * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
- * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
- * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
- *
- * By:
- *	chongo <Landon Curt Noll> /\oo/\
- *	  http://www.isthe.com/chongo/
- *
- * Share and Enjoy!	:-)
- */
-
-/** perform a 64 bit Fowler/Noll/Vo FNV-1a hash on a buffer
- * @param[in] val	value to hash
- * @param[in] len	length of value
- * @return 64 bit hash
- */
-mdb_hash_t
-mdb_hash(const void *val, size_t len)
-{
-	const unsigned char *s = (const unsigned char *) val, *end = s + len;
-	mdb_hash_t hval = 0xcbf29ce484222325ULL;
-	/*
-	 * FNV-1a hash each octet of the buffer
-	 */
-	while (s < end) {
-		hval = (hval ^ *s++) * 0x100000001b3ULL;
-	}
-	/* return our new hash value */
-	return hval;
-}
-
-/** Hash the string and output the encoded hash.
- * This uses modified RFC1924 Ascii85 encoding to accommodate systems with
- * very short name limits. We don't care about the encoding being reversible,
- * we just want to preserve as many bits of the input as possible in a
- * small printable string.
- * @param[in] str string to hash
- * @param[out] encbuf an array of 11 chars to hold the hash
- */
-const char mdb_a85[]= "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~";
-
-void ESECT
-mdb_pack85(unsigned long long l, char *out)
-{
-	int i;
-
-	for (i=0; i<10 && l; i++) {
-		*out++ = mdb_a85[l % 85];
-		l /= 85;
-	}
-	*out = '\0';
-}
-
 /** Init #MDB_env.me_mutexname[] except the char which #MUTEXNAME() will set.
  *	Changes to this code must be reflected in #MDB_LOCK_FORMAT.
  */
@@ -5348,8 +5275,6 @@ mdb_env_mname_init(MDB_env *env)
 #define MUTEXNAME(env, ch) ( \
 		(void) ((env)->me_mutexname[sizeof(MUTEXNAME_PREFIX)-1] = (ch)), \
 		(env)->me_mutexname)
-
-#endif
 
 /** Open and/or initialize the lock region for the environment.
  * @param[in] env The LMDB environment.
