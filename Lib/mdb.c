@@ -58,7 +58,7 @@ typedef NTSTATUS (WINAPI NtCreateSectionFunc)
   IN PLARGE_INTEGER ms OPTIONAL,
   IN ULONG pp, IN ULONG aa, IN HANDLE fh OPTIONAL);
 
-static NtCreateSectionFunc *NtCreateSection;
+NtCreateSectionFunc *NtCreateSection;
 
 typedef enum _SECTION_INHERIT {
 	ViewShare = 1,
@@ -72,11 +72,11 @@ typedef NTSTATUS (WINAPI NtMapViewOfSectionFunc)
   IN OUT PSIZE_T vs, IN SECTION_INHERIT ih,
   IN ULONG at, IN ULONG pp);
 
-static NtMapViewOfSectionFunc *NtMapViewOfSection;
+NtMapViewOfSectionFunc *NtMapViewOfSection;
 
 typedef NTSTATUS (WINAPI NtCloseFunc)(HANDLE h);
 
-static NtCloseFunc *NtClose;
+NtCloseFunc *NtClose;
 
 /** getpid() returns int; MinGW defines pid_t but MinGW64 typedefs it
  *  as int64 which is wrong. MSVC doesn't define it at all, so just
@@ -398,7 +398,7 @@ typedef sem_t *mdb_mutex_t, *mdb_mutexref_t;
 #define LOCK_MUTEX0(mutex)		mdb_sem_wait(mutex)
 #define UNLOCK_MUTEX(mutex)		sem_post(mutex)
 
-static int
+int
 mdb_sem_wait(sem_t *sem)
 {
    int rc;
@@ -422,7 +422,7 @@ typedef struct mdb_mutex {
 	semop((mutex)->semid, &sb, 1); \
 } while(0)
 
-static int
+int
 mdb_sem_wait(mdb_mutexref_t sem)
 {
 	int rc, *locked = sem->locked;
@@ -513,7 +513,7 @@ typedef pthread_mutex_t *mdb_mutexref_t;
 #define LOCK_MUTEX(rc, env, mutex) \
 	(((rc) = LOCK_MUTEX0(mutex)) && \
 	 ((rc) = mdb_mutex_failed(env, mutex, rc)))
-static int mdb_mutex_failed(MDB_env *env, mdb_mutexref_t mutex, int rc);
+int mdb_mutex_failed(MDB_env *env, mdb_mutexref_t mutex, int rc);
 #else
 #define LOCK_MUTEX(rc, env, mutex) ((rc) = LOCK_MUTEX0(mutex))
 #define mdb_mutex_failed(env, mutex, rc) (rc)
@@ -586,8 +586,8 @@ typedef MDB_ID	txnid_t;
 #define MDB_DBG_TRACE	2
 
 #if MDB_DEBUG
-static int mdb_debug = MDB_DBG_TRACE;
-static txnid_t mdb_debug_start;
+int mdb_debug = MDB_DBG_TRACE;
+txnid_t mdb_debug_start;
 
 	/**	Print a debug message with printf formatting.
 	 *	Requires double parenthesis around 2 or more args.
@@ -1614,9 +1614,9 @@ typedef struct MDB_ntxn {
 #define TXN_DBI_CHANGED(txn, dbi) \
 	((txn)->mt_dbiseqs[dbi] != (txn)->mt_env->me_dbiseqs[dbi])
 
-static int  mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp);
-static int  mdb_page_new(MDB_cursor *mc, uint32_t flags, int num, MDB_page **mp);
-static int  mdb_page_touch(MDB_cursor *mc);
+int  mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp);
+int  mdb_page_new(MDB_cursor *mc, uint32_t flags, int num, MDB_page **mp);
+int  mdb_page_touch(MDB_cursor *mc);
 
 #define MDB_END_NAMES {"committed", "empty-commit", "abort", "reset", \
 	"reset-tmp", "fail-begin", "fail-beginchild"}
@@ -1629,71 +1629,71 @@ enum {
 #define MDB_END_UPDATE	0x10	/**< update env state (DBIs) */
 #define MDB_END_FREE	0x20	/**< free txn unless it is #MDB_env.%me_txn0 */
 #define MDB_END_SLOT MDB_NOTLS	/**< release any reader slot if #MDB_NOTLS */
-static void mdb_txn_end(MDB_txn *txn, unsigned mode);
+void mdb_txn_end(MDB_txn *txn, unsigned mode);
 
-static int  mdb_page_get(MDB_cursor *mc, pgno_t pgno, MDB_page **mp, int *lvl);
-static int  mdb_page_search_root(MDB_cursor *mc,
+int  mdb_page_get(MDB_cursor *mc, pgno_t pgno, MDB_page **mp, int *lvl);
+int  mdb_page_search_root(MDB_cursor *mc,
 			    MDB_val *key, int modify);
 #define MDB_PS_MODIFY	1
 #define MDB_PS_ROOTONLY	2
 #define MDB_PS_FIRST	4
 #define MDB_PS_LAST		8
-static int  mdb_page_search(MDB_cursor *mc,
+int  mdb_page_search(MDB_cursor *mc,
 			    MDB_val *key, int flags);
-static int	mdb_page_merge(MDB_cursor *csrc, MDB_cursor *cdst);
+int	mdb_page_merge(MDB_cursor *csrc, MDB_cursor *cdst);
 
 #define MDB_SPLIT_REPLACE	MDB_APPENDDUP	/**< newkey is not new */
-static int	mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata,
+int	mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata,
 				pgno_t newpgno, unsigned int nflags);
 
-static int  mdb_env_read_header(MDB_env *env, int prev, MDB_meta *meta);
-static MDB_meta *mdb_env_pick_meta(const MDB_env *env);
-static int  mdb_env_write_meta(MDB_txn *txn);
+int  mdb_env_read_header(MDB_env *env, int prev, MDB_meta *meta);
+MDB_meta *mdb_env_pick_meta(const MDB_env *env);
+int  mdb_env_write_meta(MDB_txn *txn);
 #if defined(MDB_USE_POSIX_MUTEX) && !defined(MDB_ROBUST_SUPPORTED) /* Drop unused excl arg */
 # define mdb_env_close0(env, excl) mdb_env_close1(env)
 #endif
-static void mdb_env_close0(MDB_env *env, int excl);
+void mdb_env_close0(MDB_env *env, int excl);
 
-static MDB_node *mdb_node_search(MDB_cursor *mc, MDB_val *key, int *exactp);
-static int  mdb_node_add(MDB_cursor *mc, indx_t indx,
+MDB_node *mdb_node_search(MDB_cursor *mc, MDB_val *key, int *exactp);
+int  mdb_node_add(MDB_cursor *mc, indx_t indx,
 			    MDB_val *key, MDB_val *data, pgno_t pgno, unsigned int flags);
-static void mdb_node_del(MDB_cursor *mc, int ksize);
-static void mdb_node_shrink(MDB_page *mp, indx_t indx);
-static int	mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft);
-static int  mdb_node_read(MDB_cursor *mc, MDB_node *leaf, MDB_val *data);
-static size_t	mdb_leaf_size(MDB_env *env, MDB_val *key, MDB_val *data);
-static size_t	mdb_branch_size(MDB_env *env, MDB_val *key);
+void mdb_node_del(MDB_cursor *mc, int ksize);
+void mdb_node_shrink(MDB_page *mp, indx_t indx);
+int	mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft);
+int  mdb_node_read(MDB_cursor *mc, MDB_node *leaf, MDB_val *data);
+size_t	mdb_leaf_size(MDB_env *env, MDB_val *key, MDB_val *data);
+size_t	mdb_branch_size(MDB_env *env, MDB_val *key);
 
-static int	mdb_rebalance(MDB_cursor *mc);
-static int	mdb_update_key(MDB_cursor *mc, MDB_val *key);
+int	mdb_rebalance(MDB_cursor *mc);
+int	mdb_update_key(MDB_cursor *mc, MDB_val *key);
 
-static void	mdb_cursor_pop(MDB_cursor *mc);
-static int	mdb_cursor_push(MDB_cursor *mc, MDB_page *mp);
+void	mdb_cursor_pop(MDB_cursor *mc);
+int	mdb_cursor_push(MDB_cursor *mc, MDB_page *mp);
 
-static int	_mdb_cursor_del(MDB_cursor *mc, unsigned int flags);
-static int	_mdb_cursor_put(MDB_cursor *mc, MDB_val *key, MDB_val *data, unsigned int flags);
+int	_mdb_cursor_del(MDB_cursor *mc, unsigned int flags);
+int	_mdb_cursor_put(MDB_cursor *mc, MDB_val *key, MDB_val *data, unsigned int flags);
 
-static int	mdb_cursor_del0(MDB_cursor *mc);
-static int	mdb_del0(MDB_txn *txn, MDB_dbi dbi, MDB_val *key, MDB_val *data, unsigned flags);
-static int	mdb_cursor_sibling(MDB_cursor *mc, int move_right);
-static int	mdb_cursor_next(MDB_cursor *mc, MDB_val *key, MDB_val *data, MDB_cursor_op op);
-static int	mdb_cursor_prev(MDB_cursor *mc, MDB_val *key, MDB_val *data, MDB_cursor_op op);
-static int	mdb_cursor_set(MDB_cursor *mc, MDB_val *key, MDB_val *data, MDB_cursor_op op,
+int	mdb_cursor_del0(MDB_cursor *mc);
+int	mdb_del0(MDB_txn *txn, MDB_dbi dbi, MDB_val *key, MDB_val *data, unsigned flags);
+int	mdb_cursor_sibling(MDB_cursor *mc, int move_right);
+int	mdb_cursor_next(MDB_cursor *mc, MDB_val *key, MDB_val *data, MDB_cursor_op op);
+int	mdb_cursor_prev(MDB_cursor *mc, MDB_val *key, MDB_val *data, MDB_cursor_op op);
+int	mdb_cursor_set(MDB_cursor *mc, MDB_val *key, MDB_val *data, MDB_cursor_op op,
 				int *exactp);
-static int	mdb_cursor_first(MDB_cursor *mc, MDB_val *key, MDB_val *data);
-static int	mdb_cursor_last(MDB_cursor *mc, MDB_val *key, MDB_val *data);
+int	mdb_cursor_first(MDB_cursor *mc, MDB_val *key, MDB_val *data);
+int	mdb_cursor_last(MDB_cursor *mc, MDB_val *key, MDB_val *data);
 
-static void	mdb_cursor_init(MDB_cursor *mc, MDB_txn *txn, MDB_dbi dbi, MDB_xcursor *mx);
-static void	mdb_xcursor_init0(MDB_cursor *mc);
-static void	mdb_xcursor_init1(MDB_cursor *mc, MDB_node *node);
-static void	mdb_xcursor_init2(MDB_cursor *mc, MDB_xcursor *src_mx, int force);
+void	mdb_cursor_init(MDB_cursor *mc, MDB_txn *txn, MDB_dbi dbi, MDB_xcursor *mx);
+void	mdb_xcursor_init0(MDB_cursor *mc);
+void	mdb_xcursor_init1(MDB_cursor *mc, MDB_node *node);
+void	mdb_xcursor_init2(MDB_cursor *mc, MDB_xcursor *src_mx, int force);
 
-static int	mdb_drop0(MDB_cursor *mc, int subs);
-static void mdb_default_cmp(MDB_txn *txn, MDB_dbi dbi);
-static int mdb_reader_check0(MDB_env *env, int rlocked, int *dead);
+int	mdb_drop0(MDB_cursor *mc, int subs);
+void mdb_default_cmp(MDB_txn *txn, MDB_dbi dbi);
+int mdb_reader_check0(MDB_env *env, int rlocked, int *dead);
 
 /** @cond */
-static MDB_cmp_func	mdb_cmp_memn, mdb_cmp_memnr, mdb_cmp_int, mdb_cmp_cint, mdb_cmp_long;
+MDB_cmp_func	mdb_cmp_memn, mdb_cmp_memnr, mdb_cmp_int, mdb_cmp_cint, mdb_cmp_long;
 /** @endcond */
 
 /** Compare two items pointing at '#mdb_size_t's of unknown alignment. */
@@ -1709,12 +1709,12 @@ static MDB_cmp_func	mdb_cmp_memn, mdb_cmp_memnr, mdb_cmp_int, mdb_cmp_cint, mdb_
 	 (cmp) == mdb_cmp_int && (ksize) == sizeof(mdb_size_t))
 
 #ifdef _WIN32
-static SECURITY_DESCRIPTOR mdb_null_sd;
-static SECURITY_ATTRIBUTES mdb_all_sa;
-static int mdb_sec_inited;
+SECURITY_DESCRIPTOR mdb_null_sd;
+SECURITY_ATTRIBUTES mdb_all_sa;
+int mdb_sec_inited;
 
 struct MDB_name;
-static int utf8_to_utf16(const char *src, struct MDB_name *dst, int xtra);
+int utf8_to_utf16(const char *src, struct MDB_name *dst, int xtra);
 #endif
 
 /** Return the library version info. */
@@ -1728,7 +1728,7 @@ mdb_version(int *major, int *minor, int *patch)
 }
 
 /** Table of descriptions for LMDB @ref errors */
-static char *const mdb_errstr[] = {
+char *const mdb_errstr[] = {
 	"MDB_KEYEXIST: Key/data pair already exists",
 	"MDB_NOTFOUND: No matching key/data pair found",
 	"MDB_PAGE_NOTFOUND: Requested page not found",
@@ -1814,7 +1814,7 @@ mdb_strerror(int err)
 # define mdb_assert0(env, expr, expr_txt) ((expr) ? (void)0 : \
 		mdb_assert_fail(env, expr_txt, mdb_func_, __FILE__, __LINE__))
 
-static void ESECT
+void ESECT
 mdb_assert_fail(MDB_env *env, const char *expr_txt,
 	const char *func, const char *file, int line)
 {
@@ -1832,7 +1832,7 @@ mdb_assert_fail(MDB_env *env, const char *expr_txt,
 
 #if MDB_DEBUG
 /** Return the page number of \b mp which may be sub-page, for debug output */
-static pgno_t
+pgno_t
 mdb_dbg_pgno(MDB_page *mp)
 {
 	pgno_t ret;
@@ -1860,17 +1860,13 @@ mdb_dkey(MDB_val *key, char *buf)
 	/* may want to make this a dynamic check: if the key is mostly
 	 * printable characters, print it as-is instead of converting to hex.
 	 */
-#if 1
 	buf[0] = '\0';
 	for (i=0; i<key->mv_size; i++)
 		ptr += sprintf(ptr, "%02x", *c++);
-#else
-	sprintf(buf, "%.*s", key->mv_size, key->mv_data);
-#endif
 	return buf;
 }
 
-static char *
+char *
 mdb_dval(MDB_txn *txn, MDB_dbi dbi, MDB_val *data, char *buf)
 {
 	if (txn->mt_dbs[dbi].md_flags & MDB_DUPSORT) {
@@ -1882,7 +1878,7 @@ mdb_dval(MDB_txn *txn, MDB_dbi dbi, MDB_val *data, char *buf)
 	return buf;
 }
 
-static const char *
+const char *
 mdb_leafnode_type(MDB_node *n)
 {
 	static char *const tp[2][2] = {{"", ": DB"}, {": sub-page", ": sub-DB"}};
@@ -1987,7 +1983,7 @@ mdb_cursor_chk(MDB_cursor *mc)
  *  being used.
  *  All named DBs must be open for a correct count.
  */
-static void mdb_audit(MDB_txn *txn)
+void mdb_audit(MDB_txn *txn)
 {
 	MDB_cursor mc;
 	MDB_val key, data;
@@ -2058,7 +2054,7 @@ mdb_dcmp(MDB_txn *txn, MDB_dbi dbi, const MDB_val *a, const MDB_val *b)
  * Re-use old malloc'd pages first for singletons, otherwise just malloc.
  * Set #MDB_TXN_ERROR on failure.
  */
-static MDB_page *
+MDB_page *
 mdb_page_malloc(MDB_txn *txn, unsigned num)
 {
 	MDB_env *env = txn->mt_env;
@@ -2096,7 +2092,7 @@ mdb_page_malloc(MDB_txn *txn, unsigned num)
  * Saves single pages to a list, for future reuse.
  * (This is not used for multi-page overflow pages.)
  */
-static void
+void
 mdb_page_free(MDB_env *env, MDB_page *mp)
 {
 	mp->mp_next = env->me_dpages;
@@ -2105,7 +2101,7 @@ mdb_page_free(MDB_env *env, MDB_page *mp)
 }
 
 /** Free a dirty page */
-static void
+void
 mdb_dpage_free(MDB_env *env, MDB_page *dp)
 {
 	if (!IS_OVERFLOW(dp) || dp->mp_pages == 1) {
@@ -2118,7 +2114,7 @@ mdb_dpage_free(MDB_env *env, MDB_page *dp)
 }
 
 /**	Return all dirty pages to dpage list */
-static void
+void
 mdb_dlist_free(MDB_txn *txn)
 {
 	MDB_env *env = txn->mt_env;
@@ -2132,7 +2128,7 @@ mdb_dlist_free(MDB_txn *txn)
 }
 
 #ifdef MDB_VL32
-static void
+void
 mdb_page_unref(MDB_txn *txn, MDB_page *mp)
 {
 	pgno_t pgno;
@@ -2150,7 +2146,7 @@ mdb_page_unref(MDB_txn *txn, MDB_page *mp)
 }
 #define MDB_PAGE_UNREF(txn, mp)	mdb_page_unref(txn, mp)
 
-static void
+void
 mdb_cursor_unref(MDB_cursor *mc)
 {
 	int i;
@@ -2188,7 +2184,7 @@ mdb_cursor_unref(MDB_cursor *mc)
  * If the page wasn't dirtied in this txn, just add it
  * to this txn's free list.
  */
-static int
+int
 mdb_page_loose(MDB_cursor *mc, MDB_page *mp)
 {
 	int loose = 0;
@@ -2240,7 +2236,7 @@ mdb_page_loose(MDB_cursor *mc, MDB_page *mp)
  * @param[in] all No shortcuts. Needed except after a full #mdb_page_flush().
  * @return 0 on success, non-zero on failure.
  */
-static int
+int
 mdb_pages_xkeep(MDB_cursor *mc, unsigned pflags, int all)
 {
 	enum { Mask = P_SUBP|P_DIRTY|P_LOOSE|P_KEEP };
@@ -2298,7 +2294,7 @@ mark_done:
 	return rc;
 }
 
-static int mdb_page_flush(MDB_txn *txn, int keep);
+int mdb_page_flush(MDB_txn *txn, int keep);
 
 /**	Spill pages from the dirty list back to disk.
  * This is intended to prevent running into #MDB_TXN_FULL situations,
@@ -2332,7 +2328,7 @@ static int mdb_page_flush(MDB_txn *txn, int keep);
  * @param[in] data For a put operation, the data being stored.
  * @return 0 on success, non-zero on failure.
  */
-static int
+int
 mdb_page_spill(MDB_cursor *m0, MDB_val *key, MDB_val *data)
 {
 	MDB_txn *txn = m0->mc_txn;
@@ -2431,7 +2427,7 @@ done:
 }
 
 /** Find oldest txnid still referenced. Expects txn->mt_txnid > 0. */
-static txnid_t
+txnid_t
 mdb_find_oldest(MDB_txn *txn)
 {
 	int i;
@@ -2450,7 +2446,7 @@ mdb_find_oldest(MDB_txn *txn)
 }
 
 /** Add a page to the txn's dirty list */
-static void
+void
 mdb_page_dirty(MDB_txn *txn, MDB_page *mp)
 {
 	MDB_ID2 mid;
@@ -2489,7 +2485,7 @@ mdb_page_dirty(MDB_txn *txn, MDB_page *mp)
  *  will always be satisfied by a single contiguous chunk of memory.
  * @return 0 on success, non-zero on failure.
  */
-static int
+int
 mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp)
 {
 #ifdef MDB_PARANOID	/* Seems like we can ignore this now */
@@ -2687,7 +2683,7 @@ fail:
  * @param[in] src page to copy from
  * @param[in] psize size of a page
  */
-static void
+void
 mdb_page_copy(MDB_page *dst, MDB_page *src, unsigned int psize)
 {
 	enum { Align = sizeof(pgno_t) };
@@ -2714,7 +2710,7 @@ mdb_page_copy(MDB_page *dst, MDB_page *src, unsigned int psize)
  * @param[out] ret the writable page, if any. ret is unchanged if
  * mp wasn't spilled.
  */
-static int
+int
 mdb_page_unspill(MDB_txn *txn, MDB_page *mp, MDB_page **ret)
 {
 	MDB_env *env = txn->mt_env;
@@ -2773,7 +2769,7 @@ mdb_page_unspill(MDB_txn *txn, MDB_page *mp, MDB_page **ret)
  * @param[in] mc cursor pointing to the page to be touched
  * @return 0 on success, non-zero on failure.
  */
-static int
+int
 mdb_page_touch(MDB_cursor *mc)
 {
 	MDB_page *mp = mc->mc_pg[mc->mc_top], *np;
@@ -2913,7 +2909,7 @@ mdb_env_sync(MDB_env *env, int force)
 }
 
 /** Back up parent txn's cursors, then grab the originals for tracking */
-static int
+int
 mdb_cursor_shadow(MDB_txn *src, MDB_txn *dst)
 {
 	MDB_cursor *mc, *bk;
@@ -2956,7 +2952,7 @@ mdb_cursor_shadow(MDB_txn *src, MDB_txn *dst)
  * @param[in] merge true to keep changes to parent cursors, false to revert.
  * @return 0 on success, non-zero on failure.
  */
-static void
+void
 mdb_cursors_close(MDB_txn *txn, unsigned merge)
 {
 	MDB_cursor **cursors = txn->mt_cursors, *mc, *next, *bk;
@@ -3009,7 +3005,7 @@ enum Pidlock_op {
  * of the process with the given pid. On POSIX we use a single byte
  * lock on the lockfile, set at an offset equal to the pid.
  */
-static int
+int
 mdb_reader_pid(MDB_env *env, enum Pidlock_op op, MDB_PID_T pid)
 {
 #if !(MDB_PIDLOCK)		/* Currently the same as defined(_WIN32) */
@@ -3049,7 +3045,7 @@ mdb_reader_pid(MDB_env *env, enum Pidlock_op op, MDB_PID_T pid)
  * @param[in] txn the transaction handle to initialize
  * @return 0 on success, non-zero on failure.
  */
-static int
+int
 mdb_txn_renew0(MDB_txn *txn)
 {
 	MDB_env *env = txn->mt_env;
@@ -3341,7 +3337,7 @@ mdb_txn_id(MDB_txn *txn)
 }
 
 /** Export or close DBI handles opened in this txn. */
-static void
+void
 mdb_dbis_update(MDB_txn *txn, int keep)
 {
 	int i;
@@ -3374,7 +3370,7 @@ mdb_dbis_update(MDB_txn *txn, int keep)
  * @param[in] txn the transaction handle to end
  * @param[in] mode why and how to end the transaction
  */
-static void
+void
 mdb_txn_end(MDB_txn *txn, unsigned mode)
 {
 	MDB_env	*env = txn->mt_env;
@@ -3481,7 +3477,7 @@ mdb_txn_reset(MDB_txn *txn)
 	mdb_txn_end(txn, MDB_END_RESET);
 }
 
-static void
+void
 _mdb_txn_abort(MDB_txn *txn)
 {
 	if (txn == NULL)
@@ -3506,7 +3502,7 @@ mdb_txn_abort(MDB_txn *txn)
  * When (MDB_DEVEL) & 2, the changes do not affect #mdb_page_alloc(),
  * it then uses the transaction's original snapshot of the freeDB.
  */
-static int
+int
 mdb_freelist_save(MDB_txn *txn)
 {
 	/* env->me_pghead[] can grow and shrink during this call.
@@ -3731,7 +3727,7 @@ mdb_freelist_save(MDB_txn *txn)
  * @param[in] keep number of initial pages in dirty_list to keep dirty.
  * @return 0 on success, non-zero on failure.
  */
-static int
+int
 mdb_page_flush(MDB_txn *txn, int keep)
 {
 	MDB_env		*env = txn->mt_env;
@@ -3962,9 +3958,9 @@ done:
 	return MDB_SUCCESS;
 }
 
-static int ESECT mdb_env_share_locks(MDB_env *env, int *excl);
+int ESECT mdb_env_share_locks(MDB_env *env, int *excl);
 
-static int
+int
 _mdb_txn_commit(MDB_txn *txn)
 {
 	int		rc;
@@ -4219,7 +4215,7 @@ mdb_txn_commit(MDB_txn *txn)
  * @param[out] meta address of where to store the meta information
  * @return 0 on success, non-zero on failure.
  */
-static int ESECT
+int ESECT
 mdb_env_read_header(MDB_env *env, int prev, MDB_meta *meta)
 {
 	MDB_metabuf	pbuf;
@@ -4278,7 +4274,7 @@ mdb_env_read_header(MDB_env *env, int prev, MDB_meta *meta)
 }
 
 /** Fill in most of the zeroed #MDB_meta for an empty database environment */
-static void ESECT
+void ESECT
 mdb_env_init_meta0(MDB_env *env, MDB_meta *meta)
 {
 	meta->mm_magic = MDB_MAGIC;
@@ -4297,7 +4293,7 @@ mdb_env_init_meta0(MDB_env *env, MDB_meta *meta)
  * @param[in] meta the #MDB_meta to write
  * @return 0 on success, non-zero on failure.
  */
-static int ESECT
+int ESECT
 mdb_env_init_meta(MDB_env *env, MDB_meta *meta)
 {
 	MDB_page *p, *q;
@@ -4348,7 +4344,7 @@ mdb_env_init_meta(MDB_env *env, MDB_meta *meta)
  * @param[in] txn the transaction that's being committed
  * @return 0 on success, non-zero on failure.
  */
-static int
+int
 mdb_env_write_meta(MDB_txn *txn)
 {
 	MDB_env *env;
@@ -4479,7 +4475,7 @@ done:
  * @param[in] env the environment handle
  * @return newest #MDB_meta.
  */
-static MDB_meta *
+MDB_meta *
 mdb_env_pick_meta(const MDB_env *env)
 {
 	MDB_meta *const *metas = env->me_metas;
@@ -4518,7 +4514,7 @@ mdb_env_create(MDB_env **env)
 
 #ifdef _WIN32
 /** @brief Map a result from an NTAPI call to WIN32. */
-static DWORD
+DWORD
 mdb_nt2win32(NTSTATUS st)
 {
 	OVERLAPPED o = {0};
@@ -4529,7 +4525,7 @@ mdb_nt2win32(NTSTATUS st)
 }
 #endif
 
-static int ESECT
+int ESECT
 mdb_env_map(MDB_env *env, void *addr)
 {
 	MDB_page *p;
@@ -4711,7 +4707,7 @@ mdb_env_get_maxreaders(MDB_env *env, unsigned int *readers)
 	return MDB_SUCCESS;
 }
 
-static int ESECT
+int ESECT
 mdb_fsize(HANDLE fd, mdb_size_t *size)
 {
 #ifdef _WIN32
@@ -4752,7 +4748,7 @@ typedef struct MDB_name {
 } MDB_name;
 
 /** Filename suffixes [datafile,lockfile][without,with MDB_NOSUBDIR] */
-static const mdb_nchar_t *const mdb_suffixes[2][2] = {
+const mdb_nchar_t *const mdb_suffixes[2][2] = {
 	{ MDB_NAME("/data.mdb"), MDB_NAME("")      },
 	{ MDB_NAME("/lock.mdb"), MDB_NAME("-lock") }
 };
@@ -4767,7 +4763,7 @@ static const mdb_nchar_t *const mdb_suffixes[2][2] = {
  * @param[in] envflags Whether a subdir and/or lockfile will be used.
  * @param[out] fname Resulting filename, with room for a suffix if necessary.
  */
-static int ESECT
+int ESECT
 mdb_fname_init(const char *path, unsigned envflags, MDB_name *fname)
 {
 	int no_suffix = F_ISSET(envflags, MDB_NOSUBDIR|MDB_NOLOCK);
@@ -4825,7 +4821,7 @@ enum mdb_fopen_type {
  * @param[out] res	Resulting file handle.
  * @return 0 on success, non-zero on failure.
  */
-static int ESECT
+int ESECT
 mdb_fopen(const MDB_env *env, MDB_name *fname,
 	enum mdb_fopen_type which, mdb_mode_t mode,
 	HANDLE *res)
@@ -4927,7 +4923,7 @@ mdb_fopen(const MDB_env *env, MDB_name *fname,
 
 /** Further setup required for opening an LMDB environment
  */
-static int ESECT
+int ESECT
 mdb_env_open2(MDB_env *env, int prev)
 {
 	unsigned int flags = env->me_flags;
@@ -5111,7 +5107,7 @@ mdb_env_open2(MDB_env *env, int prev)
  *	This function is called automatically when a thread exits.
  * @param[in] ptr This points to the slot in the reader lock table.
  */
-static void
+void
 mdb_env_reader_dest(void *ptr)
 {
 	MDB_reader *reader = ptr;
@@ -5132,10 +5128,10 @@ mdb_env_reader_dest(void *ptr)
 #ifndef MAX_TLS_KEYS
 #define MAX_TLS_KEYS	64
 #endif
-static pthread_key_t mdb_tls_keys[MAX_TLS_KEYS];
-static int mdb_tls_nkeys;
+pthread_key_t mdb_tls_keys[MAX_TLS_KEYS];
+int mdb_tls_nkeys;
 
-static void NTAPI mdb_tls_callback(PVOID module, DWORD reason, PVOID ptr)
+void NTAPI mdb_tls_callback(PVOID module, DWORD reason, PVOID ptr)
 {
 	int i;
 	switch(reason) {
@@ -5181,7 +5177,7 @@ PIMAGE_TLS_CALLBACK mdb_tls_cbp = mdb_tls_callback;
 #endif
 
 /** Downgrade the exclusive lock on the region back to shared */
-static int ESECT
+int ESECT
 mdb_env_share_locks(MDB_env *env, int *excl)
 {
 	int rc = 0;
@@ -5224,7 +5220,7 @@ mdb_env_share_locks(MDB_env *env, int *excl)
 /** Try to get exclusive lock, otherwise shared.
  *	Maintain *excl = -1: no/unknown lock, 0: shared, 1: exclusive.
  */
-static int ESECT
+int ESECT
 mdb_env_excl_lock(MDB_env *env, int *excl)
 {
 	int rc = 0;
@@ -5300,7 +5296,7 @@ mdb_env_excl_lock(MDB_env *env, int *excl)
  * @param[in] len	length of value
  * @return 64 bit hash
  */
-static mdb_hash_t
+mdb_hash_t
 mdb_hash(const void *val, size_t len)
 {
 	const unsigned char *s = (const unsigned char *) val, *end = s + len;
@@ -5323,9 +5319,9 @@ mdb_hash(const void *val, size_t len)
  * @param[in] str string to hash
  * @param[out] encbuf an array of 11 chars to hold the hash
  */
-static const char mdb_a85[]= "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~";
+const char mdb_a85[]= "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~";
 
-static void ESECT
+void ESECT
 mdb_pack85(unsigned long long l, char *out)
 {
 	int i;
@@ -5340,7 +5336,7 @@ mdb_pack85(unsigned long long l, char *out)
 /** Init #MDB_env.me_mutexname[] except the char which #MUTEXNAME() will set.
  *	Changes to this code must be reflected in #MDB_LOCK_FORMAT.
  */
-static void ESECT
+void ESECT
 mdb_env_mname_init(MDB_env *env)
 {
 	char *nm = env->me_mutexname;
@@ -5362,7 +5358,7 @@ mdb_env_mname_init(MDB_env *env)
  * @param[in,out] excl In -1, out lock type: -1 none, 0 shared, 1 exclusive
  * @return 0 on success, non-zero on failure.
  */
-static int ESECT
+int ESECT
 mdb_env_setup_locks(MDB_env *env, MDB_name *fname, int mode, int *excl)
 {
 #ifdef _WIN32
@@ -5774,7 +5770,7 @@ leave:
 }
 
 /** Destroy resources from mdb_env_open(), clear our readers & DBIs */
-static void ESECT
+void ESECT
 mdb_env_close0(MDB_env *env, int excl)
 {
 	int i;
@@ -5934,7 +5930,7 @@ mdb_env_close(MDB_env *env)
 }
 
 /** Compare two items pointing at aligned #mdb_size_t's */
-static int
+int
 mdb_cmp_long(const MDB_val *a, const MDB_val *b)
 {
 	return (*(mdb_size_t *)a->mv_data < *(mdb_size_t *)b->mv_data) ? -1 :
@@ -5946,7 +5942,7 @@ mdb_cmp_long(const MDB_val *a, const MDB_val *b)
  *	This is also set as #MDB_INTEGERDUP|#MDB_DUPFIXED's #MDB_dbx.%md_dcmp,
  *	but #mdb_cmp_clong() is called instead if the data type is #mdb_size_t.
  */
-static int
+int
 mdb_cmp_int(const MDB_val *a, const MDB_val *b)
 {
 	return (*(unsigned int *)a->mv_data < *(unsigned int *)b->mv_data) ? -1 :
@@ -5956,7 +5952,7 @@ mdb_cmp_int(const MDB_val *a, const MDB_val *b)
 /** Compare two items pointing at unsigned ints of unknown alignment.
  *	Nodes and keys are guaranteed to be 2-byte aligned.
  */
-static int
+int
 mdb_cmp_cint(const MDB_val *a, const MDB_val *b)
 {
 #if BYTE_ORDER == LITTLE_ENDIAN
@@ -5984,7 +5980,7 @@ mdb_cmp_cint(const MDB_val *a, const MDB_val *b)
 }
 
 /** Compare two items lexically */
-static int
+int
 mdb_cmp_memn(const MDB_val *a, const MDB_val *b)
 {
 	int diff;
@@ -6003,7 +5999,7 @@ mdb_cmp_memn(const MDB_val *a, const MDB_val *b)
 }
 
 /** Compare two items in reverse byte order */
-static int
+int
 mdb_cmp_memnr(const MDB_val *a, const MDB_val *b)
 {
 	const unsigned char	*p1, *p2, *p1_lim;
@@ -6035,7 +6031,7 @@ mdb_cmp_memnr(const MDB_val *a, const MDB_val *b)
  * Updates the cursor index with the index of the found entry.
  * If no entry larger or equal to the key is found, returns NULL.
  */
-static MDB_node *
+MDB_node *
 mdb_node_search(MDB_cursor *mc, MDB_val *key, int *exactp)
 {
 	unsigned int	 i = 0, nkeys;
@@ -6126,22 +6122,8 @@ mdb_node_search(MDB_cursor *mc, MDB_val *key, int *exactp)
 	return node;
 }
 
-#if 0
-static void
-mdb_cursor_adjust(MDB_cursor *mc, func)
-{
-	MDB_cursor *m2;
-
-	for (m2 = mc->mc_txn->mt_cursors[mc->mc_dbi]; m2; m2=m2->mc_next) {
-		if (m2->mc_pg[m2->mc_top] == mc->mc_pg[mc->mc_top]) {
-			func(mc, m2);
-		}
-	}
-}
-#endif
-
 /** Pop a page off the top of the cursor's stack. */
-static void
+void
 mdb_cursor_pop(MDB_cursor *mc)
 {
 	if (mc->mc_snum) {
@@ -6160,7 +6142,7 @@ mdb_cursor_pop(MDB_cursor *mc)
 /** Push a page onto the top of the cursor's stack.
  * Set #MDB_TXN_ERROR on failure.
  */
-static int
+int
 mdb_cursor_push(MDB_cursor *mc, MDB_page *mp)
 {
 	DPRINTF(("pushing page %"Yu" on db %d cursor %p", mp->mp_pgno,
@@ -6228,7 +6210,7 @@ mdb_cursor_push(MDB_cursor *mc, MDB_page *mp)
  * @param[out] ret address of a pointer where the page's address will be stored.
  * @return 0 on success, non-zero on failure.
  */
-static int
+int
 mdb_rpage_get(MDB_txn *txn, pgno_t pg0, MDB_page **ret)
 {
 	MDB_env *env = txn->mt_env;
@@ -6474,7 +6456,7 @@ ok:
  * @param[out] lvl dirty_list inheritance level of found page. 1=current txn, 0=mapped page.
  * @return 0 on success, non-zero on failure.
  */
-static int
+int
 mdb_page_get(MDB_cursor *mc, pgno_t pgno, MDB_page **ret, int *lvl)
 {
 	MDB_txn *txn = mc->mc_txn;
@@ -6542,7 +6524,7 @@ done:
 /** Finish #mdb_page_search() / #mdb_page_search_lowest().
  *	The cursor is at the root page, set up the rest of it.
  */
-static int
+int
 mdb_page_search_root(MDB_cursor *mc, MDB_val *key, int flags)
 {
 	MDB_page	*mp = mc->mc_pg[mc->mc_top];
@@ -6628,7 +6610,7 @@ ready:
  * are all in situations where the current page is known to
  * be underfilled.
  */
-static int
+int
 mdb_page_search_lowest(MDB_cursor *mc)
 {
 	MDB_page	*mp = mc->mc_pg[mc->mc_top];
@@ -6655,7 +6637,7 @@ mdb_page_search_lowest(MDB_cursor *mc)
  *   If MDB_PS_ROOTONLY set, just fetch root node, no further lookups.
  * @return 0 on success, non-zero on failure.
  */
-static int
+int
 mdb_page_search(MDB_cursor *mc, MDB_val *key, int flags)
 {
 	int		 rc;
@@ -6743,7 +6725,7 @@ mdb_page_search(MDB_cursor *mc, MDB_val *key, int flags)
 	return mdb_page_search_root(mc, key, flags);
 }
 
-static int
+int
 mdb_ovpage_free(MDB_cursor *mc, MDB_page *mp)
 {
 	MDB_txn *txn = mc->mc_txn;
@@ -6829,7 +6811,7 @@ release:
  * @param[out] data Updated to point to the node's data.
  * @return 0 on success, non-zero on failure.
  */
-static int
+int
 mdb_node_read(MDB_cursor *mc, MDB_node *leaf, MDB_val *data)
 {
 	MDB_page	*omp;		/* overflow page */
@@ -6894,7 +6876,7 @@ mdb_get(MDB_txn *txn, MDB_dbi dbi,
  * otherwise the left sibling.
  * @return 0 on success, non-zero on failure.
  */
-static int
+int
 mdb_cursor_sibling(MDB_cursor *mc, int move_right)
 {
 	int		 rc;
@@ -6952,7 +6934,7 @@ mdb_cursor_sibling(MDB_cursor *mc, int move_right)
 }
 
 /** Move the cursor to the next data item. */
-static int
+int
 mdb_cursor_next(MDB_cursor *mc, MDB_val *key, MDB_val *data, MDB_cursor_op op)
 {
 	MDB_page	*mp;
@@ -7040,7 +7022,7 @@ skip:
 }
 
 /** Move the cursor to the previous data item. */
-static int
+int
 mdb_cursor_prev(MDB_cursor *mc, MDB_val *key, MDB_val *data, MDB_cursor_op op)
 {
 	MDB_page	*mp;
@@ -7125,7 +7107,7 @@ mdb_cursor_prev(MDB_cursor *mc, MDB_val *key, MDB_val *data, MDB_cursor_op op)
 }
 
 /** Set the cursor on a specific data item. */
-static int
+int
 mdb_cursor_set(MDB_cursor *mc, MDB_val *key, MDB_val *data,
     MDB_cursor_op op, int *exactp)
 {
@@ -7323,7 +7305,7 @@ set1:
 }
 
 /** Move the cursor to the first item in the database. */
-static int
+int
 mdb_cursor_first(MDB_cursor *mc, MDB_val *key, MDB_val *data)
 {
 	int		 rc;
@@ -7370,7 +7352,7 @@ mdb_cursor_first(MDB_cursor *mc, MDB_val *key, MDB_val *data)
 }
 
 /** Move the cursor to the last item in the database. */
-static int
+int
 mdb_cursor_last(MDB_cursor *mc, MDB_val *key, MDB_val *data)
 {
 	int		 rc;
@@ -7606,7 +7588,7 @@ fetchm:
  *	Makes sure all the pages are writable, before attempting a write operation.
  * @param[in] mc The cursor to operate on.
  */
-static int
+int
 mdb_cursor_touch(MDB_cursor *mc)
 {
 	int rc = MDB_SUCCESS;
@@ -7636,7 +7618,7 @@ mdb_cursor_touch(MDB_cursor *mc)
 /** Do not spill pages to disk if txn is getting full, may fail instead */
 #define MDB_NOSPILL	0x8000
 
-static int
+int
 _mdb_cursor_put(MDB_cursor *mc, MDB_val *key, MDB_val *data,
     unsigned int flags)
 {
@@ -8179,7 +8161,7 @@ mdb_cursor_put(MDB_cursor *mc, MDB_val *key, MDB_val *data,
 	return rc;
 }
 
-static int
+int
 _mdb_cursor_del(MDB_cursor *mc, unsigned int flags)
 {
 	MDB_node	*leaf;
@@ -8299,7 +8281,7 @@ mdb_cursor_del(MDB_cursor *mc, unsigned int flags)
  * @param[out] mp Address of a page, or NULL on failure.
  * @return 0 on success, non-zero on failure.
  */
-static int
+int
 mdb_page_new(MDB_cursor *mc, uint32_t flags, int num, MDB_page **mp)
 {
 	MDB_page	*np;
@@ -8337,7 +8319,7 @@ mdb_page_new(MDB_cursor *mc, uint32_t flags, int num, MDB_page **mp)
  * @param[in] data The data for the node.
  * @return The number of bytes needed to store the node.
  */
-static size_t
+size_t
 mdb_leaf_size(MDB_env *env, MDB_val *key, MDB_val *data)
 {
 	size_t		 sz;
@@ -8361,7 +8343,7 @@ mdb_leaf_size(MDB_env *env, MDB_val *key, MDB_val *data)
  * @param[in] key The key for the node.
  * @return The number of bytes needed to store the node.
  */
-static size_t
+size_t
 mdb_branch_size(MDB_env *env, MDB_val *key)
 {
 	size_t		 sz;
@@ -8392,7 +8374,7 @@ mdb_branch_size(MDB_env *env, MDB_val *key)
  *	page's free space before calling this function.
  * </ul>
  */
-static int
+int
 mdb_node_add(MDB_cursor *mc, indx_t indx,
     MDB_val *key, MDB_val *data, pgno_t pgno, unsigned int flags)
 {
@@ -8519,7 +8501,7 @@ full:
  * @param[in] ksize The size of a node. Only used if the page is
  * part of a #MDB_DUPFIXED database.
  */
-static void
+void
 mdb_node_del(MDB_cursor *mc, int ksize)
 {
 	MDB_page *mp = mc->mc_pg[mc->mc_top];
@@ -8575,7 +8557,7 @@ mdb_node_del(MDB_cursor *mc, int ksize)
  * @param[in] mp The main page to operate on.
  * @param[in] indx The index of the subpage on the main page.
  */
-static void
+void
 mdb_node_shrink(MDB_page *mp, indx_t indx)
 {
 	MDB_node *node;
@@ -8625,7 +8607,7 @@ mdb_node_shrink(MDB_page *mp, indx_t indx)
  * depend only on the parent DB.
  * @param[in] mc The main cursor whose sorted-dups cursor is to be initialized.
  */
-static void
+void
 mdb_xcursor_init0(MDB_cursor *mc)
 {
 	MDB_xcursor *mx = mc->mc_xcursor;
@@ -8653,7 +8635,7 @@ mdb_xcursor_init0(MDB_cursor *mc)
  * @param[in] node The data containing the #MDB_db record for the
  * sorted-dup database.
  */
-static void
+void
 mdb_xcursor_init1(MDB_cursor *mc, MDB_node *node)
 {
 	MDB_xcursor *mx = mc->mc_xcursor;
@@ -8702,7 +8684,7 @@ mdb_xcursor_init1(MDB_cursor *mc, MDB_node *node)
  * @param[in] src_mx The xcursor of an up-to-date cursor.
  * @param[in] new_dupdata True if converting from a non-#F_DUPDATA item.
  */
-static void
+void
 mdb_xcursor_init2(MDB_cursor *mc, MDB_xcursor *src_mx, int new_dupdata)
 {
 	MDB_xcursor *mx = mc->mc_xcursor;
@@ -8726,7 +8708,7 @@ mdb_xcursor_init2(MDB_cursor *mc, MDB_xcursor *src_mx, int new_dupdata)
 }
 
 /** Initialize a cursor for a given transaction and database. */
-static void
+void
 mdb_cursor_init(MDB_cursor *mc, MDB_txn *txn, MDB_dbi dbi, MDB_xcursor *mx)
 {
 	mc->mc_next = NULL;
@@ -8885,7 +8867,7 @@ mdb_cursor_dbi(MDB_cursor *mc)
  * @param[in] key The new key to use.
  * @return 0 on success, non-zero on failure.
  */
-static int
+int
 mdb_update_key(MDB_cursor *mc, MDB_val *key)
 {
 	MDB_page		*mp;
@@ -8954,7 +8936,7 @@ mdb_update_key(MDB_cursor *mc, MDB_val *key)
 	return MDB_SUCCESS;
 }
 
-static void
+void
 mdb_cursor_copy(const MDB_cursor *csrc, MDB_cursor *cdst);
 
 /** Perform \b act while tracking temporary cursor \b mn */
@@ -8975,7 +8957,7 @@ mdb_cursor_copy(const MDB_cursor *csrc, MDB_cursor *cdst);
 
 /** Move a node from csrc to cdst.
  */
-static int
+int
 mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft)
 {
 	MDB_node		*srcnode;
@@ -9204,7 +9186,7 @@ mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft)
  * @param[in] cdst Cursor pointing to the destination page.
  * @return 0 on success, non-zero on failure.
  */
-static int
+int
 mdb_page_merge(MDB_cursor *csrc, MDB_cursor *cdst)
 {
 	MDB_page	*psrc, *pdst;
@@ -9346,7 +9328,7 @@ mdb_page_merge(MDB_cursor *csrc, MDB_cursor *cdst)
  * @param[in] csrc The cursor to copy from.
  * @param[out] cdst The cursor to copy to.
  */
-static void
+void
 mdb_cursor_copy(const MDB_cursor *csrc, MDB_cursor *cdst)
 {
 	unsigned int i;
@@ -9371,7 +9353,7 @@ mdb_cursor_copy(const MDB_cursor *csrc, MDB_cursor *cdst)
  * should begin.
  * @return 0 on success, non-zero on failure.
  */
-static int
+int
 mdb_rebalance(MDB_cursor *mc)
 {
 	MDB_node	*node;
@@ -9555,7 +9537,7 @@ mdb_rebalance(MDB_cursor *mc)
 }
 
 /** Complete a delete operation started by #mdb_cursor_del(). */
-static int
+int
 mdb_cursor_del0(MDB_cursor *mc)
 {
 	int rc;
@@ -9683,7 +9665,7 @@ mdb_del(MDB_txn *txn, MDB_dbi dbi,
 	return mdb_del0(txn, dbi, key, data, 0);
 }
 
-static int
+int
 mdb_del0(MDB_txn *txn, MDB_dbi dbi,
 	MDB_val *key, MDB_val *data, unsigned flags)
 {
@@ -9736,7 +9718,7 @@ mdb_del0(MDB_txn *txn, MDB_dbi dbi,
  * @param[in] nflags The #NODE_ADD_FLAGS for the new node.
  * @return 0 on success, non-zero on failure.
  */
-static int
+int
 mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno,
 	unsigned int nflags)
 {
@@ -10211,7 +10193,7 @@ typedef struct mdb_copy {
 } mdb_copy;
 
 	/** Dedicated writer thread for compacting copy. */
-static THREAD_RET ESECT CALL_CONV
+THREAD_RET ESECT CALL_CONV
 mdb_env_copythr(void *arg)
 {
 	mdb_copy *my = arg;
@@ -10292,7 +10274,7 @@ again:
 	 * @param[in] my control structure.
 	 * @param[in] adjust (1 to hand off 1 buffer) | (MDB_EOF when ending).
 	 */
-static int ESECT
+int ESECT
 mdb_env_cthr_toggle(mdb_copy *my, int adjust)
 {
 	pthread_mutex_lock(&my->mc_mutex);
@@ -10313,7 +10295,7 @@ mdb_env_cthr_toggle(mdb_copy *my, int adjust)
 	 * @param[in,out] pg database root.
 	 * @param[in] flags includes #F_DUPDATA if it is a sorted-duplicate sub-DB.
 	 */
-static int ESECT
+int ESECT
 mdb_env_cwalk(mdb_copy *my, pgno_t *pg, int flags)
 {
 	MDB_cursor mc = {0};
@@ -10470,7 +10452,7 @@ done:
 }
 
 	/** Copy environment with compaction. */
-static int ESECT
+int ESECT
 mdb_env_copyfd1(MDB_env *env, HANDLE fd)
 {
 	MDB_meta *mm;
@@ -10601,7 +10583,7 @@ done2:
 }
 
 	/** Copy environment as-is. */
-static int ESECT
+int ESECT
 mdb_env_copyfd0(MDB_env *env, HANDLE fd)
 {
 	MDB_txn *txn = NULL;
@@ -10815,7 +10797,7 @@ mdb_env_get_fd(MDB_env *env, mdb_filehandle_t *arg)
  * @param[out] arg the address of an #MDB_stat structure to receive the stats.
  * @return 0, this function always succeeds.
  */
-static int ESECT
+int ESECT
 mdb_stat0(MDB_env *env, MDB_db *db, MDB_stat *arg)
 {
 	arg->ms_psize = env->me_psize;
@@ -10867,7 +10849,7 @@ mdb_env_info(MDB_env *env, MDB_envinfo *arg)
  * @param[in] txn A transaction handle returned by #mdb_txn_begin()
  * @param[in] dbi A database handle returned by #mdb_dbi_open()
  */
-static void
+void
 mdb_default_cmp(MDB_txn *txn, MDB_dbi dbi)
 {
 	uint16_t f = txn->mt_dbs[dbi].md_flags;
@@ -11053,7 +11035,7 @@ int mdb_dbi_flags(MDB_txn *txn, MDB_dbi dbi, unsigned int *flags)
  * @param[in] subs non-Zero to check for sub-DBs in this DB.
  * @return 0 on success, non-zero on failure.
  */
-static int
+int
 mdb_drop0(MDB_cursor *mc, int subs)
 {
 	int rc;
@@ -11289,7 +11271,7 @@ mdb_reader_list(MDB_env *env, MDB_msg_func *func, void *ctx)
 /** Insert pid into list if not already present.
  * return -1 if already present.
  */
-static int ESECT
+int ESECT
 mdb_pid_insert(MDB_PID_T *ids, MDB_PID_T pid)
 {
 	/* binary search of pid in list */
@@ -11337,7 +11319,7 @@ mdb_reader_check(MDB_env *env, int *dead)
 }
 
 /** As #mdb_reader_check(). \b rlocked is set if caller locked #me_rmutex. */
-static int ESECT
+int ESECT
 mdb_reader_check0(MDB_env *env, int rlocked, int *dead)
 {
 	mdb_mutexref_t rmutex = rlocked ? NULL : env->me_rmutex;
@@ -11397,7 +11379,7 @@ mdb_reader_check0(MDB_env *env, int rlocked, int *dead)
  * @param[in] rc	LOCK_MUTEX0() error (nonzero)
  * @return 0 on success with the mutex locked, or an error code on failure.
  */
-static int ESECT
+int ESECT
 mdb_mutex_failed(MDB_env *env, mdb_mutexref_t mutex, int rc)
 {
 	int rlocked, rc2;
@@ -11442,7 +11424,7 @@ mdb_mutex_failed(MDB_env *env, mdb_mutexref_t mutex, int rc)
 
 #if defined(_WIN32)
 /** Convert \b src to new wchar_t[] string with room for \b xtra extra chars */
-static int ESECT
+int ESECT
 utf8_to_utf16(const char *src, MDB_name *dst, int xtra)
 {
 	int rc, need = 0;
