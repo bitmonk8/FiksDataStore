@@ -14,7 +14,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
-#include "../lmdb.h"
+#include "lmdb.h"
 #include <sys/stat.h>
 #include <cerrno>
 

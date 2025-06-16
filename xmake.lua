@@ -14,9 +14,9 @@ end
 
 target("fiksstore")
     set_kind("static")
-    add_files("mdb.c", "midl.c")
+    add_files("Lib/mdb.c", "Lib/midl.c")
     add_defines("MDB_DEBUG=0")
-    add_includedirs(".", {public = true})
+    add_includedirs("Lib/", {public = true})
 
 local testdir1 = path.join(os.tmpdir(), "test1")
 target("mtest")
@@ -171,7 +171,7 @@ target("mdb_copy")
 
 target("mdb_drop")
     set_kind("binary")
-    add_files("Tools/mdb_drop.c", "getopt.c")
+    add_files("Tools/mdb_drop.c", "Lib/getopt.c")
     add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
@@ -180,7 +180,7 @@ target("mdb_drop")
 
 target("mdb_dump")
     set_kind("binary")
-    add_files("Tools/mdb_dump.c", "getopt.c")
+    add_files("Tools/mdb_dump.c", "Lib/getopt.c")
     add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
@@ -189,7 +189,7 @@ target("mdb_dump")
 
 target("mdb_load")
     set_kind("binary")
-    add_files("Tools/mdb_load.c", "getopt.c")
+    add_files("Tools/mdb_load.c", "Lib/getopt.c")
     add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
@@ -198,7 +198,7 @@ target("mdb_load")
 
 target("mdb_stat")
     set_kind("binary")
-    add_files("Tools/mdb_stat.c", "getopt.c")
+    add_files("Tools/mdb_stat.c", "Lib/getopt.c")
     add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
