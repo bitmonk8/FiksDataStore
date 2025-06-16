@@ -1,4 +1,4 @@
-/* mtest.c - memory-mapped database tester/toy */
+/* mtest.cpp - memory-mapped database tester/toy */
 /*
  * Copyright 2011-2021 Howard Chu, Symas Corp.
  * All rights reserved.
@@ -11,12 +11,12 @@
  * top-level directory of the distribution or, alternatively, at
  * <http://www.OpenLDAP.org/license.html>.
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include "lmdb.h"
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
+#include "../lmdb.h"
 #include <sys/stat.h>
-#include <errno.h>
+#include <cerrno>
 
 #ifdef _WIN32
 #include <direct.h>
@@ -45,10 +45,10 @@ int main(int argc,char * argv[])
     struct stat st = {0};
     if (stat("./testdb", &st) == -1) mkdir("./testdb", 0700);
 
-	srand(time(NULL));
+	srand(static_cast<unsigned int>(time(NULL)));
 
 	    count = (rand()%384) + 64;
-	    values = (int *)malloc(count*sizeof(int));
+	    values = static_cast<int *>(malloc(count*sizeof(int)));
 
 	    for(i = 0;i<count;i++) {
 			values[i] = rand()%1024;
@@ -85,8 +85,8 @@ int main(int argc,char * argv[])
 		E(mdb_cursor_open(txn, dbi, &cursor));
 		while ((rc = mdb_cursor_get(cursor, &key, &data, MDB_NEXT)) == 0) {
 			printf("key: %p %.*s, data: %p %.*s\n",
-				key.mv_data,  (int) key.mv_size,  (char *) key.mv_data,
-				data.mv_data, (int) data.mv_size, (char *) data.mv_data);
+				key.mv_data,  static_cast<int>(key.mv_size),  static_cast<char *>(key.mv_data),
+				data.mv_data, static_cast<int>(data.mv_size), static_cast<char *>(data.mv_data));
 		}
 		CHECK(rc == MDB_NOTFOUND, "mdb_cursor_get");
 		mdb_cursor_close(cursor);
@@ -115,31 +115,31 @@ int main(int argc,char * argv[])
 		printf("Cursor next\n");
 		while ((rc = mdb_cursor_get(cursor, &key, &data, MDB_NEXT)) == 0) {
 			printf("key: %.*s, data: %.*s\n",
-				(int) key.mv_size,  (char *) key.mv_data,
-				(int) data.mv_size, (char *) data.mv_data);
+				static_cast<int>(key.mv_size),  static_cast<char *>(key.mv_data),
+				static_cast<int>(data.mv_size), static_cast<char *>(data.mv_data));
 		}
 		CHECK(rc == MDB_NOTFOUND, "mdb_cursor_get");
 		printf("Cursor last\n");
 		E(mdb_cursor_get(cursor, &key, &data, MDB_LAST));
 		printf("key: %.*s, data: %.*s\n",
-			(int) key.mv_size,  (char *) key.mv_data,
-			(int) data.mv_size, (char *) data.mv_data);
+			static_cast<int>(key.mv_size),  static_cast<char *>(key.mv_data),
+			static_cast<int>(data.mv_size), static_cast<char *>(data.mv_data));
 		printf("Cursor prev\n");
 		while ((rc = mdb_cursor_get(cursor, &key, &data, MDB_PREV)) == 0) {
 			printf("key: %.*s, data: %.*s\n",
-				(int) key.mv_size,  (char *) key.mv_data,
-				(int) data.mv_size, (char *) data.mv_data);
+				static_cast<int>(key.mv_size),  static_cast<char *>(key.mv_data),
+				static_cast<int>(data.mv_size), static_cast<char *>(data.mv_data));
 		}
 		CHECK(rc == MDB_NOTFOUND, "mdb_cursor_get");
 		printf("Cursor last/prev\n");
 		E(mdb_cursor_get(cursor, &key, &data, MDB_LAST));
 			printf("key: %.*s, data: %.*s\n",
-				(int) key.mv_size,  (char *) key.mv_data,
-				(int) data.mv_size, (char *) data.mv_data);
+				static_cast<int>(key.mv_size),  static_cast<char *>(key.mv_data),
+				static_cast<int>(data.mv_size), static_cast<char *>(data.mv_data));
 		E(mdb_cursor_get(cursor, &key, &data, MDB_PREV));
 			printf("key: %.*s, data: %.*s\n",
-				(int) key.mv_size,  (char *) key.mv_data,
-				(int) data.mv_size, (char *) data.mv_data);
+				static_cast<int>(key.mv_size),  static_cast<char *>(key.mv_data),
+				static_cast<int>(data.mv_size), static_cast<char *>(data.mv_data));
 
 		mdb_cursor_close(cursor);
 		mdb_txn_abort(txn);
@@ -151,8 +151,8 @@ int main(int argc,char * argv[])
 			if (RES(MDB_NOTFOUND, mdb_cursor_get(cur2, &key, &data, MDB_NEXT)))
 				break;
 			printf("key: %p %.*s, data: %p %.*s\n",
-				key.mv_data,  (int) key.mv_size,  (char *) key.mv_data,
-				data.mv_data, (int) data.mv_size, (char *) data.mv_data);
+				key.mv_data,  static_cast<int>(key.mv_size),  static_cast<char *>(key.mv_data),
+				data.mv_data, static_cast<int>(data.mv_size), static_cast<char *>(data.mv_data));
 			E(mdb_del(txn, dbi, &key, NULL));
 		}
 
@@ -161,8 +161,8 @@ int main(int argc,char * argv[])
 			if (RES(MDB_NOTFOUND, mdb_cursor_get(cur2, &key, &data, op)))
 				break;
 			printf("key: %p %.*s, data: %p %.*s\n",
-				key.mv_data,  (int) key.mv_size,  (char *) key.mv_data,
-				data.mv_data, (int) data.mv_size, (char *) data.mv_data);
+				key.mv_data,  static_cast<int>(key.mv_size),  static_cast<char *>(key.mv_data),
+				data.mv_data, static_cast<int>(data.mv_size), static_cast<char *>(data.mv_data));
 		}
 		mdb_cursor_close(cur2);
 		E(mdb_txn_commit(txn));
@@ -174,8 +174,8 @@ int main(int argc,char * argv[])
 			if (RES(MDB_NOTFOUND, mdb_cursor_get(cursor, &key, &data, op)))
 				break;
 			printf("key: %p %.*s, data: %p %.*s\n",
-				key.mv_data,  (int) key.mv_size,  (char *) key.mv_data,
-				data.mv_data, (int) data.mv_size, (char *) data.mv_data);
+				key.mv_data,  static_cast<int>(key.mv_size),  static_cast<char *>(key.mv_data),
+				data.mv_data, static_cast<int>(data.mv_size), static_cast<char *>(data.mv_data));
 		}
 		mdb_cursor_close(cursor);
 		mdb_txn_abort(txn);

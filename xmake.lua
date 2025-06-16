@@ -21,15 +21,16 @@ target("lmdb")
 local testdir1 = path.join(os.tmpdir(), "test1")
 target("mtest")
     set_kind("binary")
-    add_files("Tests/mtest.c")
+    add_files("Tests/mtest.cpp")
     add_deps("lmdb")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
     add_defines("MDB_DEBUG=0")
+    set_languages("c++11")
     add_tests("test1", {
         rundir = testdir1,
-        fail_outputs = "TEST FAILED: ", 
+        fail_outputs = "TEST FAILED: ",
         plain = true
     })
     before_test(function (target)
@@ -39,17 +40,18 @@ target("mtest")
         if os.isdir(testdir1) then
             os.rmdir(testdir1)
         end
-    end)    
+    end)
 
 local testdir2 = path.join(os.tmpdir(), "test2")
 target("mtest2")
     set_kind("binary")
-    add_files("Tests/mtest2.c")
+    add_files("Tests/mtest2.cpp")
     add_deps("lmdb")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
     add_defines("MDB_DEBUG=0")
+    set_languages("c++11")
     add_tests("test2", {
         rundir = testdir2,
         fail_outputs = "TEST FAILED: ", 
@@ -67,12 +69,13 @@ target("mtest2")
 local testdir3 = path.join(os.tmpdir(), "test3")
 target("mtest3")
     set_kind("binary")
-    add_files("Tests/mtest3.c")
+    add_files("Tests/mtest3.cpp")
     add_deps("lmdb")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
     add_defines("MDB_DEBUG=0")
+    set_languages("c++11")
     add_tests("test3", {
         rundir = testdir3,
         fail_outputs = "TEST FAILED: ", 
