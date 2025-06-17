@@ -33,13 +33,18 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+ #include "lmdb.h"
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE 1
 #endif
+
 #if defined(MDB_VL32) || defined(__WIN64__)
 #define _FILE_OFFSET_BITS	64
 #endif
+
 #ifdef _WIN32
+
 #include <malloc.h>
 #include <windows.h>
 #include <wchar.h>				/* get wcscpy() */
@@ -59,8 +64,6 @@ typedef NTSTATUS (WINAPI NtCreateSectionFunc)
   IN PLARGE_INTEGER ms OPTIONAL,
   IN ULONG pp, IN ULONG aa, IN HANDLE fh OPTIONAL);
 
-NtCreateSectionFunc *NtCreateSection;
-
 typedef enum _SECTION_INHERIT {
 	ViewShare = 1,
 	ViewUnmap = 2
@@ -73,11 +76,11 @@ typedef NTSTATUS (WINAPI NtMapViewOfSectionFunc)
   IN OUT PSIZE_T vs, IN SECTION_INHERIT ih,
   IN ULONG at, IN ULONG pp);
 
-NtMapViewOfSectionFunc *NtMapViewOfSection;
-
 typedef NTSTATUS (WINAPI NtCloseFunc)(HANDLE h);
 
 NtCloseFunc *NtClose;
+NtCreateSectionFunc *NtCreateSection;
+NtMapViewOfSectionFunc *NtMapViewOfSection;
 
 /** getpid() returns int; MinGW defines pid_t but MinGW64 typedefs it
  *  as int64 which is wrong. MSVC doesn't define it at all, so just
@@ -85,8 +88,10 @@ NtCloseFunc *NtClose;
  */
 #define MDB_PID_T	int
 #define MDB_THR_T	DWORD
+
 #include <sys/types.h>
 #include <sys/stat.h>
+
 #ifdef __GNUC__
 # include <sys/param.h>
 #else
@@ -97,8 +102,11 @@ NtCloseFunc *NtClose;
 #  define SSIZE_MAX	INT_MAX
 # endif
 #endif
+
 #define MDB_OFF_T	int64_t
+
 #else
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #define MDB_PID_T	pid_t
@@ -111,6 +119,7 @@ NtCloseFunc *NtClose;
 #endif
 #include <fcntl.h>
 #define MDB_OFF_T	off_t
+
 #endif
 
 #if defined(__mips) && defined(__linux)
@@ -119,15 +128,6 @@ NtCloseFunc *NtClose;
 #define CACHEFLUSH(addr, bytes, cache)	cacheflush(addr, bytes, cache)
 #else
 #define CACHEFLUSH(addr, bytes, cache)
-#endif
-
-#if defined(__linux) && !defined(MDB_FDATASYNC_WORKS)
-/** fdatasync is broken on ext3/ext4fs on older kernels, see
- *	description in #mdb_env_open2 comments. You can safely
- *	define MDB_FDATASYNC_WORKS if this code will only be run
- *	on kernels 3.6 and newer.
- */
-#define	BROKEN_FDATASYNC
 #endif
 
 #include <errno.h>
@@ -146,14 +146,10 @@ typedef SSIZE_T	ssize_t;
 #include <unistd.h>
 #endif
 
-#if defined(__sun) || defined(__ANDROID__)
+#if defined(__ANDROID__)
 /* Most platforms have posix_memalign, older may only have memalign */
 #define HAVE_MEMALIGN	1
 #include <malloc.h>
-/* On Solaris, we need the POSIX sigwait function */
-#if defined (__sun)
-# define _POSIX_PTHREAD_SEMANTICS	1
-#endif
 #endif
 
 #if !(defined(BYTE_ORDER) || defined(__BYTE_ORDER))
@@ -243,10 +239,8 @@ union semun {
 #define MISALIGNED_OK	1
 #endif
 
-#include "lmdb.h"
 #include "mdb_hash.h"
 #include "mdb_page.h"
-#include "mdb_util.h"
 #include "midl.h"
 
 
@@ -1944,12 +1938,6 @@ mdb_env_sync0(MDB_env *env, int force, pgno_t numpgs)
 				rc = ErrCode();
 #endif
 		} else {
-#ifdef BROKEN_FDATASYNC
-			if (env->me_flags & MDB_FSYNCONLY) {
-				if (fsync(env->me_fd))
-					rc = ErrCode();
-			} else
-#endif
 			if (MDB_FDATASYNC(env->me_fd))
 				rc = ErrCode();
 		}
@@ -3735,12 +3723,6 @@ mdb_fopen(const MDB_env *env, MDB_name *fname,
 	return rc;
 }
 
-
-#ifdef BROKEN_FDATASYNC
-#include <sys/utsname.h>
-#include <sys/vfs.h>
-#endif
-
 /** Further setup required for opening an LMDB environment
  */
 int ESECT
@@ -3774,54 +3756,6 @@ mdb_env_open2(MDB_env *env, int prev)
 	}
 	env->ovs = 0;
 #endif /* _WIN32 */
-
-#ifdef BROKEN_FDATASYNC
-	/* ext3/ext4 fdatasync is broken on some older Linux kernels.
-	 * https://lkml.org/lkml/2012/9/3/83
-	 * Kernels after 3.6-rc6 are known good.
-	 * https://lkml.org/lkml/2012/9/10/556
-	 * See if the DB is on ext3/ext4, then check for new enough kernel
-	 * Kernels 2.6.32.60, 2.6.34.15, 3.2.30, and 3.5.4 are also known
-	 * to be patched.
-	 */
-	{
-		struct statfs st;
-		fstatfs(env->me_fd, &st);
-		while (st.f_type == 0xEF53) {
-			struct utsname uts;
-			int i;
-			uname(&uts);
-			if (uts.release[0] < '3') {
-				if (!strncmp(uts.release, "2.6.32.", 7)) {
-					i = atoi(uts.release+7);
-					if (i >= 60)
-						break;	/* 2.6.32.60 and newer is OK */
-				} else if (!strncmp(uts.release, "2.6.34.", 7)) {
-					i = atoi(uts.release+7);
-					if (i >= 15)
-						break;	/* 2.6.34.15 and newer is OK */
-				}
-			} else if (uts.release[0] == '3') {
-				i = atoi(uts.release+2);
-				if (i > 5)
-					break;	/* 3.6 and newer is OK */
-				if (i == 5) {
-					i = atoi(uts.release+4);
-					if (i >= 4)
-						break;	/* 3.5.4 and newer is OK */
-				} else if (i == 2) {
-					i = atoi(uts.release+4);
-					if (i >= 30)
-						break;	/* 3.2.30 and newer is OK */
-				}
-			} else {	/* 4.x and newer is OK */
-				break;
-			}
-			env->me_flags |= MDB_FSYNCONLY;
-			break;
-		}
-	}
-#endif
 
 	if ((i = mdb_env_read_header(env, prev, &meta)) != 0) {
 		if (i != ENOENT)

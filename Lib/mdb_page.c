@@ -1691,7 +1691,8 @@ mdb_node_shrink(MDB_page *mp, indx_t indx)
 	MDB_node *node;
 	MDB_page *sp, *xp;
 	char *base;
-	indx_t delta, nsize, len, ptr;
+	indx_t delta, len, ptr;
+	unsigned int nsize;
 	int i;
 
 	node = NODEPTR(mp, indx);

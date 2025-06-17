@@ -27,7 +27,7 @@ target("mtest")
         add_syslinks("advapi32")
     end
     add_defines("MDB_DEBUG=0")
-    set_languages("c++11")
+    set_languages("cxx20")
     add_tests("test1", {
         rundir = testdir1,
         fail_outputs = "TEST FAILED: ",
@@ -51,7 +51,7 @@ target("mtest2")
         add_syslinks("advapi32")
     end
     add_defines("MDB_DEBUG=0")
-    set_languages("c++11")
+    set_languages("cxx20")
     add_tests("test2", {
         rundir = testdir2,
         fail_outputs = "TEST FAILED: ", 
@@ -75,7 +75,7 @@ target("mtest3")
         add_syslinks("advapi32")
     end
     add_defines("MDB_DEBUG=0")
-    set_languages("c++11")
+    set_languages("cxx20")
     add_tests("test3", {
         rundir = testdir3,
         fail_outputs = "TEST FAILED: ", 

@@ -1,4 +1,5 @@
-#include "mdb_util.h"
+#include "lmdb.h"
+
 #include <string.h>
 
 #ifdef _WIN32
@@ -6,8 +7,7 @@
 #endif
 
 /** Return the library version info. */
-char *
-mdb_version(int *major, int *minor, int *patch)
+const char* mdb_version(int *major, int *minor, int *patch)
 {
 	if (major) *major = MDB_VERSION_MAJOR;
 	if (minor) *minor = MDB_VERSION_MINOR;
@@ -41,8 +41,7 @@ static const char *const mdb_errstr[] = {
 	"MDB_LAST_ERRCODE: MDB_LAST_ERRCODE",
 };
 
-char *
-mdb_strerror(int err)
+const char* mdb_strerror(int err)
 {
 #ifdef _WIN32
 	/** HACK: pad 4KB on stack over the buf. Return system msgs in buf.
@@ -51,7 +50,7 @@ mdb_strerror(int err)
 	 */
 #define MSGSIZE	1024
 #define PADSIZE	4096
-	char buf[MSGSIZE+PADSIZE], *ptr = buf;
+	static char buf[MSGSIZE+PADSIZE], *ptr = buf;
 #endif
 	int i;
 	if (!err)
