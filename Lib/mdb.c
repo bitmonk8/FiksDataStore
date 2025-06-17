@@ -6385,4 +6385,38 @@ utf8_to_utf16(const char *src, MDB_name *dst, int xtra)
 	}
 }
 #endif /* defined(_WIN32) */
-/** @} */
+
+
+#ifndef _WIN32
+
+#ifdef MDB_USE_POSIX_SEM
+
+int
+mdb_sem_wait(sem_t *sem)
+{
+   int rc;
+   while ((rc = sem_wait(sem)) && (rc = errno) == EINTR) ;
+   return rc;
+}
+
+#elif defined MDB_USE_SYSV_SEM
+
+int
+mdb_sem_wait(mdb_mutexref_t sem)
+{
+	int rc, *locked = sem->locked;
+	struct sembuf sb = { 0, -1, SEM_UNDO };
+	sb.sem_num = sem->semnum;
+	do {
+		if (!semop(sem->semid, &sb, 1)) {
+			rc = *locked ? MDB_OWNERDEAD : MDB_SUCCESS;
+			*locked = 1;
+			break;
+		}
+	} while ((rc = errno) == EINTR);
+	return rc;
+}
+
+#endif
+
+#endif

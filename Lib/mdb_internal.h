@@ -360,13 +360,7 @@ typedef sem_t *mdb_mutex_t, *mdb_mutexref_t;
 #define LOCK_MUTEX0(mutex)		mdb_sem_wait(mutex)
 #define UNLOCK_MUTEX(mutex)		sem_post(mutex)
 
-int
-mdb_sem_wait(sem_t *sem)
-{
-   int rc;
-   while ((rc = sem_wait(sem)) && (rc = errno) == EINTR) ;
-   return rc;
-}
+int mdb_sem_wait(sem_t *sem);
 
 #elif defined MDB_USE_SYSV_SEM
 
@@ -384,21 +378,7 @@ typedef struct mdb_mutex {
 	semop((mutex)->semid, &sb, 1); \
 } while(0)
 
-int
-mdb_sem_wait(mdb_mutexref_t sem)
-{
-	int rc, *locked = sem->locked;
-	struct sembuf sb = { 0, -1, SEM_UNDO };
-	sb.sem_num = sem->semnum;
-	do {
-		if (!semop(sem->semid, &sb, 1)) {
-			rc = *locked ? MDB_OWNERDEAD : MDB_SUCCESS;
-			*locked = 1;
-			break;
-		}
-	} while ((rc = errno) == EINTR);
-	return rc;
-}
+int mdb_sem_wait(mdb_mutexref_t sem);
 
 #define mdb_mutex_consistent(mutex)	0
 
