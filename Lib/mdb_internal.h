@@ -1511,6 +1511,7 @@ typedef struct MDB_ntxn {
 int  mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp);
 int  mdb_page_new(MDB_cursor *mc, uint32_t flags, int num, MDB_page **mp);
 int  mdb_page_touch(MDB_cursor *mc);
+int mdb_page_unspill(MDB_txn *txn, MDB_page *mp, MDB_page **ret);
 
 #define MDB_END_NAMES {"committed", "empty-commit", "abort", "reset", \
 	"reset-tmp", "fail-begin", "fail-beginchild"}
