@@ -1,0 +1,30 @@
+name: Manual build and test
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: 'Commit SHA to run the workflow on'
+        required: true
+        type: string
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.commit_sha }}
+          
+      - name: Set up XMake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: latest
+          build-cache: true
+
+      - name: Run xmake build
+        run: |
+          xmake
+          xmake build
+          xmake test -vD -j1
