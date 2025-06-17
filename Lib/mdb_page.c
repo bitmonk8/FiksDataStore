@@ -1,4 +1,3 @@
-#include "mdb.c"
 #include "mdb_page.h"
 
 /** @defgroup page_ops Page Management Operations
@@ -83,44 +82,6 @@ mdb_dlist_free(MDB_txn *txn)
 	}
 	dl[0].mid = 0;
 }
-
-#ifdef MDB_VL32
-void
-mdb_page_unref(MDB_txn *txn, MDB_page *mp)
-{
-	pgno_t pgno;
-	MDB_ID3L tl = txn->mt_rpages;
-	unsigned x, rem;
-	if (mp->mp_flags & (P_SUBP|P_DIRTY))
-		return;
-	rem = mp->mp_pgno & (MDB_RPAGE_CHUNK-1);
-	pgno = mp->mp_pgno ^ rem;
-	x = mdb_mid3l_search(tl, pgno);
-	if (x != tl[0].mid && tl[x+1].mid == mp->mp_pgno)
-		x++;
-	if (tl[x].mref)
-		tl[x].mref--;
-}
-
-void
-mdb_cursor_unref(MDB_cursor *mc)
-{
-	int i;
-	if (mc->mc_txn->mt_rpages[0].mid) {
-		if (!mc->mc_snum || !mc->mc_pg[0] || IS_SUBP(mc->mc_pg[0]))
-			return;
-		for (i=0; i<mc->mc_snum; i++)
-			mdb_page_unref(mc->mc_txn, mc->mc_pg[i]);
-		if (mc->mc_ovpg) {
-			mdb_page_unref(mc->mc_txn, mc->mc_ovpg);
-			mc->mc_ovpg = 0;
-		}
-	}
-	mc->mc_snum = mc->mc_top = 0;
-	mc->mc_pg[0] = NULL;
-	mc->mc_flags &= ~C_INITIALIZED;
-}
-#endif /* MDB_VL32 */
 
 /** Loosen or free a single page.
  * Saves single pages to a list for future reuse
@@ -424,10 +385,6 @@ retry_seek:
 		wsize += size;
 		n++;
 	}
-#ifdef MDB_VL32
-	if (pgno > txn->mt_last_pgno)
-		txn->mt_last_pgno = pgno;
-#endif
 
 #ifdef _WIN32
 	if (!F_ISSET(env->me_flags, MDB_NOSYNC)) {
@@ -816,7 +773,7 @@ mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp)
 			rc = MDB_MAP_FULL;
 			goto fail;
 	}
-#if defined(_WIN32) && !defined(MDB_VL32)
+#if defined(_WIN32)
 	if (!(env->me_flags & MDB_RDONLY)) {
 		void *p;
 		p = (MDB_page *)(env->me_map + env->me_psize * pgno);
@@ -1102,16 +1059,8 @@ mdb_page_get(MDB_cursor *mc, pgno_t pgno, MDB_page **ret, int *lvl)
 
 mapped:
 	{
-#ifdef MDB_VL32
-		int rc = mdb_rpage_get(txn, pgno, &p);
-		if (rc) {
-			txn->mt_flags |= MDB_TXN_ERROR;
-			return rc;
-		}
-#else
 		MDB_env *env = txn->mt_env;
 		p = (MDB_page *)(env->me_map + env->me_psize * pgno);
-#endif
 	}
 
 done:
@@ -1288,21 +1237,10 @@ mdb_page_search(MDB_cursor *mc, MDB_val *key, int flags)
 
 	mdb_cassert(mc, root > 1);
 	if (!mc->mc_pg[0] || mc->mc_pg[0]->mp_pgno != root) {
-#ifdef MDB_VL32
-		if (mc->mc_pg[0])
-			MDB_PAGE_UNREF(mc->mc_txn, mc->mc_pg[0]);
-#endif
 		if ((rc = mdb_page_get(mc, root, &mc->mc_pg[0], NULL)) != 0)
 			return rc;
 	}
 
-#ifdef MDB_VL32
-	{
-		int i;
-		for (i=1; i<mc->mc_snum; i++)
-			MDB_PAGE_UNREF(mc->mc_txn, mc->mc_pg[i]);
-	}
-#endif
 	mc->mc_snum = 1;
 	mc->mc_top = 0;
 
@@ -1392,10 +1330,6 @@ release:
 		if (rc)
 			return rc;
 	}
-#ifdef MDB_VL32
-	if (mc->mc_ovpg == mp)
-		mc->mc_ovpg = NULL;
-#endif
 	mc->mc_db->md_overflow_pages -= ovpages;
 	return 0;
 }

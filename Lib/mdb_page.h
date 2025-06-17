@@ -1,35 +1,8 @@
 #ifndef MDB_PAGE_H
 #define MDB_PAGE_H
 
-#include "lmdb.h"
+#include "mdb_internal.h"
 #include "midl.h"
-
-typedef MDB_ID pgno_t;
-typedef uint16_t indx_t;
-
-/** Common header for all page types. The page type depends on #mp_flags.
- */
-typedef struct MDB_page {
-#define	mp_pgno	mp_p.p_pgno
-#define	mp_next	mp_p.p_next
-	union {
-		pgno_t		p_pgno;	/**< page number */
-		struct MDB_page *p_next; /**< for in-memory list of freed pages */
-	} mp_p;
-	uint16_t	mp_pad;			/**< key size if this is a LEAF2 page */
-	uint16_t	mp_flags;		/**< @ref mdb_page */
-#define mp_lower	mp_pb.pb.pb_lower
-#define mp_upper	mp_pb.pb.pb_upper
-#define mp_pages	mp_pb.pb_pages
-	union {
-		struct {
-			indx_t		pb_lower;		/**< lower bound of free space */
-			indx_t		pb_upper;		/**< upper bound of free space */
-		} pb;
-		uint32_t	pb_pages;	/**< number of overflow pages */
-	} mp_pb;
-	indx_t		mp_ptrs[0];		/**< dynamic size */
-} MDB_page;
 
 #define	P_BRANCH	 0x01		/**< branch page */
 #define	P_LEAF		 0x02		/**< leaf page */
