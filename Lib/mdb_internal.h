@@ -1594,10 +1594,11 @@ int mdb_reader_check0(MDB_env *env, int rlocked, int *dead);
 #define mdb_eassert(env, expr)	mdb_assert0(env, expr, #expr)
 
 #ifndef NDEBUG
-# define mdb_assert0(env, expr, expr_txt) ((expr) ? (void)0 : \
+#define mdb_assert0(env, expr, expr_txt) ((expr) ? (void)0 : \
 		mdb_assert_fail(env, expr_txt, mdb_func_, __FILE__, __LINE__))
+void ESECT mdb_assert_fail(MDB_env *env, const char *expr_txt, const char *func, const char *file, int line);
 #else
-# define mdb_assert0(env, expr, expr_txt) ((void) 0)
+#define mdb_assert0(env, expr, expr_txt) ((void) 0)
 #endif /* NDEBUG */
 
 #define MDB_PAGE_UNREF(txn, mp)
