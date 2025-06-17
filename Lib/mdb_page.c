@@ -624,7 +624,7 @@ mdb_page_dirty(MDB_txn *txn, MDB_page *mp)
  *  will always be satisfied by a single contiguous chunk of memory.
  * @return 0 on success, non-zero on failure.
  */
-mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp)
+int mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp)
 {
 #ifdef MDB_PARANOID	/* Seems like we can ignore this now */
 	/* Get at most <Max_retries> more freeDB records once me_pghead
