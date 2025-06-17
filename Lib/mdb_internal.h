@@ -1585,6 +1585,7 @@ void	mdb_xcursor_init2(MDB_cursor *mc, MDB_xcursor *src_mx, int force);
 int	mdb_drop0(MDB_cursor *mc, int subs);
 void mdb_default_cmp(MDB_txn *txn, MDB_dbi dbi);
 int mdb_reader_check0(MDB_env *env, int rlocked, int *dead);
+void mdb_cursor_copy(const MDB_cursor *csrc, MDB_cursor *cdst);
 
 /** assert(3) variant in cursor context */
 #define mdb_cassert(mc, expr)	mdb_assert0((mc)->mc_txn->mt_env, expr, #expr)

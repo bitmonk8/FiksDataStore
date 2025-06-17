@@ -4884,9 +4884,6 @@ mdb_update_key(MDB_cursor *mc, MDB_val *key)
 	return MDB_SUCCESS;
 }
 
-void
-mdb_cursor_copy(const MDB_cursor *csrc, MDB_cursor *cdst);
-
 /** Copy the contents of a cursor.
  * @param[in] csrc The cursor to copy from.
  * @param[out] cdst The cursor to copy to.
