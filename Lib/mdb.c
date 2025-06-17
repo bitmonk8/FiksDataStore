@@ -4016,6 +4016,8 @@ mdb_env_excl_lock(MDB_env *env, int *excl)
 	return rc;
 }
 
+#if defined(_WIN32) || defined(MDB_USE_POSIX_SEM)
+
 /** Init #MDB_env.me_mutexname[] except the char which #MUTEXNAME() will set.
  *	Changes to this code must be reflected in #MDB_LOCK_FORMAT.
  */
@@ -4031,6 +4033,8 @@ mdb_env_mname_init(MDB_env *env)
 #define MUTEXNAME(env, ch) ( \
 		(void) ((env)->me_mutexname[sizeof(MUTEXNAME_PREFIX)-1] = (ch)), \
 		(env)->me_mutexname)
+
+#endif
 
 /** Open and/or initialize the lock region for the environment.
  * @param[in] env The LMDB environment.
