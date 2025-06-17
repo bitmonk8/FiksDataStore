@@ -4,11 +4,6 @@
 #include "lmdb.h"
 #include "midl.h"
 
-/* Forward declarations for opaque structs */
-typedef struct MDB_env MDB_env;
-typedef struct MDB_txn MDB_txn;
-typedef struct MDB_cursor MDB_cursor;
-
 typedef MDB_ID pgno_t;
 typedef uint16_t indx_t;
 
