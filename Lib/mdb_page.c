@@ -1,5 +1,7 @@
 #include "mdb_page.h"
 
+#include "mdb_env.h"
+
 /** @defgroup page_ops Page Management Operations
  *  @ingroup internal
  *  @{

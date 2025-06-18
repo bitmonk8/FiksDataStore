@@ -1,5 +1,15 @@
 #include "mdb_lock.h"
 
+#include "mdb_env.h"
+
+#ifdef _WIN32
+#define MDB_OWNERDEAD	((int) WAIT_ABANDONED)
+#elif defined MDB_USE_SYSV_SEM
+#define MDB_OWNERDEAD	(MDB_LAST_ERRCODE + 11)
+#elif defined(MDB_USE_POSIX_MUTEX)
+#define MDB_OWNERDEAD	EOWNERDEAD	/**< #LOCK_MUTEX0() result if dead owner */
+#endif
+
 /** Set or check a pid lock. Set returns 0 on success.
  * Check returns 0 if the process is certainly dead, nonzero if it may
  * be alive (the lock exists or an error happened so we do not know).
@@ -129,6 +139,55 @@ mdb_reader_check(MDB_env *env, int *dead)
 	if (dead)
 		*dead = 0;
 	return env->me_txns ? mdb_reader_check0(env, 0, dead) : MDB_SUCCESS;
+}
+
+/** Handle #LOCK_MUTEX0() failure.
+ * Try to repair the lock file if the mutex owner died.
+ * @param[in] env	the environment handle
+ * @param[in] mutex	LOCK_MUTEX0() mutex
+ * @param[in] rc	LOCK_MUTEX0() error (nonzero)
+ * @return 0 on success with the mutex locked, or an error code on failure.
+ */
+int ESECT
+mdb_mutex_failed(MDB_env *env, mdb_mutexref_t mutex, int rc)
+{
+	int rlocked, rc2;
+	MDB_meta *meta;
+
+	if (rc == MDB_OWNERDEAD) {
+		/* We own the mutex. Clean up after dead previous owner. */
+		rc = MDB_SUCCESS;
+		rlocked = (mutex == env->me_rmutex);
+		if (!rlocked) {
+			/* Keep mti_txnid updated, otherwise next writer can
+			 * overwrite data which latest meta page refers to.
+			 */
+			meta = mdb_env_pick_meta(env);
+			env->me_txns->mti_txnid = meta->mm_txnid;
+			/* env is hosed if the dead thread was ours */
+			if (env->me_txn) {
+				env->me_flags |= MDB_FATAL_ERROR;
+				env->me_txn = NULL;
+				rc = MDB_PANIC;
+			}
+		}
+		DPRINTF(("%cmutex owner died, %s", (rlocked ? 'r' : 'w'),
+			(rc ? "this process' env is hosed" : "recovering")));
+		rc2 = mdb_reader_check0(env, rlocked, NULL);
+		if (rc2 == 0)
+			rc2 = mdb_mutex_consistent(mutex);
+		if (rc || (rc = rc2)) {
+			DPRINTF(("LOCK_MUTEX recovery failed, %s", mdb_strerror(rc)));
+			UNLOCK_MUTEX(mutex);
+		}
+	} else {
+#ifdef _WIN32
+		rc = ErrCode();
+#endif
+		DPRINTF(("LOCK_MUTEX failed, %s", mdb_strerror(rc)));
+	}
+
+	return rc;
 }
 
 /** As #mdb_reader_check(). \b rlocked is set if caller locked #me_rmutex. */

@@ -640,55 +640,6 @@ mdb_put(MDB_txn *txn, MDB_dbi dbi,
 	return rc;
 }
 
-/** Handle #LOCK_MUTEX0() failure.
- * Try to repair the lock file if the mutex owner died.
- * @param[in] env	the environment handle
- * @param[in] mutex	LOCK_MUTEX0() mutex
- * @param[in] rc	LOCK_MUTEX0() error (nonzero)
- * @return 0 on success with the mutex locked, or an error code on failure.
- */
-int ESECT
-mdb_mutex_failed(MDB_env *env, mdb_mutexref_t mutex, int rc)
-{
-	int rlocked, rc2;
-	MDB_meta *meta;
-
-	if (rc == MDB_OWNERDEAD) {
-		/* We own the mutex. Clean up after dead previous owner. */
-		rc = MDB_SUCCESS;
-		rlocked = (mutex == env->me_rmutex);
-		if (!rlocked) {
-			/* Keep mti_txnid updated, otherwise next writer can
-			 * overwrite data which latest meta page refers to.
-			 */
-			meta = mdb_env_pick_meta(env);
-			env->me_txns->mti_txnid = meta->mm_txnid;
-			/* env is hosed if the dead thread was ours */
-			if (env->me_txn) {
-				env->me_flags |= MDB_FATAL_ERROR;
-				env->me_txn = NULL;
-				rc = MDB_PANIC;
-			}
-		}
-		DPRINTF(("%cmutex owner died, %s", (rlocked ? 'r' : 'w'),
-			(rc ? "this process' env is hosed" : "recovering")));
-		rc2 = mdb_reader_check0(env, rlocked, NULL);
-		if (rc2 == 0)
-			rc2 = mdb_mutex_consistent(mutex);
-		if (rc || (rc = rc2)) {
-			DPRINTF(("LOCK_MUTEX recovery failed, %s", mdb_strerror(rc)));
-			UNLOCK_MUTEX(mutex);
-		}
-	} else {
-#ifdef _WIN32
-		rc = ErrCode();
-#endif
-		DPRINTF(("LOCK_MUTEX failed, %s", mdb_strerror(rc)));
-	}
-
-	return rc;
-}
-
 #if defined(_WIN32)
 /** Convert \b src to new wchar_t[] string with room for \b xtra extra chars */
 int ESECT

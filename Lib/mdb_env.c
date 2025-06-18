@@ -3,11 +3,44 @@
 #include "mdb_compare.h"
 #include "mdb_page.h"
 #include "mdb_txn.h"
+#include "mdb_lock.h"
 
 #ifdef _WIN32
-int mdb_sec_inited;
-SECURITY_DESCRIPTOR mdb_null_sd;
-SECURITY_ATTRIBUTES mdb_all_sa;
+/* We use native NT APIs to setup the memory map, so that we can
+ * let the DB file grow incrementally instead of always preallocating
+ * the full size. These APIs are defined in <wdm.h> and <ntifs.h>
+ * but those headers are meant for driver-level development and
+ * conflict with the regular user-level headers, so we explicitly
+ * declare them here. We get pointers to these functions from
+ * NTDLL.DLL at runtime, to avoid buildtime dependencies on any
+ * NTDLL import libraries.
+ */
+typedef NTSTATUS (WINAPI NtCreateSectionFunc)
+  (OUT PHANDLE sh, IN ACCESS_MASK acc,
+  IN void * oa OPTIONAL,
+  IN PLARGE_INTEGER ms OPTIONAL,
+  IN ULONG pp, IN ULONG aa, IN HANDLE fh OPTIONAL);
+
+  typedef enum _SECTION_INHERIT {
+	ViewShare = 1,
+	ViewUnmap = 2
+} SECTION_INHERIT;
+
+typedef NTSTATUS (WINAPI NtMapViewOfSectionFunc)
+  (IN PHANDLE sh, IN HANDLE ph,
+  IN OUT PVOID *addr, IN ULONG_PTR zbits,
+  IN SIZE_T cs, IN OUT PLARGE_INTEGER off OPTIONAL,
+  IN OUT PSIZE_T vs, IN SECTION_INHERIT ih,
+  IN ULONG at, IN ULONG pp);
+
+typedef NTSTATUS (WINAPI NtCloseFunc)(HANDLE h);
+
+static int mdb_sec_inited;
+static SECURITY_DESCRIPTOR mdb_null_sd;
+static SECURITY_ATTRIBUTES mdb_all_sa;
+static NtCloseFunc *NtClose;
+static NtCreateSectionFunc *NtCreateSection;
+static NtMapViewOfSectionFunc *NtMapViewOfSection;
 #endif
 
 int
