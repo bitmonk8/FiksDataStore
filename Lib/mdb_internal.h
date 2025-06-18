@@ -1600,3 +1600,7 @@ extern pthread_key_t mdb_tls_keys[MAX_TLS_KEYS];
 extern int mdb_tls_nkeys;
 #endif
 
+int ESECT mdb_fopen(const MDB_env *env, MDB_name *fname, enum mdb_fopen_type which, mdb_mode_t mode, HANDLE *res);
+int ESECT mdb_fname_init(const char *path, unsigned envflags, MDB_name *fname);
+void _mdb_txn_abort(MDB_txn *txn);
+int mdb_txn_renew0(MDB_txn *txn);
