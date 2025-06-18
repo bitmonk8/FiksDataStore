@@ -4,6 +4,7 @@
 #include "mdb_page.h"
 #include "mdb_txn.h"
 #include "mdb_lock.h"
+#include "mdb_cursor.h"
 
 static void mdb_env_reader_dest(void *ptr);
 
