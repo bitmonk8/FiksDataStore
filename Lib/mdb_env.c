@@ -2,6 +2,7 @@
 
 #include "mdb_compare.h"
 #include "mdb_page.h"
+#include "mdb_txn.h"
 
 #ifdef _WIN32
 int mdb_sec_inited;
