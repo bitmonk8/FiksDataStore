@@ -1301,6 +1301,5 @@ size_t	mdb_branch_size(MDB_env *env, MDB_val *key);
 int	mdb_rebalance(MDB_cursor *mc);
 int	mdb_update_key(MDB_cursor *mc, MDB_val *key);
 
-int	mdb_del0(MDB_txn *txn, MDB_dbi dbi, MDB_val *key, MDB_val *data, unsigned flags);
 
 

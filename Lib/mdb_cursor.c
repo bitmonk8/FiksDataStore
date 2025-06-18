@@ -1980,3 +1980,77 @@ fail:
 		mc->mc_txn->mt_flags |= MDB_TXN_ERROR;
 	return rc;
 }
+
+/** Replace the key for a branch node with a new key.
+ * Set #MDB_TXN_ERROR on failure.
+ * @param[in] mc Cursor pointing to the node to operate on.
+ * @param[in] key The new key to use.
+ * @return 0 on success, non-zero on failure.
+ */
+int mdb_update_key(MDB_cursor *mc, MDB_val *key)
+{
+	MDB_page		*mp;
+	MDB_node		*node;
+	char			*base;
+	size_t			 len;
+	int				 delta, ksize, oksize;
+	indx_t			 ptr, i, numkeys, indx;
+	DKBUF;
+
+	indx = mc->mc_ki[mc->mc_top];
+	mp = mc->mc_pg[mc->mc_top];
+	node = NODEPTR(mp, indx);
+	ptr = mp->mp_ptrs[indx];
+#if MDB_DEBUG
+	{
+		MDB_val	k2;
+		char kbuf2[DKBUF_MAXKEYSIZE*2+1];
+		k2.mv_data = NODEKEY(node);
+		k2.mv_size = node->mn_ksize;
+		DPRINTF(("update key %u (ofs %u) [%s] to [%s] on page %"Yu,
+			indx, ptr,
+			mdb_dkey(&k2, kbuf2),
+			DKEY(key),
+			mp->mp_pgno));
+	}
+#endif
+
+	/* Sizes must be 2-byte aligned. */
+	ksize = EVEN(key->mv_size);
+	oksize = EVEN(node->mn_ksize);
+	delta = ksize - oksize;
+
+	/* Shift node contents if EVEN(key length) changed. */
+	if (delta) {
+		if (delta > 0 && SIZELEFT(mp) < delta) {
+			pgno_t pgno;
+			/* not enough space left, do a delete and split */
+			DPRINTF(("Not enough room, delta = %d, splitting...", delta));
+			pgno = NODEPGNO(node);
+			mdb_node_del(mc, 0);
+			return mdb_page_split(mc, key, NULL, pgno, MDB_SPLIT_REPLACE);
+		}
+
+		numkeys = NUMKEYS(mp);
+		for (i = 0; i < numkeys; i++) {
+			if (mp->mp_ptrs[i] <= ptr)
+				mp->mp_ptrs[i] -= delta;
+		}
+
+		base = (char *)mp + mp->mp_upper + PAGEBASE;
+		len = ptr - mp->mp_upper + NODESIZE;
+		memmove(base - delta, base, len);
+		mp->mp_upper -= delta;
+
+		node = NODEPTR(mp, indx);
+	}
+
+	/* But even if no shift was needed, update ksize */
+	if (node->mn_ksize != key->mv_size)
+		node->mn_ksize = key->mv_size;
+
+	if (key->mv_size)
+		memcpy(NODEKEY(node), key->mv_data, key->mv_size);
+
+	return MDB_SUCCESS;
+}

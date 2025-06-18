@@ -274,6 +274,69 @@ done:
 	return rc;
 }
 
+static int mdb_del0(MDB_txn *txn, MDB_dbi dbi, MDB_val *key, MDB_val *data, unsigned flags)
+{
+	MDB_cursor mc;
+	MDB_xcursor mx;
+	MDB_cursor_op op;
+	MDB_val rdata, *xdata;
+	int		 rc, exact = 0;
+	DKBUF;
+
+	DPRINTF(("====> delete db %u key [%s]", dbi, DKEY(key)));
+
+	mdb_cursor_init(&mc, txn, dbi, &mx);
+
+	if (data) {
+		op = MDB_GET_BOTH;
+		rdata = *data;
+		xdata = &rdata;
+	} else {
+		op = MDB_SET;
+		xdata = NULL;
+		flags |= MDB_NODUPDATA;
+	}
+	rc = mdb_cursor_set(&mc, key, xdata, op, &exact);
+	if (rc == 0) {
+		/* let mdb_page_split know about this cursor if needed:
+		 * delete will trigger a rebalance; if it needs to move
+		 * a node from one page to another, it will have to
+		 * update the parent's separator key(s). If the new sepkey
+		 * is larger than the current one, the parent page may
+		 * run out of space, triggering a split. We need this
+		 * cursor to be consistent until the end of the rebalance.
+		 */
+		mc.mc_next = txn->mt_cursors[dbi];
+		txn->mt_cursors[dbi] = &mc;
+		rc = _mdb_cursor_del(&mc, flags);
+		txn->mt_cursors[dbi] = mc.mc_next;
+	}
+	return rc;
+}
+
+int
+mdb_del(MDB_txn *txn, MDB_dbi dbi,
+    MDB_val *key, MDB_val *data)
+{
+	DKBUF;
+	DDBUF;
+	if (!key || !TXN_DBI_EXIST(txn, dbi, DB_USRVALID))
+		return EINVAL;
+
+	if (txn->mt_flags & (MDB_TXN_RDONLY|MDB_TXN_BLOCKED))
+		return (txn->mt_flags & MDB_TXN_RDONLY) ? EACCES : MDB_BAD_TXN;
+
+	if (!F_ISSET(txn->mt_dbs[dbi].md_flags, MDB_DUPSORT)) {
+		/* must ignore any data */
+		data = NULL;
+	}
+
+	MDB_TRACE(("%p, %u, %"Z"u[%s], %"Z"u%s",
+		txn, dbi, key ? key->mv_size:0, DKEY(key), data ? data->mv_size:0,
+		data ? mdb_dval(txn, dbi, data, dbuf):""));
+	return mdb_del0(txn, dbi, key, data, 0);
+}
+
 int mdb_drop(MDB_txn *txn, MDB_dbi dbi, int del)
 {
 	MDB_cursor *mc, *m2;
@@ -326,6 +389,33 @@ leave:
 	return rc;
 }
 
+int mdb_put(MDB_txn *txn, MDB_dbi dbi, MDB_val *key, MDB_val *data, unsigned int flags)
+{
+	MDB_cursor mc;
+	MDB_xcursor mx;
+	int rc;
+	DKBUF;
+	DDBUF;
+
+	if (!key || !data || !TXN_DBI_EXIST(txn, dbi, DB_USRVALID))
+		return EINVAL;
+
+	if (flags & ~(MDB_NOOVERWRITE|MDB_NODUPDATA|MDB_RESERVE|MDB_APPEND|MDB_APPENDDUP))
+		return EINVAL;
+
+	if (txn->mt_flags & (MDB_TXN_RDONLY|MDB_TXN_BLOCKED))
+		return (txn->mt_flags & MDB_TXN_RDONLY) ? EACCES : MDB_BAD_TXN;
+
+	MDB_TRACE(("%p, %u, %"Z"u[%s], %"Z"u%s, %u",
+		txn, dbi, key ? key->mv_size:0, DKEY(key), data->mv_size, mdb_dval(txn, dbi, data, dbuf), flags));
+	mdb_cursor_init(&mc, txn, dbi, &mx);
+	mc.mc_next = txn->mt_cursors[dbi];
+	txn->mt_cursors[dbi] = &mc;
+	rc = _mdb_cursor_put(&mc, key, data, flags);
+	txn->mt_cursors[dbi] = mc.mc_next;
+	return rc;
+}
+
 int mdb_set_compare(MDB_txn *txn, MDB_dbi dbi, MDB_cmp_func *cmp)
 {
 	if (!TXN_DBI_EXIST(txn, dbi, DB_USRVALID))
@@ -360,4 +450,24 @@ int mdb_set_relctx(MDB_txn *txn, MDB_dbi dbi, void *ctx)
 
 	txn->mt_dbxs[dbi].md_relctx = ctx;
 	return MDB_SUCCESS;
+}
+
+int mdb_get(MDB_txn *txn, MDB_dbi dbi, MDB_val *key, MDB_val *data)
+{
+	MDB_cursor	mc;
+	MDB_xcursor	mx;
+	int exact = 0, rc;
+	DKBUF;
+
+	DPRINTF(("===> get db %u key [%s]", dbi, DKEY(key)));
+
+	if (!key || !data || !TXN_DBI_EXIST(txn, dbi, DB_USRVALID))
+		return EINVAL;
+
+	if (txn->mt_flags & MDB_TXN_BLOCKED)
+		return MDB_BAD_TXN;
+
+	mdb_cursor_init(&mc, txn, dbi, &mx);
+	rc = mdb_cursor_set(&mc, key, data, MDB_SET, &exact);
+	return rc;
 }
