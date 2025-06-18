@@ -129,45 +129,6 @@ mdb_node_search(MDB_cursor *mc, MDB_val *key, int *exactp)
 	return node;
 }
 
-/** Back up parent txn's cursors, then grab the originals for tracking */
-int
-mdb_cursor_shadow(MDB_txn *src, MDB_txn *dst)
-{
-	MDB_cursor *mc, *bk;
-	MDB_xcursor *mx;
-	size_t size;
-	int i;
-
-	for (i = src->mt_numdbs; --i >= 0; ) {
-		if ((mc = src->mt_cursors[i]) != NULL) {
-			size = sizeof(MDB_cursor);
-			if (mc->mc_xcursor)
-				size += sizeof(MDB_xcursor);
-			for (; mc; mc = bk->mc_next) {
-				bk = malloc(size);
-				if (!bk)
-					return ENOMEM;
-				*bk = *mc;
-				mc->mc_backup = bk;
-				mc->mc_db = &dst->mt_dbs[i];
-				/* Kill pointers into src to reduce abuse: The
-				 * user may not use mc until dst ends. But we need a valid
-				 * txn pointer here for cursor fixups to keep working.
-				 */
-				mc->mc_txn    = dst;
-				mc->mc_dbflag = &dst->mt_dbflags[i];
-				if ((mx = mc->mc_xcursor) != NULL) {
-					*(MDB_xcursor *)(bk+1) = *mx;
-					mx->mx_cursor.mc_txn = dst;
-				}
-				mc->mc_next = dst->mt_cursors[i];
-				dst->mt_cursors[i] = mc;
-			}
-		}
-	}
-	return MDB_SUCCESS;
-}
-
 /** Pop a page off the top of the cursor's stack. */
 void
 mdb_cursor_pop(MDB_cursor *mc)
