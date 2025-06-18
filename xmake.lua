@@ -14,7 +14,13 @@ end
 
 target("fiksstore")
     set_kind("static")
-    add_files("Lib/mdb.c", "Lib/midl.c", "Lib/mdb_hash.c", "Lib/mdb_page.c", "Lib/mdb_util.c", "Lib/mdb_compare.c")
+    add_files("Lib/mdb.c", 
+              "Lib/midl.c",
+              "Lib/mdb_hash.c",
+              "Lib/mdb_page.c",
+              "Lib/mdb_util.c",
+              "Lib/mdb_compare.c",
+              "Lib/mdb_env.c")
     add_defines("MDB_DEBUG=0")
     add_includedirs("Lib/", {public = true})
 

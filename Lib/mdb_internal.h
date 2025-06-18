@@ -1539,3 +1539,64 @@ void ESECT mdb_assert_fail(MDB_env *env, const char *expr_txt, const char *func,
 	{ act; } \
 	*tp = tracked->mc_next; \
 } while (0)
+
+#ifdef _WIN32
+typedef wchar_t	mdb_nchar_t;
+# define MDB_NAME(str)	L##str
+# define mdb_name_cpy	wcscpy
+#else
+/** Character type for file names: char on Unix, wchar_t on Windows */
+typedef char	mdb_nchar_t;
+# define MDB_NAME(str)	str		/**< #mdb_nchar_t[] string literal */
+# define mdb_name_cpy	strcpy	/**< Copy name (#mdb_nchar_t string) */
+#endif
+
+/** Filename - string of #mdb_nchar_t[] */
+typedef struct MDB_name {
+	int mn_len;					/**< Length  */
+	int mn_alloced;				/**< True if #mn_val was malloced */
+	mdb_nchar_t	*mn_val;		/**< Contents */
+} MDB_name;
+
+/** Destroy \b fname from #mdb_fname_init() */
+#define mdb_fname_destroy(fname) \
+	do { if ((fname).mn_alloced) free((fname).mn_val); } while (0)
+
+#ifdef O_CLOEXEC /* POSIX.1-2008: Set FD_CLOEXEC atomically at open() */
+# define MDB_CLOEXEC		O_CLOEXEC
+#else
+# define MDB_CLOEXEC		0
+#endif
+
+/** File type, access mode etc. for #mdb_fopen() */
+enum mdb_fopen_type {
+#ifdef _WIN32
+	MDB_O_RDONLY, MDB_O_RDWR, MDB_O_OVERLAPPED, MDB_O_META, MDB_O_COPY, MDB_O_LOCKS
+#else
+	/* A comment in mdb_fopen() explains some O_* flag choices. */
+	MDB_O_RDONLY= O_RDONLY,                            /**< for RDONLY me_fd */
+	MDB_O_RDWR  = O_RDWR  |O_CREAT,                    /**< for me_fd */
+	MDB_O_META  = O_WRONLY|MDB_DSYNC     |MDB_CLOEXEC, /**< for me_mfd */
+	MDB_O_COPY  = O_WRONLY|O_CREAT|O_EXCL|MDB_CLOEXEC, /**< for #mdb_env_copy() */
+	/** Bitmask for open() flags in enum #mdb_fopen_type.  The other bits
+	 * distinguish otherwise-equal MDB_O_* constants from each other.
+	 */
+	MDB_O_MASK  = MDB_O_RDWR|MDB_CLOEXEC | MDB_O_RDONLY|MDB_O_META|MDB_O_COPY,
+	MDB_O_LOCKS = MDB_O_RDWR|MDB_CLOEXEC | ((MDB_O_MASK+1) & ~MDB_O_MASK) /**< for me_lfd */
+#endif
+};
+
+#ifdef _WIN32
+/** Junk for arranging thread-specific callbacks on Windows. This is
+ *	necessarily platform and compiler-specific. Windows supports up
+ *	to 1088 keys. Let's assume nobody opens more than 64 environments
+ *	in a single process, for now. They can override this if needed.
+ */
+#ifndef MAX_TLS_KEYS
+#define MAX_TLS_KEYS	64
+#endif
+
+extern pthread_key_t mdb_tls_keys[MAX_TLS_KEYS];
+extern int mdb_tls_nkeys;
+#endif
+
