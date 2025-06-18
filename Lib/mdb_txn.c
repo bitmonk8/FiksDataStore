@@ -274,6 +274,73 @@ mdb_txn_id(MDB_txn *txn)
     return txn->mt_txnid;
 }
 
+/** Export or close DBI handles opened in this txn. */
+static void mdb_dbis_update(MDB_txn *txn, int keep)
+{
+	int i;
+	MDB_dbi n = txn->mt_numdbs;
+	MDB_env *env = txn->mt_env;
+	unsigned char *tdbflags = txn->mt_dbflags;
+
+	for (i = n; --i >= CORE_DBS;) {
+		if (tdbflags[i] & DB_NEW) {
+			if (keep) {
+				env->me_dbflags[i] = txn->mt_dbs[i].md_flags | MDB_VALID;
+			} else {
+				char *ptr = env->me_dbxs[i].md_name.mv_data;
+				if (ptr) {
+					env->me_dbxs[i].md_name.mv_data = NULL;
+					env->me_dbxs[i].md_name.mv_size = 0;
+					env->me_dbflags[i] = 0;
+					env->me_dbiseqs[i]++;
+					free(ptr);
+				}
+			}
+		}
+	}
+	if (keep && env->me_numdbs < n)
+		env->me_numdbs = n;
+}
+
+/** Close this write txn's cursors, give parent txn's cursors back to parent.
+ * @param[in] txn the transaction handle.
+ * @param[in] merge true to keep changes to parent cursors, false to revert.
+ * @return 0 on success, non-zero on failure.
+ */
+static void mdb_cursors_close(MDB_txn *txn, unsigned merge)
+{
+	MDB_cursor **cursors = txn->mt_cursors, *mc, *next, *bk;
+	MDB_xcursor *mx;
+	int i;
+
+	for (i = txn->mt_numdbs; --i >= 0; ) {
+		for (mc = cursors[i]; mc; mc = next) {
+			next = mc->mc_next;
+			if ((bk = mc->mc_backup) != NULL) {
+				if (merge) {
+					/* Commit changes to parent txn */
+					mc->mc_next = bk->mc_next;
+					mc->mc_backup = bk->mc_backup;
+					mc->mc_txn = bk->mc_txn;
+					mc->mc_db = bk->mc_db;
+					mc->mc_dbflag = bk->mc_dbflag;
+					if ((mx = mc->mc_xcursor) != NULL)
+						mx->mx_cursor.mc_txn = bk->mc_txn;
+				} else {
+					/* Abort nested txn */
+					*mc = *bk;
+					if ((mx = mc->mc_xcursor) != NULL)
+						*mx = *(MDB_xcursor *)(bk+1);
+				}
+				mc = bk;
+			}
+			/* Only malloced cursors are permanently tracked. */
+			free(mc);
+		}
+		cursors[i] = NULL;
+	}
+}
+
 /** End a transaction, except successful commit of a nested transaction.
  * May be called twice for readonly txns: First reset it, then abort.
  * @param[in] txn the transaction handle to end

@@ -1612,3 +1612,6 @@ enum Pidlock_op {
 	Pidset = F_SETLK, Pidcheck = F_GETLK
 };
 #endif
+
+int mdb_reader_pid(MDB_env *env, enum Pidlock_op op, MDB_PID_T pid);
+int mdb_cursor_shadow(MDB_txn *src, MDB_txn *dst);
