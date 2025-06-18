@@ -4,6 +4,7 @@
 #include "mdb_page.h"
 #include "mdb_env.h"
 #include "mdb_cursor.h"
+#include "mdb_debug.h"
 
 /** Set the default comparison functions for a database.
  * Called immediately after a database is opened to set the defaults.

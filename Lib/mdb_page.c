@@ -2,6 +2,7 @@
 
 #include "mdb_env.h"
 #include "mdb_cursor.h"
+#include "mdb_debug.h"
 
 /** @defgroup page_ops Page Management Operations
  *  @ingroup internal

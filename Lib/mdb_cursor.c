@@ -3,6 +3,7 @@
 #include "mdb_compare.h"
 #include "mdb_page.h"
 #include "mdb_env.h"
+#include "mdb_debug.h"
 
 #if MDB_DEBUG
 void

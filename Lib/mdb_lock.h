@@ -23,3 +23,4 @@ enum Pidlock_op {
     
 int mdb_mutex_failed(MDB_env *env, mdb_mutexref_t mutex, int rc);
 int mdb_reader_pid(MDB_env *env, enum Pidlock_op op, MDB_PID_T pid);
+int mdb_reader_check0(MDB_env *env, int rlocked, int *dead);

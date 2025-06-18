@@ -1301,42 +1301,6 @@ size_t	mdb_branch_size(MDB_env *env, MDB_val *key);
 int	mdb_rebalance(MDB_cursor *mc);
 int	mdb_update_key(MDB_cursor *mc, MDB_val *key);
 
-void	mdb_cursor_pop(MDB_cursor *mc);
-int	mdb_cursor_push(MDB_cursor *mc, MDB_page *mp);
-
-int	_mdb_cursor_del(MDB_cursor *mc, unsigned int flags);
-int	_mdb_cursor_put(MDB_cursor *mc, MDB_val *key, MDB_val *data, unsigned int flags);
-
-int	mdb_cursor_del0(MDB_cursor *mc);
 int	mdb_del0(MDB_txn *txn, MDB_dbi dbi, MDB_val *key, MDB_val *data, unsigned flags);
-int	mdb_cursor_sibling(MDB_cursor *mc, int move_right);
-int	mdb_cursor_next(MDB_cursor *mc, MDB_val *key, MDB_val *data, MDB_cursor_op op);
-int	mdb_cursor_prev(MDB_cursor *mc, MDB_val *key, MDB_val *data, MDB_cursor_op op);
-int	mdb_cursor_set(MDB_cursor *mc, MDB_val *key, MDB_val *data, MDB_cursor_op op,
-				int *exactp);
-int	mdb_cursor_first(MDB_cursor *mc, MDB_val *key, MDB_val *data);
-int	mdb_cursor_last(MDB_cursor *mc, MDB_val *key, MDB_val *data);
 
-void	mdb_cursor_init(MDB_cursor *mc, MDB_txn *txn, MDB_dbi dbi, MDB_xcursor *mx);
-void	mdb_xcursor_init0(MDB_cursor *mc);
-void	mdb_xcursor_init1(MDB_cursor *mc, MDB_node *node);
-void	mdb_xcursor_init2(MDB_cursor *mc, MDB_xcursor *src_mx, int force);
 
-int	mdb_drop0(MDB_cursor *mc, int subs);
-int mdb_reader_check0(MDB_env *env, int rlocked, int *dead);
-void mdb_cursor_copy(const MDB_cursor *csrc, MDB_cursor *cdst);
-
-/** assert(3) variant in cursor context */
-#define mdb_cassert(mc, expr)	mdb_assert0((mc)->mc_txn->mt_env, expr, #expr)
-/** assert(3) variant in transaction context */
-#define mdb_tassert(txn, expr)	mdb_assert0((txn)->mt_env, expr, #expr)
-/** assert(3) variant in environment context */
-#define mdb_eassert(env, expr)	mdb_assert0(env, expr, #expr)
-
-#ifndef NDEBUG
-#define mdb_assert0(env, expr, expr_txt) ((expr) ? (void)0 : \
-		mdb_assert_fail(env, expr_txt, __func__, __FILE__, __LINE__))
-void ESECT mdb_assert_fail(MDB_env *env, const char *expr_txt, const char *func, const char *file, int line);
-#else
-#define mdb_assert0(env, expr, expr_txt) ((void) 0)
-#endif /* NDEBUG */
