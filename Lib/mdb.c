@@ -59,7 +59,6 @@ mdb_get(MDB_txn *txn, MDB_dbi dbi,
 
 	mdb_cursor_init(&mc, txn, dbi, &mx);
 	rc = mdb_cursor_set(&mc, key, data, MDB_SET, &exact);
-	MDB_CURSOR_UNREF(&mc, 1);
 	return rc;
 }
 

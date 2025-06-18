@@ -1341,9 +1341,6 @@ void ESECT mdb_assert_fail(MDB_env *env, const char *expr_txt, const char *func,
 #define mdb_assert0(env, expr, expr_txt) ((void) 0)
 #endif /* NDEBUG */
 
-#define MDB_PAGE_UNREF(txn, mp)
-#define MDB_CURSOR_UNREF(mc, force) ((void)0)
-
 /** Perform \b act while tracking temporary cursor \b mn */
 #define WITH_CURSOR_TRACKING(mn, act) do { \
 	MDB_cursor dummy, *tracked, **tp = &(mn).mc_txn->mt_cursors[mn.mc_dbi]; \

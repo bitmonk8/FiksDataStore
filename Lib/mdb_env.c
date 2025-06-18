@@ -5,7 +5,7 @@
 #include "mdb_txn.h"
 #include "mdb_lock.h"
 
-void mdb_env_reader_dest(void *ptr);
+static void mdb_env_reader_dest(void *ptr);
 
 #ifdef _WIN32
 typedef wchar_t	mdb_nchar_t;

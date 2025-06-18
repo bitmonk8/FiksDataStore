@@ -220,7 +220,6 @@ mdb_node_read(MDB_cursor *mc, MDB_node *leaf, MDB_val *data)
 	int rc;
 
 	if (MC_OVPG(mc)) {
-		MDB_PAGE_UNREF(mc->mc_txn, MC_OVPG(mc));
 		MC_SET_OVPG(mc, NULL);
 	}
 	if (!F_ISSET(leaf->mn_flags, F_BIGDATA)) {
@@ -285,8 +284,6 @@ mdb_cursor_sibling(MDB_cursor *mc, int move_right)
 	}
 	mdb_cassert(mc, IS_BRANCH(mc->mc_pg[mc->mc_top]));
 
-	MDB_PAGE_UNREF(mc->mc_txn, op);
-
 	indx = NODEPTR(mc->mc_pg[mc->mc_top], mc->mc_ki[mc->mc_top]);
 	if ((rc = mdb_page_get(mc, NODEPGNO(indx), &mp, NULL)) != 0) {
 		/* mc will be inconsistent if caller does mc_snum++ as above */
@@ -333,9 +330,6 @@ mdb_cursor_next(MDB_cursor *mc, MDB_val *key, MDB_val *data, MDB_cursor_op op)
 						MDB_GET_KEY(leaf, key);
 					return rc;
 				}
-			}
-			else {
-				MDB_CURSOR_UNREF(&mc->mc_xcursor->mx_cursor, 0);
 			}
 		} else {
 			mc->mc_xcursor->mx_cursor.mc_flags &= ~(C_INITIALIZED|C_EOF);
@@ -420,9 +414,6 @@ mdb_cursor_prev(MDB_cursor *mc, MDB_val *key, MDB_val *data, MDB_cursor_op op)
 					return rc;
 				}
 			}
-			else {
-				MDB_CURSOR_UNREF(&mc->mc_xcursor->mx_cursor, 0);
-			}
 		} else {
 			mc->mc_xcursor->mx_cursor.mc_flags &= ~(C_INITIALIZED|C_EOF);
 			if (op == MDB_PREV_DUP)
@@ -488,7 +479,6 @@ mdb_cursor_set(MDB_cursor *mc, MDB_val *key, MDB_val *data,
 		return MDB_BAD_VALSIZE;
 
 	if (mc->mc_xcursor) {
-		MDB_CURSOR_UNREF(&mc->mc_xcursor->mx_cursor, 0);
 		mc->mc_xcursor->mx_cursor.mc_flags &= ~(C_INITIALIZED|C_EOF);
 	}
 
@@ -680,7 +670,6 @@ mdb_cursor_first(MDB_cursor *mc, MDB_val *key, MDB_val *data)
 	MDB_node	*leaf;
 
 	if (mc->mc_xcursor) {
-		MDB_CURSOR_UNREF(&mc->mc_xcursor->mx_cursor, 0);
 		mc->mc_xcursor->mx_cursor.mc_flags &= ~(C_INITIALIZED|C_EOF);
 	}
 
@@ -727,7 +716,6 @@ mdb_cursor_last(MDB_cursor *mc, MDB_val *key, MDB_val *data)
 	MDB_node	*leaf;
 
 	if (mc->mc_xcursor) {
-		MDB_CURSOR_UNREF(&mc->mc_xcursor->mx_cursor, 0);
 		mc->mc_xcursor->mx_cursor.mc_flags &= ~(C_INITIALIZED|C_EOF);
 	}
 
@@ -1872,9 +1860,6 @@ void
 mdb_cursor_close(MDB_cursor *mc)
 {
 	MDB_TRACE(("%p", mc));
-	if (mc) {
-		MDB_CURSOR_UNREF(mc, 0);
-	}
 	if (mc && !mc->mc_backup) {
 		/* Remove from txn, if tracked.
 		 * A read-only txn (!C_UNTRACK) may have been freed already,

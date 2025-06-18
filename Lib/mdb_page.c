@@ -968,7 +968,6 @@ done:
 			}
 		}
 	}
-	MDB_PAGE_UNREF(mc->mc_txn, mp);
 	return 0;
 
 fail:
