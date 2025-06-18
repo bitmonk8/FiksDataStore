@@ -1685,6 +1685,26 @@ done2:
 	return rc ? rc : my.mc_error;
 }
 
+static int ESECT mdb_fsize(HANDLE fd, mdb_size_t *size)
+{
+#ifdef _WIN32
+	LARGE_INTEGER fsize;
+
+	if (!GetFileSizeEx(fd, &fsize))
+		return ErrCode();
+
+	*size = fsize.QuadPart;
+#else
+	struct stat st;
+
+	if (fstat(fd, &st))
+		return ErrCode();
+
+	*size = st.st_size;
+#endif
+	return MDB_SUCCESS;
+}
+
 	/** Copy environment as-is. */
 int ESECT
 mdb_env_copyfd0(MDB_env *env, HANDLE fd)
@@ -1892,6 +1912,41 @@ mdb_env_get_fd(MDB_env *env, mdb_filehandle_t *arg)
 
 	*arg = env->me_fd;
 	return MDB_SUCCESS;
+}
+
+/** Common code for #mdb_stat() and #mdb_env_stat().
+ * @param[in] env the environment to operate in.
+ * @param[in] db the #MDB_db record containing the stats to return.
+ * @param[out] arg the address of an #MDB_stat structure to receive the stats.
+ * @return 0, this function always succeeds.
+ */
+static int ESECT mdb_stat0(MDB_env *env, MDB_db *db, MDB_stat *arg)
+{
+	arg->ms_psize = env->me_psize;
+	arg->ms_depth = db->md_depth;
+	arg->ms_branch_pages = db->md_branch_pages;
+	arg->ms_leaf_pages = db->md_leaf_pages;
+	arg->ms_overflow_pages = db->md_overflow_pages;
+	arg->ms_entries = db->md_entries;
+
+	return MDB_SUCCESS;
+}
+
+int ESECT mdb_stat(MDB_txn *txn, MDB_dbi dbi, MDB_stat *arg)
+{
+	if (!arg || !TXN_DBI_EXIST(txn, dbi, DB_VALID))
+		return EINVAL;
+
+	if (txn->mt_flags & MDB_TXN_BLOCKED)
+		return MDB_BAD_TXN;
+
+	if (txn->mt_dbflags[dbi] & DB_STALE) {
+		MDB_cursor mc;
+		MDB_xcursor mx;
+		/* Stale, must read the DB's root. cursor_init does it for us. */
+		mdb_cursor_init(&mc, txn, dbi, &mx);
+	}
+	return mdb_stat0(txn->mt_env, &txn->mt_dbs[dbi], arg);
 }
 
 int ESECT
