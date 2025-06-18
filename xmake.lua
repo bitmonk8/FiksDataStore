@@ -24,7 +24,8 @@ target("fiksstore")
               "Lib/mdb_txn.c",
               "Lib/mdb_cursor.c",
               "Lib/mdb_db.c",
-              "Lib/mdb_lock.c")
+              "Lib/mdb_lock.c",
+              "Lib/mdb_debug.c")
     add_defines("MDB_DEBUG=0")
     add_includedirs("Lib/", {public = true})
 

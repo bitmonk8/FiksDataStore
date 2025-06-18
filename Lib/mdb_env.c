@@ -5,7 +5,88 @@
 #include "mdb_txn.h"
 #include "mdb_lock.h"
 
+void mdb_env_reader_dest(void *ptr);
+
 #ifdef _WIN32
+typedef wchar_t	mdb_nchar_t;
+# define MDB_NAME(str)	L##str
+# define mdb_name_cpy	wcscpy
+#else
+/** Character type for file names: char on Unix, wchar_t on Windows */
+typedef char	mdb_nchar_t;
+# define MDB_NAME(str)	str		/**< #mdb_nchar_t[] string literal */
+# define mdb_name_cpy	strcpy	/**< Copy name (#mdb_nchar_t string) */
+#endif
+
+#ifdef O_CLOEXEC /* POSIX.1-2008: Set FD_CLOEXEC atomically at open() */
+# define MDB_CLOEXEC		O_CLOEXEC
+#else
+# define MDB_CLOEXEC		0
+#endif
+
+#ifdef _WIN32
+
+/** Junk for arranging thread-specific callbacks on Windows. This is
+ *	necessarily platform and compiler-specific. Windows supports up
+ *	to 1088 keys. Let's assume nobody opens more than 64 environments
+ *	in a single process, for now. They can override this if needed.
+ */
+#ifndef MAX_TLS_KEYS
+#define MAX_TLS_KEYS	64
+#endif
+
+/** Junk for arranging thread-specific callbacks on Windows. This is
+ *	necessarily platform and compiler-specific. Windows supports up
+ *	to 1088 keys. Let's assume nobody opens more than 64 environments
+ *	in a single process, for now. They can override this if needed.
+ */
+pthread_key_t mdb_tls_keys[MAX_TLS_KEYS];
+int mdb_tls_nkeys;
+
+void NTAPI mdb_tls_callback(PVOID module, DWORD reason, PVOID ptr)
+{
+	int i;
+	switch(reason) {
+	case DLL_PROCESS_ATTACH: break;
+	case DLL_THREAD_ATTACH: break;
+	case DLL_THREAD_DETACH:
+		for (i=0; i<mdb_tls_nkeys; i++) {
+			MDB_reader *r = pthread_getspecific(mdb_tls_keys[i]);
+			if (r) {
+				mdb_env_reader_dest(r);
+			}
+		}
+		break;
+	case DLL_PROCESS_DETACH: break;
+	}
+}
+#ifdef __GNUC__
+#ifdef _WIN64
+const PIMAGE_TLS_CALLBACK mdb_tls_cbp __attribute__((section (".CRT$XLB"))) = mdb_tls_callback;
+#else
+PIMAGE_TLS_CALLBACK mdb_tls_cbp __attribute__((section (".CRT$XLB"))) = mdb_tls_callback;
+#endif
+#else
+#ifdef _WIN64
+/* Force some symbol references.
+ *	_tls_used forces the linker to create the TLS directory if not already done
+ *	mdb_tls_cbp prevents whole-program-optimizer from dropping the symbol.
+ */
+#pragma comment(linker, "/INCLUDE:_tls_used")
+#pragma comment(linker, "/INCLUDE:mdb_tls_cbp")
+#pragma const_seg(".CRT$XLB")
+extern const PIMAGE_TLS_CALLBACK mdb_tls_cbp;
+const PIMAGE_TLS_CALLBACK mdb_tls_cbp = mdb_tls_callback;
+#pragma const_seg()
+#else	/* _WIN32 */
+#pragma comment(linker, "/INCLUDE:__tls_used")
+#pragma comment(linker, "/INCLUDE:_mdb_tls_cbp")
+#pragma data_seg(".CRT$XLB")
+PIMAGE_TLS_CALLBACK mdb_tls_cbp = mdb_tls_callback;
+#pragma data_seg()
+#endif	/* WIN 32/64 */
+#endif	/* !__GNUC__ */
+
 /* We use native NT APIs to setup the memory map, so that we can
  * let the DB file grow incrementally instead of always preallocating
  * the full size. These APIs are defined in <wdm.h> and <ntifs.h>
@@ -91,6 +172,7 @@ static NtMapViewOfSectionFunc *NtMapViewOfSection;
 #ifndef MS_ASYNC
 #define	MS_ASYNC	0
 #endif
+
 
 /** Filename - string of #mdb_nchar_t[] */
 typedef struct MDB_name {
@@ -934,8 +1016,7 @@ mdb_env_open2(MDB_env *env, int prev)
  *	This function is called automatically when a thread exits.
  * @param[in] ptr This points to the slot in the reader lock table.
  */
-void
-mdb_env_reader_dest(void *ptr)
+static void mdb_env_reader_dest(void *ptr)
 {
 	MDB_reader *reader = ptr;
 

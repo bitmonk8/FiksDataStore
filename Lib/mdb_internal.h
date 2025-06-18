@@ -1360,46 +1360,4 @@ void ESECT mdb_assert_fail(MDB_env *env, const char *expr_txt, const char *func,
 	*tp = tracked->mc_next; \
 } while (0)
 
-#ifdef _WIN32
-typedef wchar_t	mdb_nchar_t;
-# define MDB_NAME(str)	L##str
-# define mdb_name_cpy	wcscpy
-#else
-/** Character type for file names: char on Unix, wchar_t on Windows */
-typedef char	mdb_nchar_t;
-# define MDB_NAME(str)	str		/**< #mdb_nchar_t[] string literal */
-# define mdb_name_cpy	strcpy	/**< Copy name (#mdb_nchar_t string) */
-#endif
 
-#ifdef O_CLOEXEC /* POSIX.1-2008: Set FD_CLOEXEC atomically at open() */
-# define MDB_CLOEXEC		O_CLOEXEC
-#else
-# define MDB_CLOEXEC		0
-#endif
-
-#ifdef _WIN32
-/** Junk for arranging thread-specific callbacks on Windows. This is
- *	necessarily platform and compiler-specific. Windows supports up
- *	to 1088 keys. Let's assume nobody opens more than 64 environments
- *	in a single process, for now. They can override this if needed.
- */
-#ifndef MAX_TLS_KEYS
-#define MAX_TLS_KEYS	64
-#endif
-
-extern pthread_key_t mdb_tls_keys[MAX_TLS_KEYS];
-extern int mdb_tls_nkeys;
-#endif
-
-#if !(MDB_PIDLOCK)		/* Currently the same as defined(_WIN32) */
-enum Pidlock_op {
-	Pidset, Pidcheck
-};
-#else
-enum Pidlock_op {
-	Pidset = F_SETLK, Pidcheck = F_GETLK
-};
-#endif
-
-int mdb_reader_pid(MDB_env *env, enum Pidlock_op op, MDB_PID_T pid);
-int mdb_cursor_shadow(MDB_txn *src, MDB_txn *dst);
