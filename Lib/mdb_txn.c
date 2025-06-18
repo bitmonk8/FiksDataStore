@@ -1,6 +1,7 @@
 #include "mdb_txn.h"
 
 #include "mdb_page.h"
+#include "mdb_env.h"
 
 /** Common code for #mdb_txn_begin() and #mdb_txn_renew().
  * @param[in] txn the transaction handle to initialize
