@@ -876,9 +876,6 @@ mdb_txn_abort(MDB_txn *txn)
 
 /** Save the freelist as of this transaction to the freeDB.
  * This changes the freelist. Keep trying until it stabilizes.
- *
- * When (MDB_DEVEL) & 2, the changes do not affect #mdb_page_alloc(),
- * it then uses the transaction's original snapshot of the freeDB.
  */
 int
 mdb_freelist_save(MDB_txn *txn)
@@ -1598,8 +1595,6 @@ fail:
 		env->me_flags |= MDB_FATAL_ERROR;
 		return rc;
 	}
-	/* MIPS has cache coherency issues, this is a no-op everywhere else */
-	CACHEFLUSH(env->me_map + off, len, DCACHE);
 done:
 	/* Memory ordering issues are irrelevant; since the entire writer
 	 * is wrapped by wmutex, all of these changes will become visible
@@ -2522,9 +2517,7 @@ mdb_env_setup_locks(MDB_env *env, MDB_name *fname, int mode, int *excl)
 		if ((rc = pthread_mutexattr_init(&mattr)) != 0)
 			goto fail;
 		rc = pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_SHARED);
-#ifdef MDB_ROBUST_SUPPORTED
 		if (!rc) rc = pthread_mutexattr_setrobust(&mattr, PTHREAD_MUTEX_ROBUST);
-#endif
 		if (!rc) rc = pthread_mutex_init(env->me_txns->mti_rmutex, &mattr);
 		if (!rc) rc = pthread_mutex_init(env->me_txns->mti_wmutex, &mattr);
 		pthread_mutexattr_destroy(&mattr);
@@ -6307,7 +6300,6 @@ mdb_reader_check0(MDB_env *env, int rlocked, int *dead)
 	return rc;
 }
 
-#ifdef MDB_ROBUST_SUPPORTED
 /** Handle #LOCK_MUTEX0() failure.
  * Try to repair the lock file if the mutex owner died.
  * @param[in] env	the environment handle
@@ -6356,7 +6348,6 @@ mdb_mutex_failed(MDB_env *env, mdb_mutexref_t mutex, int rc)
 
 	return rc;
 }
-#endif	/* MDB_ROBUST_SUPPORTED */
 
 #if defined(_WIN32)
 /** Convert \b src to new wchar_t[] string with room for \b xtra extra chars */

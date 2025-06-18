@@ -409,13 +409,6 @@ retry_seek:
 #endif	/* _WIN32 */
 
 	if (!(env->me_flags & MDB_WRITEMAP)) {
-		/* Don't free pages when using writemap (can only get here in NOSYNC mode in Windows)
-		 * MIPS has cache coherency issues, this is a no-op everywhere else
-		 * Note: for any size >= on-chip cache size, entire on-chip cache is
-		 * flushed.
-		 */
-		CACHEFLUSH(env->me_map, txn->mt_next_pgno * env->me_psize, DCACHE);
-
 		for (i = keep; ++i <= pagecount; ) {
 			dp = dl[i].mptr;
 			/* This is a page we skipped above */
@@ -615,8 +608,6 @@ mdb_page_dirty(MDB_txn *txn, MDB_page *mp)
  * Do not modify the freedB, just merge freeDB records into me_pghead[]
  * and move me_pglast to say which records were consumed.  Only this
  * function can create me_pghead and move me_pglast/mt_next_pgno.
- * When #MDB_DEVEL & 2, it is not affected by #mdb_freelist_save(): it
- * then uses the transaction's original snapshot of the freeDB.
  * @param[in] mc cursor A cursor handle identifying the transaction and
  *	database for which we are allocating.
  * @param[in] num the number of pages to allocate.
@@ -690,14 +681,6 @@ int mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp)
 			last = env->me_pglast;
 			oldest = env->me_pgoldest;
 			mdb_cursor_init(&m2, txn, FREE_DBI, NULL);
-#if (MDB_DEVEL) & 2	/* "& 2" so MDB_DEVEL=1 won't hide bugs breaking freeDB */
-			/* Use original snapshot. TODO: Should need less care in code
-			 * which modifies the database. Maybe we can delete some code?
-			 */
-			m2.mc_flags |= C_ORIG_RDONLY;
-			m2.mc_db = &env->me_metas[(txn->mt_txnid-1) & 1]->mm_dbs[FREE_DBI];
-			m2.mc_dbflag = (unsigned char *)""; /* probably unnecessary */
-#endif
 			if (last) {
 				op = MDB_SET_RANGE;
 				key.mv_data = &last; /* will look up last+1 */

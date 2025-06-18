@@ -92,14 +92,6 @@ NtMapViewOfSectionFunc *NtMapViewOfSection;
 
 #endif
 
-#if defined(__mips) && defined(__linux)
-/* MIPS has cache coherency issues, requires explicit cache control */
-#include <sys/cachectl.h>
-#define CACHEFLUSH(addr, bytes, cache)	cacheflush(addr, bytes, cache)
-#else
-#define CACHEFLUSH(addr, bytes, cache)
-#endif
-
 #include <errno.h>
 #include <limits.h>
 #include <stddef.h>
@@ -116,12 +108,6 @@ typedef SSIZE_T	ssize_t;
 #include <unistd.h>
 #endif
 
-#if defined(__ANDROID__)
-/* Most platforms have posix_memalign, older may only have memalign */
-#define HAVE_MEMALIGN	1
-#include <malloc.h>
-#endif
-
 #if !(defined(BYTE_ORDER) || defined(__BYTE_ORDER))
 #include <netinet/in.h>
 #include <resolv.h>	/* defines BYTE_ORDER on HPUX and Solaris */
@@ -129,7 +115,6 @@ typedef SSIZE_T	ssize_t;
 
 #if defined(__FreeBSD__) && defined(__FreeBSD_version) && __FreeBSD_version >= 1100110
 # define MDB_USE_POSIX_MUTEX	1
-# define MDB_USE_ROBUST	1
 #elif defined(__APPLE__) || defined (BSD) || defined(__FreeBSD_kernel__)
 # if !(defined(MDB_USE_POSIX_MUTEX) || defined(MDB_USE_POSIX_SEM))
 # define MDB_USE_SYSV_SEM	1
@@ -139,8 +124,6 @@ typedef SSIZE_T	ssize_t;
 # else
 # define MDB_FDATASYNC		fsync
 # endif
-#elif defined(__ANDROID__)
-# define MDB_FDATASYNC		fsync
 #endif
 
 #ifndef _WIN32
@@ -249,53 +232,22 @@ union semun {
  *	@{
  */
 
-	/** Features under development */
-#ifndef MDB_DEVEL
-#define MDB_DEVEL 0
-#endif
-
-	/** Wrapper around __func__, which is a C99 feature */
-#if __STDC_VERSION__ >= 199901L
-# define mdb_func_	__func__
-#elif __GNUC__ >= 2 || _MSC_VER >= 1300
-# define mdb_func_	__FUNCTION__
-#else
-/* If a debug message says <mdb_unknown>(), update the #if statements above */
-# define mdb_func_	"<mdb_unknown>"
-#endif
-
 /* Internal error codes, not exposed outside liblmdb */
 #define	MDB_NO_ROOT		(MDB_LAST_ERRCODE + 10)
+
 #ifdef _WIN32
 #define MDB_OWNERDEAD	((int) WAIT_ABANDONED)
 #elif defined MDB_USE_SYSV_SEM
 #define MDB_OWNERDEAD	(MDB_LAST_ERRCODE + 11)
-#elif defined(MDB_USE_POSIX_MUTEX) && defined(EOWNERDEAD)
+#elif defined(MDB_USE_POSIX_MUTEX)
 #define MDB_OWNERDEAD	EOWNERDEAD	/**< #LOCK_MUTEX0() result if dead owner */
 #endif
 
 #ifdef __GLIBC__
 #define	GLIBC_VER	((__GLIBC__ << 16 )| __GLIBC_MINOR__)
 #endif
-/** Some platforms define the EOWNERDEAD error code
- * even though they don't support Robust Mutexes.
- * Compile with -DMDB_USE_ROBUST=0, or use some other
- * mechanism like -DMDB_USE_SYSV_SEM instead of
- * -DMDB_USE_POSIX_MUTEX. (SysV semaphores are
- * also Robust, but some systems don't support them
- * either.)
- */
-#ifndef MDB_USE_ROBUST
-/* Android currently lacks Robust Mutex support. So does glibc < 2.4. */
-# if defined(MDB_USE_POSIX_MUTEX) && (defined(__ANDROID__) || \
-	(defined(__GLIBC__) && GLIBC_VER < 0x020004))
-#  define MDB_USE_ROBUST	0
-# else
-#  define MDB_USE_ROBUST	1
-# endif
-#endif /* !MDB_USE_ROBUST */
 
-#if defined(MDB_USE_POSIX_MUTEX) && (MDB_USE_ROBUST)
+#if defined(MDB_USE_POSIX_MUTEX)
 /* glibc < 2.12 only provided _np API */
 #  if (defined(__GLIBC__) && GLIBC_VER < 0x02000c) || \
 	(defined(PTHREAD_MUTEX_ROBUST_NP) && !defined(PTHREAD_MUTEX_ROBUST))
@@ -303,11 +255,7 @@ union semun {
 #   define pthread_mutexattr_setrobust(attr, flag)	pthread_mutexattr_setrobust_np(attr, flag)
 #   define pthread_mutex_consistent(mutex)	pthread_mutex_consistent_np(mutex)
 #  endif
-#endif /* MDB_USE_POSIX_MUTEX && MDB_USE_ROBUST */
-
-#if defined(MDB_OWNERDEAD) && (MDB_USE_ROBUST)
-#define MDB_ROBUST_SUPPORTED	1
-#endif
+#endif /* MDB_USE_POSIX_MUTEX */
 
 #ifdef _WIN32
 #define MDB_PIDLOCK	0
@@ -447,19 +395,13 @@ typedef pthread_mutex_t *mdb_mutexref_t;
 #endif
 
 /** @} */
-
-#ifdef MDB_ROBUST_SUPPORTED
-	/** Lock mutex, handle any error, set rc = result.
-	 *	Return 0 on success, nonzero (not rc) on error.
-	 */
+/** Lock mutex, handle any error, set rc = result.
+ *	Return 0 on success, nonzero (not rc) on error.
+*/
 #define LOCK_MUTEX(rc, env, mutex) \
 	(((rc) = LOCK_MUTEX0(mutex)) && \
 	 ((rc) = mdb_mutex_failed(env, mutex, rc)))
 int mdb_mutex_failed(MDB_env *env, mdb_mutexref_t mutex, int rc);
-#else
-#define LOCK_MUTEX(rc, env, mutex) ((rc) = LOCK_MUTEX0(mutex))
-#define mdb_mutex_failed(env, mutex, rc) (rc)
-#endif
 
 #ifndef _WIN32
 /**	A flag for opening a file and requesting synchronous data writes.
@@ -536,11 +478,11 @@ txnid_t mdb_debug_start;
 	 */
 # define DPRINTF(args) ((void) ((mdb_debug & MDB_DBG_INFO) && DPRINTF0 args))
 # define DPRINTF0(fmt, ...) \
-	fprintf(stderr, "%s:%d " fmt "\n", mdb_func_, __LINE__, __VA_ARGS__)
+	fprintf(stderr, "%s:%d " fmt "\n", __func__, __LINE__, __VA_ARGS__)
 	/** Trace info for replaying */
 # define MDB_TRACE(args)	((void) ((mdb_debug & MDB_DBG_TRACE) && DPRINTF1 args))
 # define DPRINTF1(fmt, ...) \
-	fprintf(stderr, ">%d:%s: " fmt "\n", getpid(), mdb_func_, __VA_ARGS__)
+	fprintf(stderr, ">%d:%s: " fmt "\n", getpid(), __func__, __VA_ARGS__)
 #else
 # define DPRINTF(args)	((void) 0)
 # define MDB_TRACE(args)	((void) 0)
@@ -593,9 +535,9 @@ txnid_t mdb_debug_start;
 #define MDB_MAGIC	 0xBEEFC0DE
 
 	/**	The version number for a database's datafile format. */
-#define MDB_DATA_VERSION	 ((MDB_DEVEL) ? 999 : 1)
+#define MDB_DATA_VERSION	 1
 	/**	The version number for a database's lockfile format. */
-#define MDB_LOCK_VERSION	 ((MDB_DEVEL) ? 999 : 2)
+#define MDB_LOCK_VERSION	 2
 	/** Number of bits representing #MDB_LOCK_VERSION in #MDB_LOCK_FORMAT.
 	 *	The remaining bits must leave room for #MDB_lock_desc.
 	 */
@@ -606,7 +548,7 @@ txnid_t mdb_debug_start;
 	 *	This macro should normally be left alone or set to 0.
 	 *	Note that a database with big keys or dupsort data cannot be
 	 *	reliably modified by a liblmdb which uses a smaller max.
-	 *	The default is 511 for backwards compat, or 0 when #MDB_DEVEL.
+	 *	The default is 511 for backwards compat.
 	 *
 	 *	Other values are allowed, for backwards compat.  However:
 	 *	A value bigger than the computed max can break if you do not
@@ -618,7 +560,7 @@ txnid_t mdb_debug_start;
 	 *	#MDB_DUPSORT data items must fit on a node in a regular page.
 	 */
 #ifndef MDB_MAXKEYSIZE
-#define MDB_MAXKEYSIZE	 ((MDB_DEVEL) ? 0 : 511)
+#define MDB_MAXKEYSIZE	 511
 #endif
 
 	/**	The maximum size of a key we can write to the environment. */
@@ -939,7 +881,7 @@ typedef struct MDB_page2 {
 #define METADATA(p)	 ((void *)((char *)(p) + PAGEHDRSZ))
 
 	/** ITS#7713, change PAGEBASE to handle 65536 byte pages */
-#define	PAGEBASE	((MDB_DEVEL) ? PAGEHDRSZ : 0)
+#define	PAGEBASE	0
 
 	/** Number of nodes on a page */
 #define NUMKEYS(p)	 ((MP_LOWER(p) - (PAGEHDRSZ-PAGEBASE)) >> 1)
@@ -1336,8 +1278,7 @@ struct MDB_cursor {
 #define C_UNTRACK	0x40		/**< Un-track cursor when closing */
 #define C_WRITEMAP	MDB_TXN_WRITEMAP /**< Copy of txn flag */
 /** Read-only cursor into the txn's original snapshot in the map.
- *	Set for read-only txns, and in #mdb_page_alloc() for #FREE_DBI when
- *	#MDB_DEVEL & 2. Only implements code which is necessary for this.
+ *	Set for read-only txns. Only implements code which is necessary for this.
  */
 #define C_ORIG_RDONLY	MDB_TXN_RDONLY
 /** @} */
@@ -1524,9 +1465,6 @@ int	mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata,
 int  mdb_env_read_header(MDB_env *env, int prev, MDB_meta *meta);
 MDB_meta *mdb_env_pick_meta(const MDB_env *env);
 int  mdb_env_write_meta(MDB_txn *txn);
-#if defined(MDB_USE_POSIX_MUTEX) && !defined(MDB_ROBUST_SUPPORTED) /* Drop unused excl arg */
-# define mdb_env_close0(env, excl) mdb_env_close1(env)
-#endif
 void mdb_env_close0(MDB_env *env, int excl);
 
 MDB_node *mdb_node_search(MDB_cursor *mc, MDB_val *key, int *exactp);
@@ -1577,7 +1515,7 @@ void mdb_cursor_copy(const MDB_cursor *csrc, MDB_cursor *cdst);
 
 #ifndef NDEBUG
 #define mdb_assert0(env, expr, expr_txt) ((expr) ? (void)0 : \
-		mdb_assert_fail(env, expr_txt, mdb_func_, __FILE__, __LINE__))
+		mdb_assert_fail(env, expr_txt, __func__, __FILE__, __LINE__))
 void ESECT mdb_assert_fail(MDB_env *env, const char *expr_txt, const char *func, const char *file, int line);
 #else
 #define mdb_assert0(env, expr, expr_txt) ((void) 0)
