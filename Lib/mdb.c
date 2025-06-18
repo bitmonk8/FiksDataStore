@@ -37,6 +37,7 @@
 #include "mdb_hash.h"
 #include "mdb_page.h"
 #include "mdb_compare.h"
+#include "mdb_env.h"
 
 #ifdef _WIN32
 struct MDB_name;
