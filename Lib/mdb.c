@@ -39,6 +39,7 @@
 #include "mdb_compare.h"
 #include "mdb_env.h"
 #include "mdb_txn.h"
+#include "mdb_cursor.h"
 
 int
 mdb_get(MDB_txn *txn, MDB_dbi dbi,
