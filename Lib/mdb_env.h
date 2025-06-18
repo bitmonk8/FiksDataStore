@@ -2,6 +2,15 @@
 
 #include "mdb_internal.h"
 
+/** Initial part of #MDB_env.me_mutexname[].
+ *	Changes to this code must be reflected in #MDB_LOCK_FORMAT.
+ */
+#ifdef _WIN32
+#define MUTEXNAME_PREFIX		"Global\\MDB"
+#elif defined MDB_USE_POSIX_SEM
+#define MUTEXNAME_PREFIX		"/MDB"
+#endif
+
 	/** The database environment. */
 struct MDB_env {
 	HANDLE		me_fd;		/**< The main data file */

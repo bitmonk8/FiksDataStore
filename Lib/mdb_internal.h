@@ -86,11 +86,6 @@ typedef SSIZE_T	ssize_t;
 # if !(defined(MDB_USE_POSIX_MUTEX) || defined(MDB_USE_POSIX_SEM))
 # define MDB_USE_SYSV_SEM	1
 # endif
-# if defined(__APPLE__)
-# define MDB_FDATASYNC(fd)		fcntl(fd, F_FULLFSYNC)
-# else
-# define MDB_FDATASYNC		fsync
-# endif
 #endif
 
 #ifndef _WIN32
@@ -246,8 +241,6 @@ typedef HANDLE mdb_mutex_t, mdb_mutexref_t;
 #define UNLOCK_MUTEX(mutex)		ReleaseMutex(mutex)
 #define mdb_mutex_consistent(mutex)	0
 #define getpid()	GetCurrentProcessId()
-#define	MDB_FDATASYNC(fd)	(!FlushFileBuffers(fd))
-#define	MDB_MSYNC(addr,len,flags)	(!FlushViewOfFile(addr,len))
 #define	ErrCode()	GetLastError()
 #define GET_PAGESIZE(x) {SYSTEM_INFO si; GetSystemInfo(&si); (x) = si.dwPageSize;}
 #define	close(fd)	(CloseHandle(fd) ? 0 : -1)
@@ -342,52 +335,6 @@ typedef pthread_mutex_t *mdb_mutexref_t;
 #define MNAME_LEN	(sizeof(int))
 #else
 #define MNAME_LEN	(sizeof(pthread_mutex_t))
-#endif
-
-/** Initial part of #MDB_env.me_mutexname[].
- *	Changes to this code must be reflected in #MDB_LOCK_FORMAT.
- */
-#ifdef _WIN32
-#define MUTEXNAME_PREFIX		"Global\\MDB"
-#elif defined MDB_USE_POSIX_SEM
-#define MUTEXNAME_PREFIX		"/MDB"
-#endif
-
-#ifndef _WIN32
-/**	A flag for opening a file and requesting synchronous data writes.
- *	This is only used when writing a meta page. It's not strictly needed;
- *	we could just do a normal write and then immediately perform a flush.
- *	But if this flag is available it saves us an extra system call.
- *
- *	@note If O_DSYNC is undefined but exists in /usr/include,
- * preferably set some compiler flag to get the definition.
- */
-#ifndef MDB_DSYNC
-# ifdef O_DSYNC
-# define MDB_DSYNC	O_DSYNC
-# else
-# define MDB_DSYNC	O_SYNC
-# endif
-#endif
-#endif
-
-/** Function for flushing the data of a file. Define this to fsync
- *	if fdatasync() is not supported.
- */
-#ifndef MDB_FDATASYNC
-# define MDB_FDATASYNC	fdatasync
-#endif
-
-#ifndef MDB_MSYNC
-# define MDB_MSYNC(addr,len,flags)	msync(addr,len,flags)
-#endif
-
-#ifndef MS_SYNC
-#define	MS_SYNC	1
-#endif
-
-#ifndef MS_ASYNC
-#define	MS_ASYNC	0
 #endif
 
 	/** A page number in the database.
@@ -1424,40 +1371,11 @@ typedef char	mdb_nchar_t;
 # define mdb_name_cpy	strcpy	/**< Copy name (#mdb_nchar_t string) */
 #endif
 
-/** Filename - string of #mdb_nchar_t[] */
-typedef struct MDB_name {
-	int mn_len;					/**< Length  */
-	int mn_alloced;				/**< True if #mn_val was malloced */
-	mdb_nchar_t	*mn_val;		/**< Contents */
-} MDB_name;
-
-/** Destroy \b fname from #mdb_fname_init() */
-#define mdb_fname_destroy(fname) \
-	do { if ((fname).mn_alloced) free((fname).mn_val); } while (0)
-
 #ifdef O_CLOEXEC /* POSIX.1-2008: Set FD_CLOEXEC atomically at open() */
 # define MDB_CLOEXEC		O_CLOEXEC
 #else
 # define MDB_CLOEXEC		0
 #endif
-
-/** File type, access mode etc. for #mdb_fopen() */
-enum mdb_fopen_type {
-#ifdef _WIN32
-	MDB_O_RDONLY, MDB_O_RDWR, MDB_O_OVERLAPPED, MDB_O_META, MDB_O_COPY, MDB_O_LOCKS
-#else
-	/* A comment in mdb_fopen() explains some O_* flag choices. */
-	MDB_O_RDONLY= O_RDONLY,                            /**< for RDONLY me_fd */
-	MDB_O_RDWR  = O_RDWR  |O_CREAT,                    /**< for me_fd */
-	MDB_O_META  = O_WRONLY|MDB_DSYNC     |MDB_CLOEXEC, /**< for me_mfd */
-	MDB_O_COPY  = O_WRONLY|O_CREAT|O_EXCL|MDB_CLOEXEC, /**< for #mdb_env_copy() */
-	/** Bitmask for open() flags in enum #mdb_fopen_type.  The other bits
-	 * distinguish otherwise-equal MDB_O_* constants from each other.
-	 */
-	MDB_O_MASK  = MDB_O_RDWR|MDB_CLOEXEC | MDB_O_RDONLY|MDB_O_META|MDB_O_COPY,
-	MDB_O_LOCKS = MDB_O_RDWR|MDB_CLOEXEC | ((MDB_O_MASK+1) & ~MDB_O_MASK) /**< for me_lfd */
-#endif
-};
 
 #ifdef _WIN32
 /** Junk for arranging thread-specific callbacks on Windows. This is
@@ -1472,9 +1390,6 @@ enum mdb_fopen_type {
 extern pthread_key_t mdb_tls_keys[MAX_TLS_KEYS];
 extern int mdb_tls_nkeys;
 #endif
-
-int ESECT mdb_fopen(const MDB_env *env, MDB_name *fname, enum mdb_fopen_type which, mdb_mode_t mode, HANDLE *res);
-int ESECT mdb_fname_init(const char *path, unsigned envflags, MDB_name *fname);
 
 #if !(MDB_PIDLOCK)		/* Currently the same as defined(_WIN32) */
 enum Pidlock_op {

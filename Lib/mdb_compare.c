@@ -94,3 +94,18 @@ mdb_cmp_memnr(const MDB_val *a, const MDB_val *b)
 	}
 	return len_diff<0 ? -1 : len_diff;
 }
+
+int
+mdb_cmp(MDB_txn *txn, MDB_dbi dbi, const MDB_val *a, const MDB_val *b)
+{
+	return txn->mt_dbxs[dbi].md_cmp(a, b);
+}
+
+int
+mdb_dcmp(MDB_txn *txn, MDB_dbi dbi, const MDB_val *a, const MDB_val *b)
+{
+	MDB_cmp_func *dcmp = txn->mt_dbxs[dbi].md_dcmp;
+	if (NEED_CMP_CLONG(dcmp, a->mv_size))
+		dcmp = mdb_cmp_clong;
+	return dcmp(a, b);
+}

@@ -43,6 +43,250 @@ static NtCreateSectionFunc *NtCreateSection;
 static NtMapViewOfSectionFunc *NtMapViewOfSection;
 #endif
 
+#if defined(__FreeBSD__) && defined(__FreeBSD_version) && __FreeBSD_version >= 1100110
+#elif defined(__APPLE__)
+#define MDB_FDATASYNC(fd)		fcntl(fd, F_FULLFSYNC)
+#elif defined (BSD) || defined(__FreeBSD_kernel__)
+#define MDB_FDATASYNC		fsync
+#endif
+
+#ifdef _WIN32
+#define	MDB_FDATASYNC(fd)	(!FlushFileBuffers(fd))
+#define	MDB_MSYNC(addr,len,flags)	(!FlushViewOfFile(addr,len))
+#endif
+
+/** Function for flushing the data of a file. Define this to fsync
+ *	if fdatasync() is not supported.
+ */
+#ifndef MDB_FDATASYNC
+# define MDB_FDATASYNC	fdatasync
+#endif
+
+#ifndef _WIN32
+/**	A flag for opening a file and requesting synchronous data writes.
+ *	This is only used when writing a meta page. It's not strictly needed;
+ *	we could just do a normal write and then immediately perform a flush.
+ *	But if this flag is available it saves us an extra system call.
+ *
+ *	@note If O_DSYNC is undefined but exists in /usr/include,
+ * preferably set some compiler flag to get the definition.
+ */
+#ifndef MDB_DSYNC
+# ifdef O_DSYNC
+# define MDB_DSYNC	O_DSYNC
+# else
+# define MDB_DSYNC	O_SYNC
+# endif
+#endif
+#endif
+
+#ifndef MDB_MSYNC
+# define MDB_MSYNC(addr,len,flags)	msync(addr,len,flags)
+#endif
+
+#ifndef MS_SYNC
+#define	MS_SYNC	1
+#endif
+
+#ifndef MS_ASYNC
+#define	MS_ASYNC	0
+#endif
+
+/** Filename - string of #mdb_nchar_t[] */
+typedef struct MDB_name {
+	int mn_len;					/**< Length  */
+	int mn_alloced;				/**< True if #mn_val was malloced */
+	mdb_nchar_t	*mn_val;		/**< Contents */
+} MDB_name;
+
+/** Filename suffixes [datafile,lockfile][without,with MDB_NOSUBDIR] */
+static const mdb_nchar_t *const mdb_suffixes[2][2] = {
+	{ MDB_NAME("/data.mdb"), MDB_NAME("")      },
+	{ MDB_NAME("/lock.mdb"), MDB_NAME("-lock") }
+};
+
+#define MDB_SUFFLEN 9	/**< Max string length in #mdb_suffixes[] */
+
+/** Destroy \b fname from #mdb_fname_init() */
+#define mdb_fname_destroy(fname) \
+	do { if ((fname).mn_alloced) free((fname).mn_val); } while (0)
+
+#if defined(_WIN32)
+
+/** Convert \b src to new wchar_t[] string with room for \b xtra extra chars */
+static int ESECT utf8_to_utf16(const char *src, MDB_name *dst, int xtra)
+{
+	int rc, need = 0;
+	wchar_t *result = NULL;
+	for (;;) {					/* malloc result, then fill it in */
+		need = MultiByteToWideChar(CP_UTF8, 0, src, -1, result, need);
+		if (!need) {
+			rc = ErrCode();
+			free(result);
+			return rc;
+		}
+		if (!result) {
+			result = malloc(sizeof(wchar_t) * (need + xtra));
+			if (!result)
+				return ENOMEM;
+			continue;
+		}
+		dst->mn_alloced = 1;
+		dst->mn_len = need - 1;
+		dst->mn_val = result;
+		return MDB_SUCCESS;
+	}
+}
+#endif /* defined(_WIN32) */
+
+/** Set up filename + scratch area for filename suffix, for opening files.
+ * It should be freed with #mdb_fname_destroy().
+ * On Windows, paths are converted from char *UTF-8 to wchar_t *UTF-16.
+ *
+ * @param[in] path Pathname for #mdb_env_open().
+ * @param[in] envflags Whether a subdir and/or lockfile will be used.
+ * @param[out] fname Resulting filename, with room for a suffix if necessary.
+ */
+static int ESECT mdb_fname_init(const char *path, unsigned envflags, MDB_name *fname)
+{
+	int no_suffix = F_ISSET(envflags, MDB_NOSUBDIR|MDB_NOLOCK);
+	fname->mn_alloced = 0;
+#ifdef _WIN32
+	return utf8_to_utf16(path, fname, no_suffix ? 0 : MDB_SUFFLEN);
+#else
+	fname->mn_len = strlen(path);
+	if (no_suffix)
+		fname->mn_val = (char *) path;
+	else if ((fname->mn_val = malloc(fname->mn_len + MDB_SUFFLEN+1)) != NULL) {
+		fname->mn_alloced = 1;
+		strcpy(fname->mn_val, path);
+	}
+	else
+		return ENOMEM;
+	return MDB_SUCCESS;
+#endif
+}
+
+/** File type, access mode etc. for #mdb_fopen() */
+enum mdb_fopen_type {
+#ifdef _WIN32
+	MDB_O_RDONLY, MDB_O_RDWR, MDB_O_OVERLAPPED, MDB_O_META, MDB_O_COPY, MDB_O_LOCKS
+#else
+	/* A comment in mdb_fopen() explains some O_* flag choices. */
+	MDB_O_RDONLY= O_RDONLY,                            /**< for RDONLY me_fd */
+	MDB_O_RDWR  = O_RDWR  |O_CREAT,                    /**< for me_fd */
+	MDB_O_META  = O_WRONLY|MDB_DSYNC     |MDB_CLOEXEC, /**< for me_mfd */
+	MDB_O_COPY  = O_WRONLY|O_CREAT|O_EXCL|MDB_CLOEXEC, /**< for #mdb_env_copy() */
+	/** Bitmask for open() flags in enum #mdb_fopen_type.  The other bits
+	 * distinguish otherwise-equal MDB_O_* constants from each other.
+	 */
+	MDB_O_MASK  = MDB_O_RDWR|MDB_CLOEXEC | MDB_O_RDONLY|MDB_O_META|MDB_O_COPY,
+	MDB_O_LOCKS = MDB_O_RDWR|MDB_CLOEXEC | ((MDB_O_MASK+1) & ~MDB_O_MASK) /**< for me_lfd */
+#endif
+};
+
+/** Open an LMDB file.
+ * @param[in] env	The LMDB environment.
+ * @param[in,out] fname	Path from from #mdb_fname_init().  A suffix is
+ * appended if necessary to create the filename, without changing mn_len.
+ * @param[in] which	Determines file type, access mode, etc.
+ * @param[in] mode	The Unix permissions for the file, if we create it.
+ * @param[out] res	Resulting file handle.
+ * @return 0 on success, non-zero on failure.
+ */
+static int ESECT mdb_fopen(const MDB_env *env, MDB_name *fname,
+	enum mdb_fopen_type which, mdb_mode_t mode,
+	HANDLE *res)
+{
+	int rc = MDB_SUCCESS;
+	HANDLE fd;
+#ifdef _WIN32
+	DWORD acc, share, disp, attrs;
+#else
+	int flags;
+#endif
+
+	if (fname->mn_alloced)		/* modifiable copy */
+		mdb_name_cpy(fname->mn_val + fname->mn_len,
+			mdb_suffixes[which==MDB_O_LOCKS][F_ISSET(env->me_flags, MDB_NOSUBDIR)]);
+
+	/* The directory must already exist.  Usually the file need not.
+	 * MDB_O_META requires the file because we already created it using
+	 * MDB_O_RDWR.  MDB_O_COPY must not overwrite an existing file.
+	 *
+	 * With MDB_O_COPY we do not want the OS to cache the writes, since
+	 * the source data is already in the OS cache.
+	 *
+	 * The lockfile needs FD_CLOEXEC (close file descriptor on exec*())
+	 * to avoid the flock() issues noted under Caveats in lmdb.h.
+	 * Also set it for other filehandles which the user cannot get at
+	 * and close himself, which he may need after fork().  I.e. all but
+	 * me_fd, which programs do use via mdb_env_get_fd().
+	 */
+
+#ifdef _WIN32
+	acc = GENERIC_READ|GENERIC_WRITE;
+	share = FILE_SHARE_READ|FILE_SHARE_WRITE;
+	disp = OPEN_ALWAYS;
+	attrs = FILE_ATTRIBUTE_NORMAL;
+	switch (which) {
+	case MDB_O_OVERLAPPED: 	/* for unbuffered asynchronous writes (write-through mode)*/
+		acc = GENERIC_WRITE;
+		disp = OPEN_EXISTING;
+		attrs = FILE_FLAG_OVERLAPPED|FILE_FLAG_WRITE_THROUGH;
+		break;
+	case MDB_O_RDONLY:			/* read-only datafile */
+		acc = GENERIC_READ;
+		disp = OPEN_EXISTING;
+		break;
+	case MDB_O_META:			/* for writing metapages */
+		acc = GENERIC_WRITE;
+		disp = OPEN_EXISTING;
+		attrs = FILE_ATTRIBUTE_NORMAL|FILE_FLAG_WRITE_THROUGH;
+		break;
+	case MDB_O_COPY:			/* mdb_env_copy() & co */
+		acc = GENERIC_WRITE;
+		share = 0;
+		disp = CREATE_NEW;
+		attrs = FILE_FLAG_NO_BUFFERING|FILE_FLAG_WRITE_THROUGH;
+		break;
+	default: break;	/* silence gcc -Wswitch (not all enum values handled) */
+	}
+	fd = CreateFileW(fname->mn_val, acc, share, NULL, disp, attrs, NULL);
+#else
+	fd = open(fname->mn_val, which & MDB_O_MASK, mode);
+#endif
+
+	if (fd == INVALID_HANDLE_VALUE)
+		rc = ErrCode();
+#ifndef _WIN32
+	else {
+		if (which != MDB_O_RDONLY && which != MDB_O_RDWR) {
+			/* Set CLOEXEC if we could not pass it to open() */
+			if (!MDB_CLOEXEC && (flags = fcntl(fd, F_GETFD)) != -1)
+				(void) fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
+		}
+		if (which == MDB_O_COPY && env->me_psize >= env->me_os_psize) {
+			/* This may require buffer alignment.  There is no portable
+			 * way to ask how much, so we require OS pagesize alignment.
+			 */
+# ifdef F_NOCACHE	/* __APPLE__ */
+			(void) fcntl(fd, F_NOCACHE, 1);
+# elif defined O_DIRECT
+			/* open(...O_DIRECT...) would break on filesystems without
+			 * O_DIRECT support (ITS#7682). Try to set it here instead.
+			 */
+			if ((flags = fcntl(fd, F_GETFL)) != -1)
+				(void) fcntl(fd, F_SETFL, flags | O_DIRECT);
+# endif
+		}
+	}
+#endif	/* !_WIN32 */
+
+	*res = fd;
+	return rc;
+}
+
 int
 mdb_env_sync0(MDB_env *env, int force, pgno_t numpgs)
 {
