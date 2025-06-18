@@ -63,7 +63,6 @@ int  mdb_node_add(MDB_cursor *mc, indx_t indx, MDB_val *key, MDB_val *data, pgno
 void mdb_node_del(MDB_cursor *mc, int ksize);
 void mdb_node_shrink(MDB_page *mp, indx_t indx);
 int  mdb_ovpage_free(MDB_cursor *mc, MDB_page *mp);
-void mdb_dlist_free(MDB_txn *txn);
 int mdb_page_spill(MDB_cursor *m0, MDB_val *key, MDB_val *data);
 void mdb_page_dirty(MDB_txn *txn, MDB_page *mp);
 MDB_page *mdb_page_malloc(MDB_txn *txn, unsigned num);

@@ -1,5 +1,7 @@
 #include "mdb_txn.h"
 
+#include "mdb_page.h"
+
 /** Common code for #mdb_txn_begin() and #mdb_txn_renew().
  * @param[in] txn the transaction handle to initialize
  * @return 0 on success, non-zero on failure.
@@ -339,6 +341,19 @@ static void mdb_cursors_close(MDB_txn *txn, unsigned merge)
 		}
 		cursors[i] = NULL;
 	}
+}
+
+/**	Return all dirty pages to dpage list */
+static void mdb_dlist_free(MDB_txn *txn)
+{
+	MDB_env *env = txn->mt_env;
+	MDB_ID2L dl = txn->mt_u.dirty_list;
+	unsigned i, n = dl[0].mid;
+
+	for (i = 1; i <= n; i++) {
+		mdb_dpage_free(env, dl[i].mptr);
+	}
+	dl[0].mid = 0;
 }
 
 /** End a transaction, except successful commit of a nested transaction.

@@ -69,20 +69,6 @@ mdb_dpage_free(MDB_env *env, MDB_page *dp)
 	}
 }
 
-/**	Return all dirty pages to dpage list */
-void
-mdb_dlist_free(MDB_txn *txn)
-{
-	MDB_env *env = txn->mt_env;
-	MDB_ID2L dl = txn->mt_u.dirty_list;
-	unsigned i, n = dl[0].mid;
-
-	for (i = 1; i <= n; i++) {
-		mdb_dpage_free(env, dl[i].mptr);
-	}
-	dl[0].mid = 0;
-}
-
 /** Loosen or free a single page.
  * Saves single pages to a list for future reuse
  * in this same txn. It has been pulled from the freeDB
