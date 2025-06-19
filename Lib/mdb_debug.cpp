@@ -8,16 +8,29 @@ txnid_t mdb_debug_start;
 #endif
 
 #ifndef NDEBUG
-void ESECT mdb_assert_fail(MDB_env *env, const char *expr_txt,
-	const char *func, const char *file, int line)
+void ESECT
+mdb_assert_fail(MDB_env *env,
+                const char *expr_txt,
+                const char *func,
+                const char *file,
+                int          line)
 {
-	char buf[400];
-	sprintf(buf, "%.100s:%d: Assertion '%.200s' failed in %.40s()",
-		file, line, expr_txt, func);
-	if (env->me_assert_func)
-		env->me_assert_func(env, buf);
-	fprintf(stderr, "%s\n", buf);
-	abort();
+    char buf[400];
+
+    /* C99-style, size-bounded formatting */
+    int n = snprintf(buf, sizeof(buf),
+                     "%.100s:%d: Assertion '%.200s' failed in %.40s()",
+                     file, line, expr_txt, func);
+
+    /* guarantee a terminator even on pathological libraries */
+    if (n < 0 || (size_t)n >= sizeof(buf))
+        buf[sizeof(buf) - 1] = '\0';
+
+    if (env->me_assert_func)
+        env->me_assert_func(env, buf);
+
+    fprintf(stderr, "%s\n", buf);
+    abort();
 }
 #endif /* NDEBUG */
 
