@@ -68,21 +68,21 @@ int main(int argc,char * argv[])
 	printf("Adding 12 values, should yield 3 splits\n");
 	for (i=0;i<12;i++) {
 		kval = i*5;
-		snprintf(sval, mst.ms_psize / 4, "%08x", kval);
+		snprintf(sval, mst.ms_psize / 4, "%08lx", kval);
 		data = sdata;
 		(void)RES(MDB_KEYEXIST, mdb_cursor_put(cursor, &key, &data, MDB_NOOVERWRITE));
 	}
 	printf("Adding 12 more values, should yield 3 splits\n");
 	for (i=0;i<12;i++) {
 		kval = i*5+4;
-		snprintf(sval, mst.ms_psize / 4, "%08x", kval);
+		snprintf(sval, mst.ms_psize / 4, "%08lx", kval);
 		data = sdata;
 		(void)RES(MDB_KEYEXIST, mdb_cursor_put(cursor, &key, &data, MDB_NOOVERWRITE));
 	}
 	printf("Adding 12 more values, should yield 3 splits\n");
 	for (i=0;i<12;i++) {
 		kval = i*5+1;
-		snprintf(sval, mst.ms_psize / 4, "%08x", kval);
+		snprintf(sval, mst.ms_psize / 4, "%08lx", kval);
 		data = sdata;
 		(void)RES(MDB_KEYEXIST, mdb_cursor_put(cursor, &key, &data, MDB_NOOVERWRITE));
 	}
