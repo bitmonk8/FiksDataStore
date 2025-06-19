@@ -52,3 +52,33 @@ extern txnid_t mdb_debug_start;
 	 *	The string is printed literally, with no format processing.
 	 */
 #define DPUTS(arg)	DPRINTF(("%s", arg))
+
+	/** Debugging output value of a cursor DBI: Negative in a sub-cursor. */
+#define DDBI(mc) \
+	(((mc)->mc_flags & C_SUB) ? -(int)(mc)->mc_dbi : (int)(mc)->mc_dbi)
+
+#if MDB_DEBUG
+	/**	Key size which fits in a #DKBUF.
+	 *	@ingroup debug
+	 */
+#define DKBUF_MAXKEYSIZE ((MDB_MAXKEYSIZE) > 0 ? (MDB_MAXKEYSIZE) : 511)
+	/**	A key buffer.
+	 *	@ingroup debug
+	 *	This is used for printing a hex dump of a key's contents.
+	 */
+#define DKBUF	char kbuf[DKBUF_MAXKEYSIZE*2+1]
+	/**	A data value buffer.
+	 *	@ingroup debug
+	 *	This is used for printing a hex dump of a #MDB_DUPSORT value's contents.
+	 */
+#define DDBUF	char dbuf[DKBUF_MAXKEYSIZE*2+1+2]
+	/**	Display a key in hex.
+	 *	@ingroup debug
+	 *	Invoke a function to display a key in hex.
+	 */
+#define	DKEY(x)	mdb_dkey(x, kbuf)
+#else
+#define	DKBUF
+#define	DDBUF
+#define DKEY(x)	0
+#endif

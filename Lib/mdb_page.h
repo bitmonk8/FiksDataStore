@@ -50,6 +50,7 @@
 int  mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp);
 int  mdb_page_new(MDB_cursor *mc, uint32_t flags, int num, MDB_page **mp);
 int  mdb_page_touch(MDB_cursor *mc);
+int  mdb_page_unspill(MDB_txn *txn, MDB_page *mp, MDB_page **ret);
 int  mdb_page_get(MDB_cursor *mc, pgno_t pgno, MDB_page **mp, int *lvl);
 int  mdb_page_search_root(MDB_cursor *mc, MDB_val *key, int modify);
 int  mdb_page_search(MDB_cursor *mc, MDB_val *key, int flags);
@@ -57,11 +58,15 @@ int	 mdb_page_merge(MDB_cursor *csrc, MDB_cursor *cdst);
 int	 mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno, unsigned int nflags);
 void mdb_page_copy(MDB_page *dst, MDB_page *src, unsigned int psize);
 int  mdb_page_flush(MDB_txn *txn, int keep);
-size_t mdb_leaf_size(MDB_env *env, MDB_val *key, MDB_val *data);
-size_t mdb_branch_size(MDB_env *env, MDB_val *key);
+/* Node operation functions */
+MDB_node *mdb_node_search(MDB_cursor *mc, MDB_val *key, int *exactp);
 int  mdb_node_add(MDB_cursor *mc, indx_t indx, MDB_val *key, MDB_val *data, pgno_t pgno, unsigned int flags);
 void mdb_node_del(MDB_cursor *mc, int ksize);
 void mdb_node_shrink(MDB_page *mp, indx_t indx);
+int	 mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft);
+int  mdb_node_read(MDB_cursor *mc, MDB_node *leaf, MDB_val *data);
+size_t mdb_leaf_size(MDB_env *env, MDB_val *key, MDB_val *data);
+size_t mdb_branch_size(MDB_env *env, MDB_val *key);
 int  mdb_ovpage_free(MDB_cursor *mc, MDB_page *mp);
 int mdb_page_spill(MDB_cursor *m0, MDB_val *key, MDB_val *data);
 void mdb_page_dirty(MDB_txn *txn, MDB_page *mp);

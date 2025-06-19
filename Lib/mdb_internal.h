@@ -2,6 +2,7 @@
 
 #include "lmdb.h"
 #include "midl.h"
+#include "mdb_util.h"
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE 1
@@ -349,9 +350,6 @@ typedef MDB_ID	pgno_t;
 	 */
 typedef MDB_ID	txnid_t;
 
-	/** Debugging output value of a cursor DBI: Negative in a sub-cursor. */
-#define DDBI(mc) \
-	(((mc)->mc_flags & C_SUB) ? -(int)(mc)->mc_dbi : (int)(mc)->mc_dbi)
 /** @} */
 	/**	The version number for a database's lockfile format. */
 #define MDB_LOCK_VERSION	 2
@@ -393,55 +391,11 @@ typedef MDB_ID	txnid_t;
 	 */
 #define MAXDATASIZE	0xffffffffUL
 
-#if MDB_DEBUG
-	/**	Key size which fits in a #DKBUF.
-	 *	@ingroup debug
-	 */
-#define DKBUF_MAXKEYSIZE ((MDB_MAXKEYSIZE) > 0 ? (MDB_MAXKEYSIZE) : 511)
-	/**	A key buffer.
-	 *	@ingroup debug
-	 *	This is used for printing a hex dump of a key's contents.
-	 */
-#define DKBUF	char kbuf[DKBUF_MAXKEYSIZE*2+1]
-	/**	A data value buffer.
-	 *	@ingroup debug
-	 *	This is used for printing a hex dump of a #MDB_DUPSORT value's contents.
-	 */
-#define DDBUF	char dbuf[DKBUF_MAXKEYSIZE*2+1+2]
-	/**	Display a key in hex.
-	 *	@ingroup debug
-	 *	Invoke a function to display a key in hex.
-	 */
-#define	DKEY(x)	mdb_dkey(x, kbuf)
-#else
-#define	DKBUF
-#define	DDBUF
-#define DKEY(x)	0
-#endif
-
 	/** An invalid page number.
 	 *	Mainly used to denote an empty tree.
 	 */
 #define P_INVALID	 (~(pgno_t)0)
 
-	/** Test if the flags \b f are set in a flag word \b w. */
-#define F_ISSET(w, f)	 (((w) & (f)) == (f))
-
-	/** Round \b n up to an even number. */
-#define EVEN(n)		(((n) + 1U) & -2) /* sign-extending -2 to match n+1U */
-
-	/** Least significant 1-bit of \b n.  n must be of an unsigned type. */
-#define LOW_BIT(n)		((n) & (-(n)))
-
-	/** (log2(\b p2) % \b n), for p2 = power of 2 and 0 < n < 8. */
-#define LOG2_MOD(p2, n)	(7 - 86 / ((p2) % ((1U<<(n))-1) + 11))
-	/* Explanation: Let p2 = 2**(n*y + x), x<n and M = (1U<<n)-1. Now p2 =
-	 * (M+1)**y * 2**x = 2**x (mod M). Finally "/" "happens" to return 7-x.
-	 */
-
-	/** Should be alignment of \b type. Ensure it is a power of 2. */
-#define ALIGNOF2(type) \
-	LOW_BIT(offsetof(struct { char ch_; type align_; }, align_))
 
 	/**	Used for offsets within a single page.
 	 *	Since memory pages are typically 4 or 8KB in size, 12-13 bits,
@@ -1156,55 +1110,6 @@ static_assert(sizeof(ssize_t) == 8);
 #else
     #define mdb_strdup strdup
 #endif
-
-int  mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp);
-int  mdb_page_new(MDB_cursor *mc, uint32_t flags, int num, MDB_page **mp);
-int  mdb_page_touch(MDB_cursor *mc);
-int mdb_page_unspill(MDB_txn *txn, MDB_page *mp, MDB_page **ret);
-
-enum {
-	/* mdb_txn_end operation number, for logging */
-	MDB_END_COMMITTED, MDB_END_EMPTY_COMMIT, MDB_END_ABORT, MDB_END_RESET,
-	MDB_END_RESET_TMP, MDB_END_FAIL_BEGIN, MDB_END_FAIL_BEGINCHILD
-};
-#define MDB_END_OPMASK	0x0F	/**< mask for #mdb_txn_end() operation number */
-#define MDB_END_UPDATE	0x10	/**< update env state (DBIs) */
-#define MDB_END_FREE	0x20	/**< free txn unless it is #MDB_env.%me_txn0 */
-#define MDB_END_SLOT MDB_NOTLS	/**< release any reader slot if #MDB_NOTLS */
-void mdb_txn_end(MDB_txn *txn, unsigned mode);
-
-int  mdb_page_get(MDB_cursor *mc, pgno_t pgno, MDB_page **mp, int *lvl);
-int  mdb_page_search_root(MDB_cursor *mc,
-			    MDB_val *key, int modify);
-#define MDB_PS_MODIFY	1
-#define MDB_PS_ROOTONLY	2
-#define MDB_PS_FIRST	4
-#define MDB_PS_LAST		8
-int  mdb_page_search(MDB_cursor *mc,
-			    MDB_val *key, int flags);
-int	mdb_page_merge(MDB_cursor *csrc, MDB_cursor *cdst);
-
-#define MDB_SPLIT_REPLACE	MDB_APPENDDUP	/**< newkey is not new */
-int	mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata,
-				pgno_t newpgno, unsigned int nflags);
-
-int  mdb_env_read_header(MDB_env *env, int prev, MDB_meta *meta);
-MDB_meta *mdb_env_pick_meta(const MDB_env *env);
-int  mdb_env_write_meta(MDB_txn *txn);
-void mdb_env_close0(MDB_env *env, int excl);
-
-MDB_node *mdb_node_search(MDB_cursor *mc, MDB_val *key, int *exactp);
-int  mdb_node_add(MDB_cursor *mc, indx_t indx,
-			    MDB_val *key, MDB_val *data, pgno_t pgno, unsigned int flags);
-void mdb_node_del(MDB_cursor *mc, int ksize);
-void mdb_node_shrink(MDB_page *mp, indx_t indx);
-int	mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft);
-int  mdb_node_read(MDB_cursor *mc, MDB_node *leaf, MDB_val *data);
-size_t	mdb_leaf_size(MDB_env *env, MDB_val *key, MDB_val *data);
-size_t	mdb_branch_size(MDB_env *env, MDB_val *key);
-
-int	mdb_rebalance(MDB_cursor *mc);
-int	mdb_update_key(MDB_cursor *mc, MDB_val *key);
 
 
 
