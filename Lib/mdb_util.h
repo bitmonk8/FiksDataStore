@@ -1,5 +1,7 @@
 #pragma once
 
+#include "midl.h"
+
 /** @defgroup util Utility Macros
  *	General-purpose utility macros for LMDB.
  *	@{
@@ -23,5 +25,49 @@
 	/** Should be alignment of \b type. Ensure it is a power of 2. */
 #define ALIGNOF2(type) \
 	LOW_BIT(offsetof(struct { char ch_; type align_; }, align_))
+
+	/** Enough space for 2^32 nodes with minimum of 2 keys per node. I.e., plenty.
+	 * At 4 keys per node, enough for 2^64 nodes, so there's probably no need to
+	 * raise this on a 64 bit machine.
+	 */
+#define CURSOR_STACK		 32
+
+	/** max number of pages to commit in one writev() call */
+#define MDB_COMMIT_PAGES	 64
+#if defined(IOV_MAX) && IOV_MAX < MDB_COMMIT_PAGES
+#undef MDB_COMMIT_PAGES
+#define MDB_COMMIT_PAGES	IOV_MAX
+#endif
+
+	/** max bytes to write in one call */
+#define MAX_WRITE		0x40000000U
+
+	/** A page number in the database.
+	 *	Note that 64 bit page numbers are overkill, since pages themselves
+	 *	already represent 12-13 bits of addressable memory, and the OS will
+	 *	always limit applications to a maximum of 63 bits of address space.
+	 *
+	 *	@note In the #MDB_node structure, we only store 48 bits of this value,
+	 *	which thus limits us to only 60 bits of addressable data.
+	 */
+typedef MDB_ID	pgno_t;
+
+	/** A transaction ID.
+	 *	See struct MDB_txn.mt_txnid for details.
+	 */
+typedef MDB_ID	txnid_t;
+
+	/**	Used for offsets within a single page.
+	 *	Since memory pages are typically 4 or 8KB in size, 12-13 bits,
+	 *	this is plenty.
+	 */
+typedef uint16_t	 indx_t;
+
+	/** Platform-specific string duplication function */
+#ifdef _WIN32
+	   #define mdb_strdup _strdup
+#else
+	   #define mdb_strdup strdup
+#endif
 
 /** @} */

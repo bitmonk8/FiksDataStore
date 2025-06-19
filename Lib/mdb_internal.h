@@ -3,6 +3,7 @@
 #include "lmdb.h"
 #include "midl.h"
 #include "mdb_util.h"
+#include "mdb_page.h"
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE 1
@@ -335,20 +336,6 @@ typedef pthread_mutex_t *mdb_mutexref_t;
 #define MNAME_LEN	(sizeof(pthread_mutex_t))
 #endif
 
-	/** A page number in the database.
-	 *	Note that 64 bit page numbers are overkill, since pages themselves
-	 *	already represent 12-13 bits of addressable memory, and the OS will
-	 *	always limit applications to a maximum of 63 bits of address space.
-	 *
-	 *	@note In the #MDB_node structure, we only store 48 bits of this value,
-	 *	which thus limits us to only 60 bits of addressable data.
-	 */
-typedef MDB_ID	pgno_t;
-
-	/** A transaction ID.
-	 *	See struct MDB_txn.mt_txnid for details.
-	 */
-typedef MDB_ID	txnid_t;
 
 /** @} */
 	/**	The version number for a database's lockfile format. */
@@ -397,11 +384,6 @@ typedef MDB_ID	txnid_t;
 #define P_INVALID	 (~(pgno_t)0)
 
 
-	/**	Used for offsets within a single page.
-	 *	Since memory pages are typically 4 or 8KB in size, 12-13 bits,
-	 *	this is plenty.
-	 */
-typedef uint16_t	 indx_t;
 
 
 	/**	Default size of memory map.
@@ -606,186 +588,8 @@ enum {
 };
 /** @} */
 
-/** Alternate page header, for 2-byte aligned access */
-typedef struct MDB_page2 {
-	uint16_t	mp2_p[sizeof(pgno_t)/2];
-	uint16_t	mp2_pad;
-	uint16_t	mp2_flags;
-	indx_t		mp2_lower;
-	indx_t		mp2_upper;
-	indx_t		mp2_ptrs[0];
-} MDB_page2;
 
-#define MP_PGNO(p)	(((MDB_page2 *)(void *)(p))->mp2_p)
-#define MP_PAD(p)	(((MDB_page2 *)(void *)(p))->mp2_pad)
-#define MP_FLAGS(p)	(((MDB_page2 *)(void *)(p))->mp2_flags)
-#define MP_LOWER(p)	(((MDB_page2 *)(void *)(p))->mp2_lower)
-#define MP_UPPER(p)	(((MDB_page2 *)(void *)(p))->mp2_upper)
-#define MP_PTRS(p)	(((MDB_page2 *)(void *)(p))->mp2_ptrs)
 
-	/** Size of the page header, excluding dynamic data at the end */
-#define PAGEHDRSZ	 ((unsigned) offsetof(MDB_page, mp_ptrs))
-
-	/** Address of first usable data byte in a page, after the header */
-#define METADATA(p)	 ((void *)((char *)(p) + PAGEHDRSZ))
-
-	/** ITS#7713, change PAGEBASE to handle 65536 byte pages */
-#define	PAGEBASE	0
-
-	/** Number of nodes on a page */
-#define NUMKEYS(p)	 ((MP_LOWER(p) - (PAGEHDRSZ-PAGEBASE)) >> 1)
-
-	/** The amount of space remaining in the page */
-#define SIZELEFT(p)	 (indx_t)(MP_UPPER(p) - MP_LOWER(p))
-
-	/** The percentage of space used in the page, in tenths of a percent. */
-#define PAGEFILL(env, p) (1000L * ((env)->me_psize - PAGEHDRSZ - SIZELEFT(p)) / \
-				((env)->me_psize - PAGEHDRSZ))
-	/** The minimum page fill factor, in tenths of a percent.
-	 *	Pages emptier than this are candidates for merging.
-	 */
-#define FILL_THRESHOLD	 250
-
-	/** Test if a page is a leaf page */
-#define IS_LEAF(p)	 F_ISSET(MP_FLAGS(p), P_LEAF)
-	/** Test if a page is a LEAF2 page */
-#define IS_LEAF2(p)	 F_ISSET(MP_FLAGS(p), P_LEAF2)
-	/** Test if a page is a branch page */
-#define IS_BRANCH(p)	 F_ISSET(MP_FLAGS(p), P_BRANCH)
-	/** Test if a page is an overflow page */
-#define IS_OVERFLOW(p)	 F_ISSET(MP_FLAGS(p), P_OVERFLOW)
-	/** Test if a page is a sub page */
-#define IS_SUBP(p)	 F_ISSET(MP_FLAGS(p), P_SUBP)
-
-	/** The number of overflow pages needed to store the given size. */
-#define OVPAGES(size, psize)	((PAGEHDRSZ-1 + (size)) / (psize) + 1)
-
-	/** Link in #MDB_txn.%mt_loose_pgs list.
-	 *  Kept outside the page header, which is needed when reusing the page.
-	 */
-#define NEXT_LOOSE_PAGE(p)		(*(MDB_page **)((p) + 2))
-
-	/** Header for a single key/data pair within a page.
-	 * Used in pages of type #P_BRANCH and #P_LEAF without #P_LEAF2.
-	 * We guarantee 2-byte alignment for 'MDB_node's.
-	 *
-	 * #mn_lo and #mn_hi are used for data size on leaf nodes, and for child
-	 * pgno on branch nodes.  On 64 bit platforms, #mn_flags is also used
-	 * for pgno.  (Branch nodes have no flags).  Lo and hi are in host byte
-	 * order in case some accesses can be optimized to 32-bit word access.
-	 *
-	 * Leaf node flags describe node contents.  #F_BIGDATA says the node's
-	 * data part is the page number of an overflow page with actual data.
-	 * #F_DUPDATA and #F_SUBDATA can be combined giving duplicate data in
-	 * a sub-page/sub-database, and named databases (just #F_SUBDATA).
-	 */
-typedef struct MDB_node {
-	/** part of data size or pgno
-	 *	@{ */
-#if BYTE_ORDER == LITTLE_ENDIAN
-	unsigned short	mn_lo, mn_hi;
-#else
-	unsigned short	mn_hi, mn_lo;
-#endif
-	/** @} */
-/** @defgroup mdb_node Node Flags
- *	@ingroup internal
- *	Flags for node headers.
- *	@{
- */
-#define F_BIGDATA	 0x01			/**< data put on overflow page */
-#define F_SUBDATA	 0x02			/**< data is a sub-database */
-#define F_DUPDATA	 0x04			/**< data has duplicates */
-
-/** valid flags for #mdb_node_add() */
-#define	NODE_ADD_FLAGS	(F_DUPDATA|F_SUBDATA|MDB_RESERVE|MDB_APPEND)
-
-/** @} */
-	unsigned short	mn_flags;		/**< @ref mdb_node */
-	unsigned short	mn_ksize;		/**< key size */
-	char		mn_data[1];			/**< key and data are appended here */
-} MDB_node;
-
-	/** Size of the node header, excluding dynamic data at the end */
-#define NODESIZE	 offsetof(MDB_node, mn_data)
-
-	/** Bit position of top word in page number, for shifting mn_flags */
-#define PGNO_TOPWORD ((pgno_t)-1 > 0xffffffffu ? 32 : 0)
-
-	/** Size of a node in a branch page with a given key.
-	 *	This is just the node header plus the key, there is no data.
-	 */
-#define INDXSIZE(k)	 (NODESIZE + ((k) == NULL ? 0 : (k)->mv_size))
-
-	/** Size of a node in a leaf page with a given key and data.
-	 *	This is node header plus key plus data size.
-	 */
-#define LEAFSIZE(k, d)	 (NODESIZE + (k)->mv_size + (d)->mv_size)
-
-	/** Address of node \b i in page \b p */
-#define NODEPTR(p, i)	 ((MDB_node *)((char *)(p) + MP_PTRS(p)[i] + PAGEBASE))
-
-	/** Address of the key for the node */
-#define NODEKEY(node)	 (void *)((node)->mn_data)
-
-	/** Address of the data for a node */
-#define NODEDATA(node)	 (void *)((char *)(node)->mn_data + (node)->mn_ksize)
-
-	/** Get the page number pointed to by a branch node */
-#define NODEPGNO(node) \
-	((node)->mn_lo | ((pgno_t) (node)->mn_hi << 16) | \
-	 (PGNO_TOPWORD ? ((pgno_t) (node)->mn_flags << PGNO_TOPWORD) : 0))
-	/** Set the page number in a branch node */
-#define SETPGNO(node,pgno)	do { \
-	(node)->mn_lo = (pgno) & 0xffff; (node)->mn_hi = (pgno) >> 16; \
-	if (PGNO_TOPWORD) (node)->mn_flags = (pgno) >> PGNO_TOPWORD; } while(0)
-
-	/** Get the size of the data in a leaf node */
-#define NODEDSZ(node)	 ((node)->mn_lo | ((unsigned)(node)->mn_hi << 16))
-	/** Set the size of the data for a leaf node */
-#define SETDSZ(node,size)	do { \
-	(node)->mn_lo = (size) & 0xffff; (node)->mn_hi = (size) >> 16;} while(0)
-	/** The size of a key in a node */
-#define NODEKSZ(node)	 ((node)->mn_ksize)
-
-	/** Copy a page number from src to dst */
-#ifdef MISALIGNED_OK
-#define COPY_PGNO(dst,src)	dst = src
-#undef MP_PGNO
-#define MP_PGNO(p)	((p)->mp_pgno)
-#else
-#if MDB_SIZE_MAX > 0xffffffffU
-#define COPY_PGNO(dst,src)	do { \
-	unsigned short *s, *d;	\
-	s = (unsigned short *)&(src);	\
-	d = (unsigned short *)&(dst);	\
-	*d++ = *s++;	\
-	*d++ = *s++;	\
-	*d++ = *s++;	\
-	*d = *s;	\
-} while (0)
-#else
-#define COPY_PGNO(dst,src)	do { \
-	unsigned short *s, *d;	\
-	s = (unsigned short *)&(src);	\
-	d = (unsigned short *)&(dst);	\
-	*d++ = *s++;	\
-	*d = *s;	\
-} while (0)
-#endif
-#endif
-	/** The address of a key in a LEAF2 page.
-	 *	LEAF2 pages are used for #MDB_DUPFIXED sorted-duplicate sub-DBs.
-	 *	There are no node headers, keys are stored contiguously.
-	 */
-#define LEAF2KEY(p, i, ks)	((char *)(p) + PAGEHDRSZ + ((i)*(ks)))
-
-	/** Set the \b node's key into \b keyptr, if requested. */
-#define MDB_GET_KEY(node, keyptr)	{ if ((keyptr) != NULL) { \
-	(keyptr)->mv_size = NODEKSZ(node); (keyptr)->mv_data = NODEKEY(node); } }
-
-	/** Set the \b node's key into \b key. */
-#define MDB_GET_KEY2(node, key)	{ key.mv_size = NODEKSZ(node); key.mv_data = NODEKEY(node); }
 
 	/** Information about a single database in the environment. */
 typedef struct MDB_db {
@@ -839,8 +643,6 @@ typedef struct MDB_meta {
 	volatile txnid_t	mm_txnid;	/**< txnid that committed this page */
 } MDB_meta;
 
-typedef MDB_ID pgno_t;
-typedef uint16_t indx_t;
 
 /** Common header for all page types. The page type depends on #mp_flags.
  */
@@ -980,11 +782,6 @@ struct MDB_txn {
 	unsigned int	mt_dirty_room;
 };
 
-/** Enough space for 2^32 nodes with minimum of 2 keys per node. I.e., plenty.
- * At 4 keys per node, enough for 2^64 nodes, so there's probably no need to
- * raise this on a 64 bit machine.
- */
-#define CURSOR_STACK		 32
 
 struct MDB_xcursor;
 
@@ -1084,18 +881,7 @@ typedef struct MDB_ntxn {
 	MDB_pgstate	mnt_pgstate;	/**< parent transaction's saved freestate */
 } MDB_ntxn;
 
-	/** max number of pages to commit in one writev() call */
-#define MDB_COMMIT_PAGES	 64
-#if defined(IOV_MAX) && IOV_MAX < MDB_COMMIT_PAGES
-#undef MDB_COMMIT_PAGES
-#define MDB_COMMIT_PAGES	IOV_MAX
-#endif
-
 static_assert(sizeof(ssize_t) == 8);
-
-	/** max bytes to write in one call */
-//#define MAX_WRITE		(0x40000000U >> (sizeof(ssize_t) == 4))
-#define MAX_WRITE		0x40000000U
 
 	/** Check \b txn and \b dbi arguments to a function */
 #define TXN_DBI_EXIST(txn, dbi, validity) \
@@ -1104,12 +890,5 @@ static_assert(sizeof(ssize_t) == 8);
 	/** Check for misused \b dbi handles */
 #define TXN_DBI_CHANGED(txn, dbi) \
 	((txn)->mt_dbiseqs[dbi] != (txn)->mt_env->me_dbiseqs[dbi])
-
-#ifdef _WIN32
-    #define mdb_strdup _strdup
-#else
-    #define mdb_strdup strdup
-#endif
-
 
 
