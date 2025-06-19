@@ -257,7 +257,7 @@ static int ESECT mdb_fname_init(const char *path, unsigned envflags, MDB_name *f
 	fname->mn_len = strlen(path);
 	if (no_suffix)
 		fname->mn_val = (char *) path;
-	else if ((fname->mn_val = malloc(fname->mn_len + MDB_SUFFLEN+1)) != NULL) {
+	else if ((fname->mn_val = (char *) malloc(fname->mn_len + MDB_SUFFLEN+1)) != NULL) {
 		fname->mn_alloced = 1;
 		strcpy(fname->mn_val, path);
 	}
@@ -576,7 +576,7 @@ mdb_env_write_meta(MDB_txn *txn)
 #endif
 
 	toggle = txn->mt_txnid & 1;
-	DPRINTF(("writing meta page %d for root page %"Yu,
+	DPRINTF(("writing meta page %d for root page %" Yu,
 		toggle, txn->mt_dbs[MAIN_DBI].md_root));
 
 	env = txn->mt_env;
@@ -796,7 +796,7 @@ mdb_env_map(MDB_env *env, void *addr)
 		if (ftruncate(env->me_fd, env->me_mapsize) < 0)
 			return ErrCode();
 	}
-	env->me_map = mmap(addr, env->me_mapsize, prot, mmap_flags,
+	env->me_map = (char*) mmap(addr, env->me_mapsize, prot, mmap_flags,
 		env->me_fd, 0);
 	if (env->me_map == MAP_FAILED) {
 		env->me_map = NULL;
@@ -1018,11 +1018,11 @@ mdb_env_open2(MDB_env *env, int prev)
 			meta->mm_version, env->me_psize));
 		DPRINTF(("using meta page %d",  (int) (meta->mm_txnid & 1)));
 		DPRINTF(("depth: %u",           db->md_depth));
-		DPRINTF(("entries: %"Yu,        db->md_entries));
-		DPRINTF(("branch pages: %"Yu,   db->md_branch_pages));
-		DPRINTF(("leaf pages: %"Yu,     db->md_leaf_pages));
-		DPRINTF(("overflow pages: %"Yu, db->md_overflow_pages));
-		DPRINTF(("root: %"Yu,           db->md_root));
+		DPRINTF(("entries: %" Yu,        db->md_entries));
+		DPRINTF(("branch pages: %" Yu,   db->md_branch_pages));
+		DPRINTF(("leaf pages: %" Yu,     db->md_leaf_pages));
+		DPRINTF(("overflow pages: %" Yu, db->md_overflow_pages));
+		DPRINTF(("root: %" Yu,           db->md_root));
 	}
 #endif
 

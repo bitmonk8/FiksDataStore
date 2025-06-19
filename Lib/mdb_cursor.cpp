@@ -54,7 +54,7 @@ mdb_node_search(MDB_cursor *mc, MDB_val *key, int *exactp)
 
 	nkeys = NUMKEYS(mp);
 
-	DPRINTF(("searching %u keys in %s %spage %"Yu,
+	DPRINTF(("searching %u keys in %s %spage %" Yu,
 	    nkeys, IS_LEAF(mp) ? "leaf" : "branch", IS_SUBP(mp) ? "sub-" : "",
 	    mdb_dbg_pgno(mp)));
 
@@ -1669,7 +1669,7 @@ mdb_xcursor_init1(MDB_cursor *mc, MDB_node *node)
 				mx->mx_db.md_flags |= MDB_INTEGERKEY;
 		}
 	}
-	DPRINTF(("Sub-db -%u root page %"Yu, mx->mx_cursor.mc_dbi,
+	DPRINTF(("Sub-db -%u root page %" Yu, mx->mx_cursor.mc_dbi,
 		mx->mx_db.md_root));
 	mx->mx_dbflag = DB_VALID|DB_USRVALID|DB_DUPDATA;
 	if (NEED_CMP_CLONG(mx->mx_dbx.md_cmp, mx->mx_db.md_pad))
@@ -1704,7 +1704,7 @@ mdb_xcursor_init2(MDB_cursor *mc, MDB_xcursor *src_mx, int new_dupdata)
 	}
 	mx->mx_db = src_mx->mx_db;
 	mx->mx_cursor.mc_pg[0] = src_mx->mx_cursor.mc_pg[0];
-	DPRINTF(("Sub-db -%u root page %"Yu, mx->mx_cursor.mc_dbi,
+	DPRINTF(("Sub-db -%u root page %" Yu, mx->mx_cursor.mc_dbi,
 		mx->mx_db.md_root));
 }
 
@@ -2015,7 +2015,7 @@ int mdb_update_key(MDB_cursor *mc, MDB_val *key)
 		char kbuf2[DKBUF_MAXKEYSIZE*2+1];
 		k2.mv_data = NODEKEY(node);
 		k2.mv_size = node->mn_ksize;
-		DPRINTF(("update key %u (ofs %u) [%s] to [%s] on page %"Yu,
+		DPRINTF(("update key %u (ofs %u) [%s] to [%s] on page %" Yu,
 			indx, ptr,
 			mdb_dkey(&k2, kbuf2),
 			DKEY(key),

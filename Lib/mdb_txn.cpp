@@ -155,7 +155,7 @@ mdb_txn_renew(MDB_txn *txn)
 
 	rc = mdb_txn_renew0(txn);
 	if (rc == MDB_SUCCESS) {
-		DPRINTF(("renew txn %" Yu "%c %p on mdbenv %p, root page %"Yu,
+		DPRINTF(("renew txn %" Yu "%c %p on mdbenv %p, root page %" Yu,
 			txn->mt_txnid, (txn->mt_flags & MDB_TXN_RDONLY) ? 'r' : 'w',
 			(void *)txn, (void *)txn->mt_env, txn->mt_dbs[MAIN_DBI].md_root));
 	}
@@ -294,7 +294,7 @@ renew:
 	} else {
 		txn->mt_flags |= flags;	/* could not change txn=me_txn0 earlier */
 		*ret = txn;
-		DPRINTF(("begin txn %" Yu "%c %p on mdbenv %p, root page %"Yu,
+		DPRINTF(("begin txn %" Yu "%c %p on mdbenv %p, root page %" Yu,
 			txn->mt_txnid, (flags & MDB_RDONLY) ? 'r' : 'w',
 			(void *) txn, (void *) env, txn->mt_dbs[MAIN_DBI].md_root));
 	}
@@ -416,7 +416,7 @@ mdb_txn_end(MDB_txn *txn, unsigned mode)
 	/* Export or close DBI handles opened in this txn */
 	mdb_dbis_update(txn, mode & MDB_END_UPDATE);
 
-	DPRINTF(("%s txn %" Yu "%c %p on mdbenv %p, root page %"Yu,
+	DPRINTF(("%s txn %" Yu "%c %p on mdbenv %p, root page %" Yu,
 		names[mode & MDB_END_OPMASK],
 		txn->mt_txnid, (txn->mt_flags & MDB_TXN_RDONLY) ? 'r' : 'w',
 		(void *) txn, (void *)env, txn->mt_dbs[MAIN_DBI].md_root));
@@ -630,7 +630,7 @@ mdb_freelist_save(MDB_txn *txn)
 				DPRINTF(("IDL write txn %" Yu " root %" Yu " num %u",
 					txn->mt_txnid, txn->mt_dbs[FREE_DBI].md_root, i));
 				for (; i; i--)
-					DPRINTF(("IDL %"Yu, free_pgs[i]));
+					DPRINTF(("IDL %" Yu, free_pgs[i]));
 			}
 #endif
 			continue;
@@ -905,7 +905,7 @@ _mdb_txn_commit(MDB_txn *txn)
 		!(txn->mt_flags & (MDB_TXN_DIRTY|MDB_TXN_SPILLS)))
 		goto done;
 
-	DPRINTF(("committing txn %" Yu " %p on mdbenv %p, root page %"Yu,
+	DPRINTF(("committing txn %" Yu " %p on mdbenv %p, root page %" Yu,
 	    txn->mt_txnid, (void*)txn, (void*)env, txn->mt_dbs[MAIN_DBI].md_root));
 
 	/* Update DB root pointers */

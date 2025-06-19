@@ -114,7 +114,7 @@ mdb_page_loose(MDB_cursor *mc, MDB_page *mp)
 		}
 	}
 	if (loose) {
-		DPRINTF(("loosen db %d page %"Yu, DDBI(mc), mp->mp_pgno));
+		DPRINTF(("loosen db %d page %" Yu, DDBI(mc), mp->mp_pgno));
 		NEXT_LOOSE_PAGE(mp) = txn->mt_loose_pgs;
 		txn->mt_loose_pgs = mp;
 		txn->mt_loose_count++;
@@ -370,7 +370,7 @@ retry_seek:
 		iov[n].iov_len = size;
 		iov[n].iov_base = (char *)dp;
 #endif	/* _WIN32 */
-		DPRINTF(("committing page %"Yu, pgno));
+		DPRINTF(("committing page %" Yu, pgno));
 		next_pos = pos + size;
 		wsize += size;
 		n++;
@@ -634,7 +634,7 @@ int mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp)
 		np = txn->mt_loose_pgs;
 		txn->mt_loose_pgs = NEXT_LOOSE_PAGE(np);
 		txn->mt_loose_count--;
-		DPRINTF(("db %d use loose page %"Yu, DDBI(mc), np->mp_pgno));
+		DPRINTF(("db %d use loose page %" Yu, DDBI(mc), np->mp_pgno));
 		*mp = np;
 		return MDB_SUCCESS;
 	}
@@ -731,7 +731,7 @@ int mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp)
 		DPRINTF(("IDL read txn %" Yu " root %" Yu " num %u",
 			last, txn->mt_dbs[FREE_DBI].md_root, i));
 		for (j = i; j; j--)
-			DPRINTF(("IDL %"Yu, idl[j]));
+			DPRINTF(("IDL %" Yu, idl[j]));
 #endif
 		/* Merge in descending sorted order */
 		mdb_midl_xmerge(mop, idl);
@@ -902,7 +902,7 @@ mdb_page_touch(MDB_cursor *mc)
 			(rc = mdb_page_alloc(mc, 1, &np)))
 			goto fail;
 		pgno = np->mp_pgno;
-		DPRINTF(("touched db %d page %" Yu " -> %"Yu, DDBI(mc),
+		DPRINTF(("touched db %d page %" Yu " -> %" Yu, DDBI(mc),
 			mp->mp_pgno, pgno));
 		mdb_cassert(mc, mp->mp_pgno != pgno);
 		mdb_midl_xappend(txn->mt_free_pgs, mp->mp_pgno);
@@ -1062,7 +1062,7 @@ mdb_page_search_root(MDB_cursor *mc, MDB_val *key, int flags)
 		 * let that proceed. ITS#8336
 		 */
 		mdb_cassert(mc, !mc->mc_dbi || NUMKEYS(mp) > 1);
-		DPRINTF(("found index 0 to page %"Yu, NODEPGNO(NODEPTR(mp, 0))));
+		DPRINTF(("found index 0 to page %" Yu, NODEPGNO(NODEPTR(mp, 0))));
 
 		if (flags & (MDB_PS_FIRST|MDB_PS_LAST)) {
 			i = 0;
@@ -1465,7 +1465,7 @@ mdb_node_add(MDB_cursor *mc, indx_t indx,
 				goto full;
 			if ((rc = mdb_page_new(mc, P_OVERFLOW, ovpages, &ofp)))
 				return rc;
-			DPRINTF(("allocated overflow page %"Yu, ofp->mp_pgno));
+			DPRINTF(("allocated overflow page %" Yu, ofp->mp_pgno));
 			flags |= F_BIGDATA;
 			goto update;
 		} else {
@@ -1545,7 +1545,7 @@ mdb_node_del(MDB_cursor *mc, int ksize)
 	MDB_node	*node;
 	char		*base;
 
-	DPRINTF(("delete node %u on %s page %"Yu, indx,
+	DPRINTF(("delete node %u on %s page %" Yu, indx,
 	    IS_LEAF(mp) ? "leaf" : "branch", mdb_dbg_pgno(mp)));
 	numkeys = NUMKEYS(mp);
 	mdb_cassert(mc, indx < numkeys);
@@ -1714,7 +1714,7 @@ mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft)
 			return rc;
 	}
 
-	DPRINTF(("moving %s node %u [%s] on page %" Yu " to node %u on page %"Yu,
+	DPRINTF(("moving %s node %u [%s] on page %" Yu " to node %u on page %" Yu,
 	    IS_LEAF(csrc->mc_pg[csrc->mc_top]) ? "leaf" : "branch",
 	    csrc->mc_ki[csrc->mc_top],
 		DKEY(&key),
@@ -1877,7 +1877,7 @@ mdb_page_merge(MDB_cursor *csrc, MDB_cursor *cdst)
 	psrc = csrc->mc_pg[csrc->mc_top];
 	pdst = cdst->mc_pg[cdst->mc_top];
 
-	DPRINTF(("merging page %" Yu " into %"Yu, psrc->mp_pgno, pdst->mp_pgno));
+	DPRINTF(("merging page %" Yu " into %" Yu, psrc->mp_pgno, pdst->mp_pgno));
 
 	mdb_cassert(csrc, csrc->mc_snum > 1);	/* can't merge root page */
 	mdb_cassert(csrc, cdst->mc_snum > 1);
@@ -2231,7 +2231,7 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 	if ((rc = mdb_page_new(mc, mp->mp_flags, 1, &rp)))
 		return rc;
 	rp->mp_pad = mp->mp_pad;
-	DPRINTF(("new right sibling: page %"Yu, rp->mp_pgno));
+	DPRINTF(("new right sibling: page %" Yu, rp->mp_pgno));
 
 	/* Usually when splitting the root page, the cursor
 	 * height is 1. But when called from mdb_update_key,
@@ -2249,7 +2249,7 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 		mc->mc_pg[0] = pp;
 		mc->mc_ki[0] = 0;
 		mc->mc_db->md_root = pp->mp_pgno;
-		DPRINTF(("root split! new root = %"Yu, pp->mp_pgno));
+		DPRINTF(("root split! new root = %" Yu, pp->mp_pgno));
 		new_root = mc->mc_db->md_depth++;
 
 		/* Add left (implicit) pointer. */
@@ -2266,7 +2266,7 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 		ptop = 0;
 	} else {
 		ptop = mc->mc_top-1;
-		DPRINTF(("parent branch page is %"Yu, mc->mc_pg[ptop]->mp_pgno));
+		DPRINTF(("parent branch page is %" Yu, mc->mc_pg[ptop]->mp_pgno));
 	}
 
 	mdb_cursor_copy(mc, &mn);
