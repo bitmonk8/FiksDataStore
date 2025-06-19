@@ -41,7 +41,7 @@ unsigned mdb_midl_search( MDB_IDL ids, MDB_ID id )
 	unsigned base = 0;
 	unsigned cursor = 1;
 	int val = 0;
-	unsigned n = ids[0];
+	unsigned n = (unsigned)ids[0];
 
 	while( 0 < n ) {
 		unsigned pivot = n >> 1;
@@ -103,7 +103,7 @@ int mdb_midl_insert( MDB_IDL ids, MDB_ID id )
 
 MDB_IDL mdb_midl_alloc(int num)
 {
-	MDB_IDL ids = malloc((num+2) * sizeof(MDB_ID));
+	MDB_IDL ids = (MDB_IDL)malloc((num+2) * sizeof(MDB_ID));
 	if (ids) {
 		*ids++ = num;
 		*ids = 0;
@@ -121,7 +121,7 @@ void mdb_midl_shrink( MDB_IDL *idp )
 {
 	MDB_IDL ids = *idp;
 	if (*(--ids) > MDB_IDL_UM_MAX &&
-		(ids = realloc(ids, (MDB_IDL_UM_MAX+2) * sizeof(MDB_ID))))
+		(ids = (MDB_IDL)realloc(ids, (MDB_IDL_UM_MAX+2) * sizeof(MDB_ID))))
 	{
 		*ids++ = MDB_IDL_UM_MAX;
 		*idp = ids;
@@ -132,7 +132,7 @@ static int mdb_midl_grow( MDB_IDL *idp, int num )
 {
 	MDB_IDL idn = *idp-1;
 	/* grow it */
-	idn = realloc(idn, (*idn + num + 2) * sizeof(MDB_ID));
+	idn = (MDB_IDL)realloc(idn, (*idn + num + 2) * sizeof(MDB_ID));
 	if (!idn)
 		return ENOMEM;
 	*idn++ += num;
@@ -143,10 +143,10 @@ static int mdb_midl_grow( MDB_IDL *idp, int num )
 int mdb_midl_need( MDB_IDL *idp, unsigned num )
 {
 	MDB_IDL ids = *idp;
-	num += ids[0];
+	num += (unsigned)ids[0];
 	if (num > ids[-1]) {
 		num = (num + num/4 + (256 + 2)) & -256;
-		if (!(ids = realloc(ids-1, num * sizeof(MDB_ID))))
+		if (!(ids = (MDB_IDL)realloc(ids-1, num * sizeof(MDB_ID))))
 			return ENOMEM;
 		*ids++ = num - 2;
 		*idp = ids;
@@ -173,7 +173,7 @@ int mdb_midl_append_list( MDB_IDL *idp, MDB_IDL app )
 	MDB_IDL ids = *idp;
 	/* Too big? */
 	if (ids[0] + app[0] >= ids[-1]) {
-		if (mdb_midl_grow(idp, app[0]))
+		if (mdb_midl_grow(idp, (int)app[0]))
 			return ENOMEM;
 		ids = *idp;
 	}

@@ -73,7 +73,7 @@ int mdb_dbi_open(MDB_txn *txn, const char *name, unsigned int flags, MDB_dbi *db
 			continue;
 		}
 		if (len == txn->mt_dbxs[i].md_name.mv_size &&
-			!strncmp(name, txn->mt_dbxs[i].md_name.mv_data, len)) {
+			!strncmp(name, (const char*)txn->mt_dbxs[i].md_name.mv_data, len)) {
 			*dbi = i;
 			return MDB_SUCCESS;
 		}
@@ -107,7 +107,7 @@ int mdb_dbi_open(MDB_txn *txn, const char *name, unsigned int flags, MDB_dbi *db
 	}
 
 	/* Done here so we cannot fail after creating a new DB */
-	if ((namedup = strdup(name)) == NULL)
+	if ((namedup = mdb_strdup(name)) == NULL)
 		return ENOMEM;
 
 	if (rc) {
@@ -154,7 +154,7 @@ void mdb_dbi_close(MDB_env *env, MDB_dbi dbi)
 	char *ptr;
 	if (dbi < CORE_DBS || dbi >= env->me_maxdbs)
 		return;
-	ptr = env->me_dbxs[dbi].md_name.mv_data;
+	ptr = (char*)env->me_dbxs[dbi].md_name.mv_data;
 	/* If there was no name, this was already closed */
 	if (ptr) {
 		MDB_TRACE(("%p, %u", env, dbi));
@@ -331,7 +331,7 @@ mdb_del(MDB_txn *txn, MDB_dbi dbi,
 		data = NULL;
 	}
 
-	MDB_TRACE(("%p, %u, %"Z"u[%s], %"Z"u%s",
+	MDB_TRACE(("%p, %u, %" Z "u[%s], %" Z "u%s",
 		txn, dbi, key ? key->mv_size:0, DKEY(key), data ? data->mv_size:0,
 		data ? mdb_dval(txn, dbi, data, dbuf):""));
 	return mdb_del0(txn, dbi, key, data, 0);
@@ -406,7 +406,7 @@ int mdb_put(MDB_txn *txn, MDB_dbi dbi, MDB_val *key, MDB_val *data, unsigned int
 	if (txn->mt_flags & (MDB_TXN_RDONLY|MDB_TXN_BLOCKED))
 		return (txn->mt_flags & MDB_TXN_RDONLY) ? EACCES : MDB_BAD_TXN;
 
-	MDB_TRACE(("%p, %u, %"Z"u[%s], %"Z"u%s, %u",
+	MDB_TRACE(("%p, %u, %" Z "u[%s], %" Z "u%s, %u",
 		txn, dbi, key ? key->mv_size:0, DKEY(key), data->mv_size, mdb_dval(txn, dbi, data, dbuf), flags));
 	mdb_cursor_init(&mc, txn, dbi, &mx);
 	mc.mc_next = txn->mt_cursors[dbi];

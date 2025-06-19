@@ -11,13 +11,18 @@
  * top-level directory of the distribution or, alternatively, at
  * <http://www.OpenLDAP.org/license.html>.
  */
-#include <stdio.h>
+
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
+
+ #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #ifdef _WIN32
-#include "getopt.h"
 #include <io.h>
 #include <windows.h>
 typedef SSIZE_T	ssize_t;
@@ -34,7 +39,7 @@ static int mode;
 
 typedef struct flagbit {
 	int bit;
-	char *name;
+	const char *name;
 } flagbit;
 
 flagbit dbflags[] = {
@@ -67,7 +72,7 @@ static void text(MDB_val *v)
 	unsigned char *c, *end;
 
 	putchar(' ');
-	c = v->mv_data;
+	c = (unsigned char*) v->mv_data;
 	end = c + v->mv_size;
 	while (c < end) {
 		if (isprint(*c)) {
@@ -88,7 +93,7 @@ static void byte2(MDB_val *v)
 	unsigned char *c, *end;
 
 	putchar(' ');
-	c = v->mv_data;
+	c = (unsigned char*) v->mv_data;
 	end = c + v->mv_size;
 	while (c < end) {
 		hex(*c++);
@@ -120,7 +125,7 @@ static int dumpit(MDB_txn *txn, MDB_dbi dbi, char *name)
 	if (name)
 		printf("database=%s\n", name);
 	printf("type=btree\n");
-	printf("mapsize=%"Yu"\n", info.me_mapsize);
+	printf("mapsize=%" Yu "\n", info.me_mapsize);
 	if (info.me_mapaddr)
 		printf("mapaddr=%p\n", info.me_mapaddr);
 	printf("maxreaders=%u\n", info.me_maxreaders);
@@ -166,82 +171,112 @@ static void usage(char *prog)
 
 int main(int argc, char *argv[])
 {
-	int i, rc;
-	MDB_env *env;
-	MDB_txn *txn;
-	MDB_dbi dbi;
-	char *prog = argv[0];
-	char *envname;
-	char *subname = NULL;
-	int alldbs = 0, envflags = 0, list = 0;
+    int alldbs = 0, envflags = 0, list = 0, mode = 0;
+    int i;                        /* outer argv index             */
+    MDB_env *env;
+    MDB_txn *txn;
+    MDB_dbi dbi;
+    char *prog     = argv[0];
+    char *envname  = NULL;
+    char *subname  = NULL;
 
-	if (argc < 2) {
-		usage(prog);
-	}
+    /* ---------- manual option parsing (no getopt) ---------- */
+    for (i = 1; i < argc; ++i)
+    {
+        char *arg = argv[i];
 
-	/* -a: dump main DB and all subDBs
-	 * -s: dump only the named subDB
-	 * -n: use NOSUBDIR flag on env_open
-	 * -p: use printable characters
-	 * -f: write to file instead of stdout
-	 * -v: use previous snapshot
-	 * -V: print version and exit
-	 * (default) dump only the main DB
-	 */
-	while ((i = getopt(argc, argv, "af:lnps:vV")) != EOF) {
-		switch(i) {
-		case 'V':
-			printf("%s\n", MDB_VERSION_STRING);
-			exit(0);
-			break;
-		case 'l':
-			list = 1;
-			/*FALLTHROUGH*/
-		case 'a':
-			if (subname)
-				usage(prog);
-			alldbs++;
-			break;
-		case 'f':
-			if (freopen(optarg, "w", stdout) == NULL) {
-				fprintf(stderr, "%s: %s: reopen: %s\n",
-					prog, optarg, strerror(errno));
-				exit(EXIT_FAILURE);
-			}
-			break;
-		case 'n':
-			envflags |= MDB_NOSUBDIR;
-			break;
-		case 'v':
-			envflags |= MDB_PREVSNAPSHOT;
-			break;
-		case 'p':
-			mode |= PRINT;
-			break;
-		case 's':
-			if (alldbs)
-				usage(prog);
-			subname = optarg;
-			break;
-		default:
-			usage(prog);
-		}
-	}
+        /* stop at first non-option or at “--” */
+        if (arg[0] != '-' || strcmp(arg, "--") == 0)
+        {
+            if (strcmp(arg, "--") == 0)         /* skip “--” itself */
+                ++i;
+            break;
+        }
 
-	if (optind != argc - 1)
-		usage(prog);
+        /* scan each character after the leading “-” */
+        for (size_t j = 1; arg[j] != '\0'; ++j)
+        {
+            char opt = arg[j];
+            char *optarg = NULL;                /* value, if needed */
 
+            switch (opt)
+            {
+            case 'V':
+                printf("%s\n", MDB_VERSION_STRING);
+                exit(EXIT_SUCCESS);
+
+            case 'l':
+                list = 1;
+                /* FALLTHROUGH */
+            case 'a':
+                if (subname)
+                    usage(prog);
+                ++alldbs;
+                break;
+
+            case 'n':
+                envflags |= MDB_NOSUBDIR;
+                break;
+
+            case 'v':
+                envflags |= MDB_PREVSNAPSHOT;
+                break;
+
+            case 'p':
+                mode |= PRINT;
+                break;
+
+            /* ---- options that take an argument ---- */
+            case 'f':
+            case 's':
+                /* any characters left on this option?  */
+                if (arg[j + 1] != '\0') {
+                    optarg = &arg[j + 1];       /*  -ffile   */
+                    j = strlen(arg) - 1;        /*  stop scanning this arg */
+                } else {
+                    if (++i >= argc)            /*  -f file  */
+                        usage(prog);
+                    optarg = argv[i];
+                }
+
+                if (opt == 'f') {
+                    if (freopen(optarg, "w", stdout) == NULL) {
+                        fprintf(stderr, "%s: %s: reopen: %s\n",
+                                prog, optarg, strerror(errno));
+                        exit(EXIT_FAILURE);
+                    }
+                } else {                       /* opt == 's' */
+                    if (alldbs)
+                        usage(prog);
+                    subname = optarg;
+                }
+                /* reset inner loop because we consumed next argv (if any) */
+                j = strlen(arg) - 1;
+                break;
+
+            default:
+                usage(prog);
+            }
+        }
+    }
+
+    /* ---------- positional arguments ---------- */
+    if (i != argc - 1)          /* need exactly one env path */
+        usage(prog);
+
+    envname = argv[i];
+
+    /* ---------- signal handling (unchanged) ---- */
 #ifdef SIGPIPE
-	signal(SIGPIPE, dumpsig);
+    signal(SIGPIPE, dumpsig);
 #endif
 #ifdef SIGHUP
-	signal(SIGHUP, dumpsig);
+    signal(SIGHUP, dumpsig);
 #endif
-	signal(SIGINT, dumpsig);
-	signal(SIGTERM, dumpsig);
+    signal(SIGINT,  dumpsig);
+    signal(SIGTERM, dumpsig);
 
-	envname = argv[optind];
-	rc = mdb_env_create(&env);
+	int rc = mdb_env_create(&env);
 	if (rc) {
 		fprintf(stderr, "mdb_env_create failed, error %d %s\n", rc, mdb_strerror(rc));
 		return EXIT_FAILURE;
@@ -285,7 +320,7 @@ int main(int argc, char *argv[])
 			if (memchr(key.mv_data, '\0', key.mv_size))
 				continue;
 			count++;
-			str = malloc(key.mv_size+1);
+			str = (char*) malloc(key.mv_size+1);
 			memcpy(str, key.mv_data, key.mv_size);
 			str[key.mv_size] = '\0';
 			rc = mdb_open(txn, str, 0, &db2);

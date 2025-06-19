@@ -16,11 +16,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#ifdef _WIN32
-#include "getopt.h"
-#else
-#include <unistd.h>
-#endif
 #include <signal.h>
 #include "lmdb.h"
 
@@ -37,6 +32,36 @@ static void usage(char *prog)
 	exit(EXIT_FAILURE);
 }
 
+static int
+parse_cmdline(int argc, char **argv,
+              int *envflags, int *do_delete, char **subname)
+{
+    int i = 1;                       /* skip argv[0] */
+    for (; i < argc; ++i) {
+        char *arg = argv[i];
+
+        /* stop when the first non-option is seen */
+        if (arg[0] != '-')
+            break;
+
+        if (strcmp(arg, "-d") == 0) {
+            *do_delete = 1;
+        } else if (strcmp(arg, "-n") == 0) {
+            *envflags |= MDB_NOSUBDIR;
+        } else if (strcmp(arg, "-V") == 0) {
+            printf("%s\n", MDB_VERSION_STRING);
+            exit(EXIT_SUCCESS);
+        } else if (strcmp(arg, "-s") == 0) {
+            if (++i == argc)        /* need a value after -s */
+                usage(argv[0]);
+            *subname = argv[i];
+        } else {
+            usage(argv[0]);         /* unknown option */
+        }
+    }
+    return i;
+}
+
 int main(int argc, char *argv[])
 {
 	int i, rc;
@@ -46,39 +71,16 @@ int main(int argc, char *argv[])
 	char *prog = argv[0];
 	char *envname;
 	char *subname = NULL;
-	int envflags = 0, delete = 0;
+	int envflags = 0, _delete = 0;
+	int arg_index = 0;
 
 	if (argc < 2) {
 		usage(prog);
 	}
 
-	/* -d: delete the db, don't just empty it
-	 * -s: drop the named subDB
-	 * -n: use NOSUBDIR flag on env_open
-	 * -V: print version and exit
-	 * (default) empty the main DB
-	 */
-	while ((i = getopt(argc, argv, "dns:V")) != EOF) {
-		switch(i) {
-		case 'V':
-			printf("%s\n", MDB_VERSION_STRING);
-			exit(0);
-			break;
-		case 'd':
-			delete = 1;
-			break;
-		case 'n':
-			envflags |= MDB_NOSUBDIR;
-			break;
-		case 's':
-			subname = optarg;
-			break;
-		default:
-			usage(prog);
-		}
-	}
+	arg_index = parse_cmdline(argc, argv, &envflags, &_delete, &subname);
 
-	if (optind != argc - 1)
+	if (arg_index != argc - 1)
 		usage(prog);
 
 #ifdef SIGPIPE
@@ -90,7 +92,7 @@ int main(int argc, char *argv[])
 	signal(SIGINT, dumpsig);
 	signal(SIGTERM, dumpsig);
 
-	envname = argv[optind];
+	envname = argv[arg_index];
 	rc = mdb_env_create(&env);
 	if (rc) {
 		fprintf(stderr, "mdb_env_create failed, error %d %s\n", rc, mdb_strerror(rc));
@@ -117,7 +119,7 @@ int main(int argc, char *argv[])
 		goto txn_abort;
 	}
 
-	rc = mdb_drop(txn, dbi, delete);
+	rc = mdb_drop(txn, dbi, _delete);
 	if (rc) {
 		fprintf(stderr, "mdb_drop failed, error %d %s\n", rc, mdb_strerror(rc));
 		goto txn_abort;

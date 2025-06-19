@@ -194,9 +194,6 @@ union semun {
  *	@{
  */
 
-/* Internal error codes, not exposed outside liblmdb */
-#define	MDB_NO_ROOT		(MDB_LAST_ERRCODE + 10)
-
 #ifdef __GLIBC__
 #define	GLIBC_VER	((__GLIBC__ << 16 )| __GLIBC_MINOR__)
 #endif
@@ -352,87 +349,10 @@ typedef MDB_ID	pgno_t;
 	 */
 typedef MDB_ID	txnid_t;
 
-/** @defgroup debug	Debug Macros
- *	@{
- */
-#ifndef MDB_DEBUG
-	/**	Enable debug output.  Needs variable argument macros (a C99 feature).
-	 *	Set this to 1 for copious tracing. Set to 2 to add dumps of all IDLs
-	 *	read from and written to the database (used for free space management).
-	 */
-#define MDB_DEBUG 0
-#endif
-
-#define MDB_DBG_INFO	1
-#define MDB_DBG_TRACE	2
-
-#if MDB_DEBUG
-int mdb_debug = MDB_DBG_TRACE;
-txnid_t mdb_debug_start;
-
-	/**	Print a debug message with printf formatting.
-	 *	Requires double parenthesis around 2 or more args.
-	 */
-# define DPRINTF(args) ((void) ((mdb_debug & MDB_DBG_INFO) && DPRINTF0 args))
-# define DPRINTF0(fmt, ...) \
-	fprintf(stderr, "%s:%d " fmt "\n", __func__, __LINE__, __VA_ARGS__)
-	/** Trace info for replaying */
-# define MDB_TRACE(args)	((void) ((mdb_debug & MDB_DBG_TRACE) && DPRINTF1 args))
-# define DPRINTF1(fmt, ...) \
-	fprintf(stderr, ">%d:%s: " fmt "\n", getpid(), __func__, __VA_ARGS__)
-#else
-# define DPRINTF(args)	((void) 0)
-# define MDB_TRACE(args)	((void) 0)
-#endif
-	/**	Print a debug string.
-	 *	The string is printed literally, with no format processing.
-	 */
-#define DPUTS(arg)	DPRINTF(("%s", arg))
 	/** Debugging output value of a cursor DBI: Negative in a sub-cursor. */
 #define DDBI(mc) \
 	(((mc)->mc_flags & C_SUB) ? -(int)(mc)->mc_dbi : (int)(mc)->mc_dbi)
 /** @} */
-
-	/**	@brief The maximum size of a database page.
-	 *
-	 *	It is 32k or 64k, since value-PAGEBASE must fit in
-	 *	#MDB_page.%mp_upper.
-	 *
-	 *	LMDB will use database pages < OS pages if needed.
-	 *	That causes more I/O in write transactions: The OS must
-	 *	know (read) the whole page before writing a partial page.
-	 *
-	 *	Note that we don't currently support Huge pages. On Linux,
-	 *	regular data files cannot use Huge pages, and in general
-	 *	Huge pages aren't actually pageable. We rely on the OS
-	 *	demand-pager to read our data and page it out when memory
-	 *	pressure from other processes is high. So until OSs have
-	 *	actual paging support for Huge pages, they're not viable.
-	 */
-#define MAX_PAGESIZE	 (PAGEBASE ? 0x10000 : 0x8000)
-
-	/** The minimum number of keys required in a database page.
-	 *	Setting this to a larger value will place a smaller bound on the
-	 *	maximum size of a data item. Data items larger than this size will
-	 *	be pushed into overflow pages instead of being stored directly in
-	 *	the B-tree node. This value used to default to 4. With a page size
-	 *	of 4096 bytes that meant that any item larger than 1024 bytes would
-	 *	go into an overflow page. That also meant that on average 2-3KB of
-	 *	each overflow page was wasted space. The value cannot be lower than
-	 *	2 because then there would no longer be a tree structure. With this
-	 *	value, items larger than 2KB will go into overflow pages, and on
-	 *	average only 1KB will be wasted.
-	 */
-#define MDB_MINKEYS	 2
-
-	/**	A stamp that identifies a file as an LMDB file.
-	 *	There's nothing special about this value other than that it is easily
-	 *	recognizable, and it will reflect any byte order mismatches.
-	 */
-#define MDB_MAGIC	 0xBEEFC0DE
-
-	/**	The version number for a database's datafile format. */
-#define MDB_DATA_VERSION	 1
 	/**	The version number for a database's lockfile format. */
 #define MDB_LOCK_VERSION	 2
 	/** Number of bits representing #MDB_LOCK_VERSION in #MDB_LOCK_FORMAT.
@@ -727,30 +647,8 @@ typedef struct MDB_txninfo {
 #endif
 
 enum {
-	/** Magic number for lockfile layout and features.
-	 *
-	 *  This *attempts* to stop liblmdb variants compiled with conflicting
-	 *	options from using the lockfile at the same time and thus breaking
-	 *	it.  It describes locking types, and sizes and sometimes alignment
-	 *	of the various lockfile items.
-	 *
-	 *	The detected ranges are mostly guesswork, or based simply on how
-	 *	big they could be without using more bits.  So we can tweak them
-	 *	in good conscience when updating #MDB_LOCK_VERSION.
-	 */
-	MDB_lock_desc =
-	/* Default CACHELINE=64 vs. other values (have seen mention of 32-256) */
-	(CACHELINE==64 ? 0 : 1 + LOG2_MOD(CACHELINE >> (CACHELINE>64), 5))
-	+ 6  * (sizeof(MDB_PID_T)/4 % 3)    /* legacy(2) to word(4/8)? */
-	+ 18 * (sizeof(pthread_t)/4 % 5)    /* can be struct{id, active data} */
-	+ 90 * (sizeof(MDB_txbody) / CACHELINE % 3)
-	+ 270 * (MDB_LOCK_TYPE % 120)
-	/* The above is < 270*120 < 2**15 */
-	+ ((sizeof(txnid_t) == 8) << 15)    /* 32bit/64bit */
-	+ ((sizeof(MDB_reader) > CACHELINE) << 16)
-	/* Not really needed - implied by MDB_LOCK_TYPE != (_WIN32 locking) */
-	+ (((MDB_PIDLOCK) != 0)   << 17)
-	/* 18 bits total: Must be <= (32 - MDB_LOCK_VERSION_BITS). */
+	/** Magic number for lockfile layout and features. */
+	MDB_lock_desc = 42
 };
 /** @} */
 
@@ -1217,7 +1115,7 @@ typedef struct MDB_xcursor {
 	if (!XCURSOR_INITED(mc) || (mc)->mc_ki[top] >= NUMKEYS(xr_pg)) break; \
 	xr_node = NODEPTR(xr_pg, (mc)->mc_ki[top]); \
 	if ((xr_node->mn_flags & (F_DUPDATA|F_SUBDATA)) == F_DUPDATA) \
-		(mc)->mc_xcursor->mx_cursor.mc_pg[0] = NODEDATA(xr_node); \
+		(mc)->mc_xcursor->mx_cursor.mc_pg[0] = (MDB_page*)(NODEDATA(xr_node)); \
 } while (0)
 
 	/** State of FreeDB old pages, stored in the MDB_env */
@@ -1239,8 +1137,11 @@ typedef struct MDB_ntxn {
 #define MDB_COMMIT_PAGES	IOV_MAX
 #endif
 
+static_assert(sizeof(ssize_t) == 8);
+
 	/** max bytes to write in one call */
-#define MAX_WRITE		(0x40000000U >> (sizeof(ssize_t) == 4))
+//#define MAX_WRITE		(0x40000000U >> (sizeof(ssize_t) == 4))
+#define MAX_WRITE		0x40000000U
 
 	/** Check \b txn and \b dbi arguments to a function */
 #define TXN_DBI_EXIST(txn, dbi, validity) \
@@ -1250,13 +1151,17 @@ typedef struct MDB_ntxn {
 #define TXN_DBI_CHANGED(txn, dbi) \
 	((txn)->mt_dbiseqs[dbi] != (txn)->mt_env->me_dbiseqs[dbi])
 
+#ifdef _WIN32
+    #define mdb_strdup _strdup
+#else
+    #define mdb_strdup strdup
+#endif
+
 int  mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp);
 int  mdb_page_new(MDB_cursor *mc, uint32_t flags, int num, MDB_page **mp);
 int  mdb_page_touch(MDB_cursor *mc);
 int mdb_page_unspill(MDB_txn *txn, MDB_page *mp, MDB_page **ret);
 
-#define MDB_END_NAMES {"committed", "empty-commit", "abort", "reset", \
-	"reset-tmp", "fail-begin", "fail-beginchild"}
 enum {
 	/* mdb_txn_end operation number, for logging */
 	MDB_END_COMMITTED, MDB_END_EMPTY_COMMIT, MDB_END_ABORT, MDB_END_RESET,

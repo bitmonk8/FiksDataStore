@@ -14,3 +14,41 @@ void ESECT mdb_assert_fail(MDB_env *env, const char *expr_txt, const char *func,
 #else
 #define mdb_assert0(env, expr, expr_txt) ((void) 0)
 #endif /* NDEBUG */
+
+
+/** @defgroup debug	Debug Macros
+ *	@{
+ */
+#ifndef MDB_DEBUG
+	/**	Enable debug output.  Needs variable argument macros (a C99 feature).
+	 *	Set this to 1 for copious tracing. Set to 2 to add dumps of all IDLs
+	 *	read from and written to the database (used for free space management).
+	 */
+#define MDB_DEBUG 0
+#endif
+
+#define MDB_DBG_INFO	1
+#define MDB_DBG_TRACE	2
+
+#if MDB_DEBUG
+extern int mdb_debug = MDB_DBG_TRACE;
+extern txnid_t mdb_debug_start;
+
+	/**	Print a debug message with printf formatting.
+	 *	Requires double parenthesis around 2 or more args.
+	 */
+# define DPRINTF(args) ((void) ((mdb_debug & MDB_DBG_INFO) && DPRINTF0 args))
+# define DPRINTF0(fmt, ...) \
+	fprintf(stderr, "%s:%d " fmt "\n", __func__, __LINE__, __VA_ARGS__)
+	/** Trace info for replaying */
+# define MDB_TRACE(args)	((void) ((mdb_debug & MDB_DBG_TRACE) && DPRINTF1 args))
+# define DPRINTF1(fmt, ...) \
+	fprintf(stderr, ">%d:%s: " fmt "\n", getpid(), __func__, __VA_ARGS__)
+#else
+# define DPRINTF(args)	((void) 0)
+# define MDB_TRACE(args)	((void) 0)
+#endif
+	/**	Print a debug string.
+	 *	The string is printed literally, with no format processing.
+	 */
+#define DPUTS(arg)	DPRINTF(("%s", arg))

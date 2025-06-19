@@ -2,6 +2,11 @@
 
 #include "mdb_env.h"
 
+#if MDB_DEBUG
+int mdb_debug = MDB_DBG_TRACE;
+txnid_t mdb_debug_start;
+#endif
+
 #ifndef NDEBUG
 void ESECT mdb_assert_fail(MDB_env *env, const char *expr_txt,
 	const char *func, const char *file, int line)
@@ -90,20 +95,20 @@ mdb_page_list(MDB_page *mp)
 	case P_LEAF|P_LEAF2:        type = "LEAF2 page";		break;
 	case P_LEAF|P_LEAF2|P_SUBP: type = "LEAF2 sub-page";	break;
 	case P_OVERFLOW:
-		fprintf(stderr, "Overflow page %"Yu" pages %u%s\n",
+		fprintf(stderr, "Overflow page %" Yu " pages %u%s\n",
 			pgno, mp->mp_pages, state);
 		return;
 	case P_META:
-		fprintf(stderr, "Meta-page %"Yu" txnid %"Yu"\n",
+		fprintf(stderr, "Meta-page %" Yu " txnid %" Yu "\n",
 			pgno, ((MDB_meta *)METADATA(mp))->mm_txnid);
 		return;
 	default:
-		fprintf(stderr, "Bad page %"Yu" flags 0x%X\n", pgno, MP_FLAGS(mp));
+		fprintf(stderr, "Bad page %" Yu " flags 0x%X\n", pgno, MP_FLAGS(mp));
 		return;
 	}
 
 	nkeys = NUMKEYS(mp);
-	fprintf(stderr, "%s %"Yu" numkeys %d%s\n", type, pgno, nkeys, state);
+	fprintf(stderr, "%s %" Yu " numkeys %d%s\n", type, pgno, nkeys, state);
 
 	for (i=0; i<nkeys; i++) {
 		if (IS_LEAF2(mp)) {	/* LEAF2 pages have no mp_ptrs[] or node headers */
@@ -118,7 +123,7 @@ mdb_page_list(MDB_page *mp)
 		key.mv_data = node->mn_data;
 		nsize = NODESIZE + key.mv_size;
 		if (IS_BRANCH(mp)) {
-			fprintf(stderr, "key %d: page %"Yu", %s\n", i, NODEPGNO(node),
+			fprintf(stderr, "key %d: page %" Yu ", %s\n", i, NODEPGNO(node),
 				DKEY(&key));
 			total += nsize;
 		} else {
@@ -189,7 +194,7 @@ void mdb_audit(MDB_txn *txn)
 		}
 	}
 	if (freecount + count + NUM_METAS != txn->mt_next_pgno) {
-		fprintf(stderr, "audit: %"Yu" freecount: %"Yu" count: %"Yu" total: %"Yu" next_pgno: %"Yu"\n",
+		fprintf(stderr, "audit: %" Yu " freecount: %" Yu " count: %" Yu " total: %" Yu " next_pgno: %" Yu "\n",
 			txn->mt_txnid, freecount, count+NUM_METAS,
 			freecount+count+NUM_METAS, txn->mt_next_pgno);
 	}

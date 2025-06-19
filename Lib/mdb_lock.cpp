@@ -1,6 +1,7 @@
 #include "mdb_lock.h"
 
 #include "mdb_env.h"
+#include "mdb_debug.h"
 
 #ifdef _WIN32
 #define MDB_OWNERDEAD	((int) WAIT_ABANDONED)
@@ -73,7 +74,7 @@ mdb_reader_list(MDB_env *env, MDB_msg_func *func, void *ctx)
 		if (mr[i].mr_pid) {
 			txnid_t	txnid = mr[i].mr_txnid;
 			sprintf(buf, txnid == (txnid_t)-1 ?
-				"%10d %"Z"x -\n" : "%10d %"Z"x %"Yu"\n",
+				"%10d %" Z "x -\n" : "%10d %" Z "x %" Yu "\n",
 				(int)mr[i].mr_pid, (size_t)mr[i].mr_tid, txnid);
 			if (first) {
 				first = 0;
@@ -201,7 +202,7 @@ mdb_reader_check0(MDB_env *env, int rlocked, int *dead)
 	int rc = MDB_SUCCESS, count = 0;
 
 	rdrs = env->me_txns->mti_numreaders;
-	pids = malloc((rdrs+1) * sizeof(MDB_PID_T));
+	pids = (MDB_PID_T*) malloc((rdrs+1) * sizeof(MDB_PID_T));
 	if (!pids)
 		return ENOMEM;
 	pids[0] = 0;

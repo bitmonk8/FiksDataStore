@@ -175,10 +175,6 @@
 #include <inttypes.h>
 #include <limits.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /** Unix permissions for creating files, or dummy definition for Windows */
 #ifdef _MSC_VER
 typedef	int	mdb_mode_t;
@@ -1645,9 +1641,6 @@ char* mdb_dkey(MDB_val *key, char *buf);
 
 /**	@} */
 
-#ifdef __cplusplus
-}
-#endif
 /** @page tools FiksStore Command Line Tools
 	The following describes the command line tools that are available for FiksStore.
 	\li \ref mdb_copy_1

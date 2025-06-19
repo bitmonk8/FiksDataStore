@@ -13,9 +13,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef _WIN32
-#include "getopt.h"
-#else
+#ifndef _WIN32
 #include <unistd.h>
 #endif
 

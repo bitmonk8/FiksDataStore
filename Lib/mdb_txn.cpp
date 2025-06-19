@@ -26,8 +26,7 @@ mdb_txn_renew0(MDB_txn *txn)
 			txn->mt_txnid = meta->mm_txnid;
 			txn->mt_u.reader = NULL;
 		} else {
-			MDB_reader *r = (env->me_flags & MDB_NOTLS) ? txn->mt_u.reader :
-				pthread_getspecific(env->me_txkey);
+			MDB_reader *r = (MDB_reader*) ((env->me_flags & MDB_NOTLS) ? txn->mt_u.reader : pthread_getspecific(env->me_txkey));
 			if (r) {
 				if (r->mr_pid != env->me_pid || r->mr_txnid != (txnid_t)-1)
 					return MDB_BAD_RSLOT;
@@ -156,7 +155,7 @@ mdb_txn_renew(MDB_txn *txn)
 
 	rc = mdb_txn_renew0(txn);
 	if (rc == MDB_SUCCESS) {
-		DPRINTF(("renew txn %"Yu"%c %p on mdbenv %p, root page %"Yu,
+		DPRINTF(("renew txn %" Yu "%c %p on mdbenv %p, root page %"Yu,
 			txn->mt_txnid, (txn->mt_flags & MDB_TXN_RDONLY) ? 'r' : 'w',
 			(void *)txn, (void *)txn->mt_env, txn->mt_dbs[MAIN_DBI].md_root));
 	}
@@ -177,7 +176,7 @@ static int mdb_cursor_shadow(MDB_txn *src, MDB_txn *dst)
 			if (mc->mc_xcursor)
 				size += sizeof(MDB_xcursor);
 			for (; mc; mc = bk->mc_next) {
-				bk = malloc(size);
+				bk = (MDB_cursor *)malloc(size);
 				if (!bk)
 					return ENOMEM;
 				*bk = *mc;
@@ -233,7 +232,7 @@ mdb_txn_begin(MDB_env *env, MDB_txn *parent, unsigned int flags, MDB_txn **ret)
 		txn = env->me_txn0;
 		goto renew;
 	}
-	if ((txn = calloc(1, size)) == NULL) {
+	if ((txn = (MDB_txn *)calloc(1, size)) == NULL) {
 		DPRINTF(("calloc: %s", strerror(errno)));
 		return ENOMEM;
 	}
@@ -247,7 +246,7 @@ mdb_txn_begin(MDB_env *env, MDB_txn *parent, unsigned int flags, MDB_txn **ret)
 		unsigned int i;
 		txn->mt_cursors = (MDB_cursor **)(txn->mt_dbs + env->me_maxdbs);
 		txn->mt_dbiseqs = parent->mt_dbiseqs;
-		txn->mt_u.dirty_list = malloc(sizeof(MDB_ID2)*MDB_IDL_UM_SIZE);
+		txn->mt_u.dirty_list = (MDB_ID2L)malloc(sizeof(MDB_ID2)*MDB_IDL_UM_SIZE);
 		if (!txn->mt_u.dirty_list ||
 			!(txn->mt_free_pgs = mdb_midl_alloc(MDB_IDL_UM_MAX)))
 		{
@@ -295,7 +294,7 @@ renew:
 	} else {
 		txn->mt_flags |= flags;	/* could not change txn=me_txn0 earlier */
 		*ret = txn;
-		DPRINTF(("begin txn %"Yu"%c %p on mdbenv %p, root page %"Yu,
+		DPRINTF(("begin txn %" Yu "%c %p on mdbenv %p, root page %"Yu,
 			txn->mt_txnid, (flags & MDB_RDONLY) ? 'r' : 'w',
 			(void *) txn, (void *) env, txn->mt_dbs[MAIN_DBI].md_root));
 	}
@@ -331,7 +330,7 @@ static void mdb_dbis_update(MDB_txn *txn, int keep)
 			if (keep) {
 				env->me_dbflags[i] = txn->mt_dbs[i].md_flags | MDB_VALID;
 			} else {
-				char *ptr = env->me_dbxs[i].md_name.mv_data;
+				char *ptr = (char*) env->me_dbxs[i].md_name.mv_data;
 				if (ptr) {
 					env->me_dbxs[i].md_name.mv_data = NULL;
 					env->me_dbxs[i].md_name.mv_size = 0;
@@ -393,10 +392,13 @@ static void mdb_dlist_free(MDB_txn *txn)
 	unsigned i, n = dl[0].mid;
 
 	for (i = 1; i <= n; i++) {
-		mdb_dpage_free(env, dl[i].mptr);
+		mdb_dpage_free(env, (MDB_page*)dl[i].mptr);
 	}
 	dl[0].mid = 0;
 }
+
+#define MDB_END_NAMES {"committed", "empty-commit", "abort", "reset", \
+	"reset-tmp", "fail-begin", "fail-beginchild"}
 
 /** End a transaction, except successful commit of a nested transaction.
  * May be called twice for readonly txns: First reset it, then abort.
@@ -414,7 +416,7 @@ mdb_txn_end(MDB_txn *txn, unsigned mode)
 	/* Export or close DBI handles opened in this txn */
 	mdb_dbis_update(txn, mode & MDB_END_UPDATE);
 
-	DPRINTF(("%s txn %"Yu"%c %p on mdbenv %p, root page %"Yu,
+	DPRINTF(("%s txn %" Yu "%c %p on mdbenv %p, root page %"Yu,
 		names[mode & MDB_END_OPMASK],
 		txn->mt_txnid, (txn->mt_flags & MDB_TXN_RDONLY) ? 'r' : 'w',
 		(void *) txn, (void *)env, txn->mt_dbs[MAIN_DBI].md_root));
@@ -625,7 +627,7 @@ mdb_freelist_save(MDB_txn *txn)
 #if (MDB_DEBUG) > 1
 			{
 				unsigned int i = free_pgs[0];
-				DPRINTF(("IDL write txn %"Yu" root %"Yu" num %u",
+				DPRINTF(("IDL write txn %" Yu " root %" Yu " num %u",
 					txn->mt_txnid, txn->mt_dbs[FREE_DBI].md_root, i));
 				for (; i; i--)
 					DPRINTF(("IDL %"Yu, free_pgs[i]));
@@ -903,7 +905,7 @@ _mdb_txn_commit(MDB_txn *txn)
 		!(txn->mt_flags & (MDB_TXN_DIRTY|MDB_TXN_SPILLS)))
 		goto done;
 
-	DPRINTF(("committing txn %"Yu" %p on mdbenv %p, root page %"Yu,
+	DPRINTF(("committing txn %" Yu " %p on mdbenv %p, root page %"Yu,
 	    txn->mt_txnid, (void*)txn, (void*)env, txn->mt_dbs[MAIN_DBI].md_root));
 
 	/* Update DB root pointers */

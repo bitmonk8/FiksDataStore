@@ -5,6 +5,49 @@
 #include "mdb_txn.h"
 #include "mdb_lock.h"
 #include "mdb_cursor.h"
+#include "mdb_debug.h"
+#include "mdb_hash.h"
+
+	/**	@brief The maximum size of a database page.
+	 *
+	 *	It is 32k or 64k, since value-PAGEBASE must fit in
+	 *	#MDB_page.%mp_upper.
+	 *
+	 *	LMDB will use database pages < OS pages if needed.
+	 *	That causes more I/O in write transactions: The OS must
+	 *	know (read) the whole page before writing a partial page.
+	 *
+	 *	Note that we don't currently support Huge pages. On Linux,
+	 *	regular data files cannot use Huge pages, and in general
+	 *	Huge pages aren't actually pageable. We rely on the OS
+	 *	demand-pager to read our data and page it out when memory
+	 *	pressure from other processes is high. So until OSs have
+	 *	actual paging support for Huge pages, they're not viable.
+	 */
+#define MAX_PAGESIZE	 (PAGEBASE ? 0x10000 : 0x8000)
+
+	/** The minimum number of keys required in a database page.
+	 *	Setting this to a larger value will place a smaller bound on the
+	 *	maximum size of a data item. Data items larger than this size will
+	 *	be pushed into overflow pages instead of being stored directly in
+	 *	the B-tree node. This value used to default to 4. With a page size
+	 *	of 4096 bytes that meant that any item larger than 1024 bytes would
+	 *	go into an overflow page. That also meant that on average 2-3KB of
+	 *	each overflow page was wasted space. The value cannot be lower than
+	 *	2 because then there would no longer be a tree structure. With this
+	 *	value, items larger than 2KB will go into overflow pages, and on
+	 *	average only 1KB will be wasted.
+	 */
+#define MDB_MINKEYS	 2
+
+	/**	A stamp that identifies a file as an LMDB file.
+	 *	There's nothing special about this value other than that it is easily
+	 *	recognizable, and it will reflect any byte order mismatches.
+	 */
+#define MDB_MAGIC	 0xBEEFC0DE
+
+	/**	The version number for a database's datafile format. */
+#define MDB_DATA_VERSION	 1
 
 static void mdb_env_reader_dest(void *ptr);
 
@@ -52,7 +95,7 @@ void NTAPI mdb_tls_callback(PVOID module, DWORD reason, PVOID ptr)
 	case DLL_THREAD_ATTACH: break;
 	case DLL_THREAD_DETACH:
 		for (i=0; i<mdb_tls_nkeys; i++) {
-			MDB_reader *r = pthread_getspecific(mdb_tls_keys[i]);
+			MDB_reader *r = (MDB_reader*) (pthread_getspecific(mdb_tls_keys[i]));
 			if (r) {
 				mdb_env_reader_dest(r);
 			}
@@ -61,32 +104,6 @@ void NTAPI mdb_tls_callback(PVOID module, DWORD reason, PVOID ptr)
 	case DLL_PROCESS_DETACH: break;
 	}
 }
-#ifdef __GNUC__
-#ifdef _WIN64
-const PIMAGE_TLS_CALLBACK mdb_tls_cbp __attribute__((section (".CRT$XLB"))) = mdb_tls_callback;
-#else
-PIMAGE_TLS_CALLBACK mdb_tls_cbp __attribute__((section (".CRT$XLB"))) = mdb_tls_callback;
-#endif
-#else
-#ifdef _WIN64
-/* Force some symbol references.
- *	_tls_used forces the linker to create the TLS directory if not already done
- *	mdb_tls_cbp prevents whole-program-optimizer from dropping the symbol.
- */
-#pragma comment(linker, "/INCLUDE:_tls_used")
-#pragma comment(linker, "/INCLUDE:mdb_tls_cbp")
-#pragma const_seg(".CRT$XLB")
-extern const PIMAGE_TLS_CALLBACK mdb_tls_cbp;
-const PIMAGE_TLS_CALLBACK mdb_tls_cbp = mdb_tls_callback;
-#pragma const_seg()
-#else	/* _WIN32 */
-#pragma comment(linker, "/INCLUDE:__tls_used")
-#pragma comment(linker, "/INCLUDE:_mdb_tls_cbp")
-#pragma data_seg(".CRT$XLB")
-PIMAGE_TLS_CALLBACK mdb_tls_cbp = mdb_tls_callback;
-#pragma data_seg()
-#endif	/* WIN 32/64 */
-#endif	/* !__GNUC__ */
 
 /* We use native NT APIs to setup the memory map, so that we can
  * let the DB file grow incrementally instead of always preallocating
@@ -109,7 +126,7 @@ typedef NTSTATUS (WINAPI NtCreateSectionFunc)
 } SECTION_INHERIT;
 
 typedef NTSTATUS (WINAPI NtMapViewOfSectionFunc)
-  (IN PHANDLE sh, IN HANDLE ph,
+  (IN HANDLE sh, IN HANDLE ph,
   IN OUT PVOID *addr, IN ULONG_PTR zbits,
   IN SIZE_T cs, IN OUT PLARGE_INTEGER off OPTIONAL,
   IN OUT PSIZE_T vs, IN SECTION_INHERIT ih,
@@ -209,7 +226,7 @@ static int ESECT utf8_to_utf16(const char *src, MDB_name *dst, int xtra)
 			return rc;
 		}
 		if (!result) {
-			result = malloc(sizeof(wchar_t) * (need + xtra));
+			result = (wchar_t*) malloc(sizeof(wchar_t) * (need + xtra));
 			if (!result)
 				return ENOMEM;
 			continue;
@@ -448,11 +465,11 @@ mdb_env_read_header(MDB_env *env, int prev, MDB_meta *meta)
 		p = (MDB_page *)&pbuf;
 
 		if (!F_ISSET(p->mp_flags, P_META)) {
-			DPRINTF(("page %"Yu" not a meta page", p->mp_pgno));
+			DPRINTF(("page %" Yu " not a meta page", p->mp_pgno));
 			return MDB_INVALID;
 		}
 
-		m = METADATA(p);
+		m = (MDB_meta*) METADATA(p);
 		if (m->mm_magic != MDB_MAGIC) {
 			DPUTS("meta has invalid magic");
 			return MDB_INVALID;
@@ -514,7 +531,7 @@ mdb_env_init_meta(MDB_env *env, MDB_meta *meta)
 
 	psize = env->me_psize;
 
-	p = calloc(NUM_METAS, psize);
+	p = (MDB_page*) calloc(NUM_METAS, psize);
 	if (!p)
 		return ENOMEM;
 	p->mp_pgno = 0;
@@ -683,7 +700,7 @@ mdb_env_create(MDB_env **env)
 {
 	MDB_env *e;
 
-	e = calloc(1, sizeof(MDB_env));
+	e = (MDB_env*) calloc(1, sizeof(MDB_env));
 	if (!e)
 		return ENOMEM;
 
@@ -766,7 +783,7 @@ mdb_env_map(MDB_env *env, void *addr)
 	NtClose(mh);
 	if (rc)
 		return mdb_nt2win32(rc);
-	env->me_map = map;
+	env->me_map = (char*) map;
 #else
 	int mmap_flags = MAP_SHARED;
 	int prot = PROT_READ;
@@ -807,8 +824,8 @@ mdb_env_map(MDB_env *env, void *addr)
 		return EBUSY;	/* TODO: Make a new MDB_* error code? */
 
 	p = (MDB_page *)env->me_map;
-	env->me_metas[0] = METADATA(p);
-	env->me_metas[1] = (MDB_meta *)((char *)env->me_metas[0] + env->me_psize);
+	env->me_metas[0] = (MDB_meta*)(METADATA(p));
+	env->me_metas[1] = (MDB_meta*)((char *)env->me_metas[0] + env->me_psize);
 
 	return MDB_SUCCESS;
 }
@@ -846,7 +863,7 @@ mdb_env_set_mapsize(MDB_env *env, mdb_size_t size)
 	env->me_mapsize = size;
 	if (env->me_psize)
 		env->me_maxpg = env->me_mapsize / env->me_psize;
-	MDB_TRACE(("%p, %"Yu"", env, size));
+	MDB_TRACE(("%p, %" Yu "", env, size));
 	return MDB_SUCCESS;
 }
 
@@ -1019,7 +1036,7 @@ mdb_env_open2(MDB_env *env, int prev)
  */
 static void mdb_env_reader_dest(void *ptr)
 {
-	MDB_reader *reader = ptr;
+	MDB_reader *reader = (MDB_reader*) ptr;
 
 #ifndef _WIN32
 	if (reader->mr_pid == getpid()) /* catch pthread_exit() in child process */
@@ -1211,7 +1228,7 @@ mdb_env_setup_locks(MDB_env *env, MDB_name *fname, int mode, int *excl)
 		mh = CreateFileMapping(env->me_lfd, NULL, PAGE_READWRITE,
 			0, 0, NULL);
 		if (!mh) goto fail_errno;
-		env->me_txns = MapViewOfFileEx(mh, FILE_MAP_WRITE, 0, 0, rsize, NULL);
+		env->me_txns = (MDB_txninfo*) MapViewOfFileEx(mh, FILE_MAP_WRITE, 0, 0, rsize, NULL);
 		CloseHandle(mh);
 		if (!env->me_txns) goto fail_errno;
 #else
@@ -1414,7 +1431,7 @@ mdb_env_open(MDB_env *env, const char *path, unsigned int flags, mdb_mode_t mode
 		flags &= ~MDB_WRITEMAP;
 	} else {
 		if (!((env->me_free_pgs = mdb_midl_alloc(MDB_IDL_UM_MAX)) &&
-			  (env->me_dirty_list = calloc(MDB_IDL_UM_SIZE, sizeof(MDB_ID2)))))
+			  (env->me_dirty_list = (MDB_ID2L)calloc(MDB_IDL_UM_SIZE, sizeof(MDB_ID2)))))
 			rc = ENOMEM;
 	}
 
@@ -1422,10 +1439,10 @@ mdb_env_open(MDB_env *env, const char *path, unsigned int flags, mdb_mode_t mode
 	if (rc)
 		goto leave;
 
-	env->me_path = strdup(path);
-	env->me_dbxs = calloc(env->me_maxdbs, sizeof(MDB_dbx));
-	env->me_dbflags = calloc(env->me_maxdbs, sizeof(uint16_t));
-	env->me_dbiseqs = calloc(env->me_maxdbs, sizeof(unsigned int));
+	env->me_path = mdb_strdup(path);
+	env->me_dbxs = (MDB_dbx*)calloc(env->me_maxdbs, sizeof(MDB_dbx));
+	env->me_dbflags = (uint16_t*)calloc(env->me_maxdbs, sizeof(uint16_t));
+	env->me_dbiseqs = (unsigned int*)calloc(env->me_maxdbs, sizeof(unsigned int));
 	if (!(env->me_dbxs && env->me_path && env->me_dbflags && env->me_dbiseqs)) {
 		rc = ENOMEM;
 		goto leave;
@@ -1480,7 +1497,7 @@ mdb_env_open(MDB_env *env, const char *path, unsigned int flags, mdb_mode_t mode
 			int tsize = sizeof(MDB_txn), size = tsize + env->me_maxdbs *
 				(sizeof(MDB_db)+sizeof(MDB_cursor *)+sizeof(unsigned int)+1);
 			if ((env->me_pbuf = calloc(1, env->me_psize)) &&
-				(txn = calloc(1, size)))
+				(txn = (MDB_txn*)calloc(1, size)))
 			{
 				txn->mt_dbs = (MDB_db *)((char *)txn + tsize);
 				txn->mt_cursors = (MDB_cursor **)(txn->mt_dbs + env->me_maxdbs);
@@ -1671,7 +1688,7 @@ typedef struct mdb_copy {
 THREAD_RET ESECT CALL_CONV
 mdb_env_copythr(void *arg)
 {
-	mdb_copy *my = arg;
+	mdb_copy *my = (mdb_copy*)arg;
 	char *ptr;
 	int toggle = 0, wsize, rc;
 #ifdef _WIN32
@@ -1796,7 +1813,7 @@ mdb_env_cwalk(mdb_copy *my, pgno_t *pg, int flags)
 		return rc;
 
 	/* Make cursor pages writable */
-	buf = ptr = malloc(my->mc_env->me_psize * mc.mc_snum);
+	buf = ptr = (char*)malloc(my->mc_env->me_psize * mc.mc_snum);
 	if (buf == NULL)
 		return ENOMEM;
 
@@ -1944,7 +1961,7 @@ mdb_env_copyfd1(MDB_env *env, HANDLE fd)
 		rc = ErrCode();
 		goto done;
 	}
-	my.mc_wbuf[0] = _aligned_malloc(MDB_WBUF*2, env->me_os_psize);
+	my.mc_wbuf[0] = (char*) _aligned_malloc(MDB_WBUF*2, env->me_os_psize);
 	if (my.mc_wbuf[0] == NULL) {
 		/* _aligned_malloc() sets errno, but we use Windows error codes */
 		rc = ERROR_NOT_ENOUGH_MEMORY;

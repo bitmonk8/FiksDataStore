@@ -12,20 +12,26 @@ if is_mode("release") then
     set_strip("all")
 end
 
+set_languages("cxx20")
+set_warnings("error")
+add_defines("MDB_DEBUG=0")
+if is_plat("windows") then
+    add_cxflags("/wd4146")
+end
+
 target("fiksstore")
     set_kind("static")
-    add_files("Lib/midl.c",
-              "Lib/mdb_hash.c",
-              "Lib/mdb_page.c",
-              "Lib/mdb_util.c",
-              "Lib/mdb_compare.c",
-              "Lib/mdb_env.c",
-              "Lib/mdb_txn.c",
-              "Lib/mdb_cursor.c",
-              "Lib/mdb_db.c",
-              "Lib/mdb_lock.c",
-              "Lib/mdb_debug.c")
-    add_defines("MDB_DEBUG=0")
+    add_files("Lib/midl.cpp",
+              "Lib/mdb_hash.cpp",
+              "Lib/mdb_page.cpp",
+              "Lib/mdb_util.cpp",
+              "Lib/mdb_compare.cpp",
+              "Lib/mdb_env.cpp",
+              "Lib/mdb_txn.cpp",
+              "Lib/mdb_cursor.cpp",
+              "Lib/mdb_db.cpp",
+              "Lib/mdb_lock.cpp",
+              "Lib/mdb_debug.cpp")
     add_includedirs("Lib/", {public = true})
 
 local testdir1 = path.join(os.tmpdir(), "test1")
@@ -36,8 +42,6 @@ target("mtest")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
-    add_defines("MDB_DEBUG=0")
-    set_languages("cxx20")
     add_tests("test1", {
         rundir = testdir1,
         fail_outputs = "TEST FAILED: ",
@@ -60,8 +64,6 @@ target("mtest2")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
-    add_defines("MDB_DEBUG=0")
-    set_languages("cxx20")
     add_tests("test2", {
         rundir = testdir2,
         fail_outputs = "TEST FAILED: ", 
@@ -84,8 +86,6 @@ target("mtest3")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
-    add_defines("MDB_DEBUG=0")
-    set_languages("cxx20")
     add_tests("test3", {
         rundir = testdir3,
         fail_outputs = "TEST FAILED: ", 
@@ -103,12 +103,11 @@ target("mtest3")
 local testdir4 = path.join(os.tmpdir(), "test4")
 target("mtest4")
     set_kind("binary")
-    add_files("Tests/mtest4.c")
+    add_files("Tests/mtest4.cpp")
     add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
-    add_defines("MDB_DEBUG=0")
     add_tests("test4", {
         rundir = testdir4,
         fail_outputs = "TEST FAILED: ", 
@@ -126,12 +125,11 @@ target("mtest4")
 local testdir5 = path.join(os.tmpdir(), "test5")
 target("mtest5")
     set_kind("binary")
-    add_files("Tests/mtest5.c")
+    add_files("Tests/mtest5.cpp")
     add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
-    add_defines("MDB_DEBUG=0")
     add_tests("test5", {
         rundir = testdir5,
         fail_outputs = "TEST FAILED: ", 
@@ -149,13 +147,11 @@ target("mtest5")
 local testdir6 = path.join(os.tmpdir(), "test6")
 target("mtest6")
     set_kind("binary")
-    add_files("Tests/mtest6.c")
+    add_files("Tests/mtest6.cpp")
     add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
-    add_defines("MDB_DEBUG=0")
-    add_tests("test6", {fail_outputs = "TEST FAILED: ", plain = true})
     add_tests("test6", {
         rundir = testdir6,
         fail_outputs = "TEST FAILED: ", 
@@ -172,45 +168,40 @@ target("mtest6")
 
 target("mdb_copy")
     set_kind("binary")
-    add_files("Tools/mdb_copy.c")
+    add_files("Tools/mdb_copy.cpp")
     add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
-    add_defines("MDB_DEBUG=0")
 
 target("mdb_drop")
     set_kind("binary")
-    add_files("Tools/mdb_drop.c", "Lib/getopt.c")
+    add_files("Tools/mdb_drop.cpp")
     add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
-    add_defines("MDB_DEBUG=0")
 
 target("mdb_dump")
     set_kind("binary")
-    add_files("Tools/mdb_dump.c", "Lib/getopt.c")
+    add_files("Tools/mdb_dump.cpp")
     add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
-    add_defines("MDB_DEBUG=0")
 
 target("mdb_load")
     set_kind("binary")
-    add_files("Tools/mdb_load.c", "Lib/getopt.c")
+    add_files("Tools/mdb_load.cpp")
     add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
-    add_defines("MDB_DEBUG=0")
 
 target("mdb_stat")
     set_kind("binary")
-    add_files("Tools/mdb_stat.c", "Lib/getopt.c")
+    add_files("Tools/mdb_stat.cpp")
     add_deps("fiksstore")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
-    add_defines("MDB_DEBUG=0")

@@ -29,10 +29,6 @@
 
 #include "lmdb.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /** @defgroup internal	LMDB Internals
  *	@{
  */
@@ -182,7 +178,4 @@ int mdb_mid2l_append( MDB_ID2L ids, MDB_ID2 *id );
 
 /** @} */
 /** @} */
-#ifdef __cplusplus
-}
-#endif
 #endif	/* _MDB_MIDL_H_ */

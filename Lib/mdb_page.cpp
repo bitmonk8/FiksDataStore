@@ -36,7 +36,7 @@ mdb_page_malloc(MDB_txn *txn, unsigned num)
 		sz *= num;
 		off = sz - psize;
 	}
-	if ((ret = malloc(sz)) != NULL) {
+	if ((ret = (MDB_page*) malloc(sz)) != NULL) {
 		VGMEMP_ALLOC(env, ret, sz);
 		if (!(env->me_flags & MDB_NOMEMINIT)) {
 			memset((char *)ret + off, 0, psize);
@@ -232,7 +232,7 @@ mdb_page_flush(MDB_txn *txn, int keep)
 		) {
 		/* Clear dirty flags */
 		while (++i <= pagecount) {
-			dp = dl[i].mptr;
+			dp = (MDB_page*) dl[i].mptr;
 			/* Don't flush this page yet */
 			if (dp->mp_flags & (P_LOOSE|P_KEEP)) {
 				dp->mp_flags &= ~P_KEEP;
@@ -249,7 +249,7 @@ mdb_page_flush(MDB_txn *txn, int keep)
 		/* ran out of room in ov array, and re-malloc, copy handles and free previous */
 		int ovs = (pagecount - keep) * 1.5; /* provide extra padding to reduce number of re-allocations */
 		int new_size = ovs * sizeof(OVERLAPPED);
-		ov = malloc(new_size);
+		ov = (OVERLAPPED*) malloc(new_size);
 		if (ov == NULL)
 			return ENOMEM;
 		int previous_size = env->ovs * sizeof(OVERLAPPED);
@@ -268,7 +268,7 @@ mdb_page_flush(MDB_txn *txn, int keep)
 	/* Write the pages */
 	for (;;) {
 		if (++i <= pagecount) {
-			dp = dl[i].mptr;
+			dp = (MDB_page*) dl[i].mptr;
 			/* Don't flush this page yet */
 			if (dp->mp_flags & (P_LOOSE|P_KEEP)) {
 				dp->mp_flags &= ~P_KEEP;
@@ -301,7 +301,7 @@ mdb_page_flush(MDB_txn *txn, int keep)
 			if (n) {
 retry_write:
 				/* Write previous page(s) */
-				DPRINTF(("committing page %"Z"u", pgno));
+				DPRINTF(("committing page %" Z "u", pgno));
 #ifdef _WIN32
 				OVERLAPPED *this_ov = &ov[async_i];
 				/* Clear status, and keep hEvent, we reuse that */
@@ -400,7 +400,7 @@ retry_seek:
 
 	if (!(env->me_flags & MDB_WRITEMAP)) {
 		for (i = keep; ++i <= pagecount; ) {
-			dp = dl[i].mptr;
+			dp = (MDB_page*) dl[i].mptr;
 			/* This is a page we skipped above */
 			if (!dl[i].mid) {
 				dl[++j] = dl[i];
@@ -511,7 +511,7 @@ mdb_page_spill(MDB_cursor *m0, MDB_val *key, MDB_val *data)
 	/* flush from the tail forward, this saves a lot of shifting later on. */
 	for (i=dl[0].mid; i && need; i--) {
 		MDB_ID pn = dl[i].mid << 1;
-		dp = dl[i].mptr;
+		dp = (MDB_page*) dl[i].mptr;
 		if (dp->mp_flags & (P_LOOSE|P_KEEP))
 			continue;
 		/* Can't spill twice, make sure it's not already in a parent's
@@ -728,7 +728,7 @@ int mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp)
 		}
 		env->me_pglast = last;
 #if (MDB_DEBUG) > 1
-		DPRINTF(("IDL read txn %"Yu" root %"Yu" num %u",
+		DPRINTF(("IDL read txn %" Yu " root %" Yu " num %u",
 			last, txn->mt_dbs[FREE_DBI].md_root, i));
 		for (j = i; j; j--)
 			DPRINTF(("IDL %"Yu, idl[j]));
@@ -902,7 +902,7 @@ mdb_page_touch(MDB_cursor *mc)
 			(rc = mdb_page_alloc(mc, 1, &np)))
 			goto fail;
 		pgno = np->mp_pgno;
-		DPRINTF(("touched db %d page %"Yu" -> %"Yu, DDBI(mc),
+		DPRINTF(("touched db %d page %" Yu " -> %"Yu, DDBI(mc),
 			mp->mp_pgno, pgno));
 		mdb_cassert(mc, mp->mp_pgno != pgno);
 		mdb_midl_xappend(txn->mt_free_pgs, mp->mp_pgno);
@@ -1013,7 +1013,7 @@ mdb_page_get(MDB_cursor *mc, pgno_t pgno, MDB_page **ret, int *lvl)
 			if (dl[0].mid) {
 				unsigned x = mdb_mid2l_search(dl, pgno);
 				if (x <= dl[0].mid && dl[x].mid == pgno) {
-					p = dl[x].mptr;
+					p = (MDB_page*) dl[x].mptr;
 					goto done;
 				}
 			}
@@ -1022,7 +1022,7 @@ mdb_page_get(MDB_cursor *mc, pgno_t pgno, MDB_page **ret, int *lvl)
 	}
 
 	if (pgno >= txn->mt_next_pgno) {
-		DPRINTF(("page %"Yu" not found", pgno));
+		DPRINTF(("page %" Yu " not found", pgno));
 		txn->mt_flags |= MDB_TXN_ERROR;
 		return MDB_PAGE_NOTFOUND;
 	}
@@ -1056,7 +1056,7 @@ mdb_page_search_root(MDB_cursor *mc, MDB_val *key, int flags)
 		MDB_node	*node;
 		indx_t		i;
 
-		DPRINTF(("branch page %"Yu" has %u keys", mp->mp_pgno, NUMKEYS(mp)));
+		DPRINTF(("branch page %" Yu " has %u keys", mp->mp_pgno, NUMKEYS(mp)));
 		/* Don't assert on branch pages in the FreeDB. We can get here
 		 * while in the process of rebalancing a FreeDB branch page; we must
 		 * let that proceed. ITS#8336
@@ -1117,7 +1117,7 @@ ready:
 		return MDB_CORRUPTED;
 	}
 
-	DPRINTF(("found leaf page %"Yu" for key [%s]", mp->mp_pgno,
+	DPRINTF(("found leaf page %" Yu " for key [%s]", mp->mp_pgno,
 	    key ? DKEY(key) : "null"));
 	mc->mc_flags |= C_INITIALIZED;
 	mc->mc_flags &= ~C_EOF;
@@ -1216,7 +1216,7 @@ mdb_page_search(MDB_cursor *mc, MDB_val *key, int flags)
 	mc->mc_snum = 1;
 	mc->mc_top = 0;
 
-	DPRINTF(("db %d root page %"Yu" has flags 0x%X",
+	DPRINTF(("db %d root page %" Yu " has flags 0x%X",
 		DDBI(mc), root, mc->mc_pg[0]->mp_flags));
 
 	if (flags & MDB_PS_MODIFY) {
@@ -1241,7 +1241,7 @@ mdb_ovpage_free(MDB_cursor *mc, MDB_page *mp)
 	MDB_ID pn = pg << 1;
 	int rc;
 
-	DPRINTF(("free ov page %"Yu" (%d)", pg, ovpages));
+	DPRINTF(("free ov page %" Yu " (%d)", pg, ovpages));
 	/* If the page is dirty or on the spill list we just acquired it,
 	 * so we should give it back to our current free list, if any.
 	 * Otherwise put it onto the list of pages we freed in this txn.
@@ -1323,7 +1323,7 @@ mdb_page_new(MDB_cursor *mc, uint32_t flags, int num, MDB_page **mp)
 
 	if ((rc = mdb_page_alloc(mc, num, &np)))
 		return rc;
-	DPRINTF(("allocated new mpage %"Yu", page size %u",
+	DPRINTF(("allocated new mpage %" Yu ", page size %u",
 	    np->mp_pgno, mc->mc_txn->mt_env->me_psize));
 	np->mp_flags = flags | P_DIRTY;
 	np->mp_lower = (PAGEHDRSZ-PAGEBASE);
@@ -1424,7 +1424,7 @@ mdb_node_add(MDB_cursor *mc, indx_t indx,
 
 	mdb_cassert(mc, MP_UPPER(mp) >= MP_LOWER(mp));
 
-	DPRINTF(("add to %s %spage %"Yu" index %i, data size %"Z"u key size %"Z"u [%s]",
+	DPRINTF(("add to %s %spage %" Yu " index %i, data size %" Z "u key size %" Z "u [%s]",
 	    IS_LEAF(mp) ? "leaf" : "branch",
 		IS_SUBP(mp) ? "sub-" : "",
 		mdb_dbg_pgno(mp), indx, data ? data->mv_size : 0,
@@ -1458,7 +1458,7 @@ mdb_node_add(MDB_cursor *mc, indx_t indx,
 			int ovpages = OVPAGES(data->mv_size, mc->mc_txn->mt_env->me_psize);
 			int rc;
 			/* Put data on overflow page. */
-			DPRINTF(("data size is %"Z"u, node would be %"Z"u, put data on overflow page",
+			DPRINTF(("data size is %" Z "u, node would be %" Z "u, put data on overflow page",
 			    data->mv_size, node_size+data->mv_size));
 			node_size = EVEN(node_size + sizeof(pgno_t));
 			if ((ssize_t)node_size > room)
@@ -1522,10 +1522,10 @@ update:
 	return MDB_SUCCESS;
 
 full:
-	DPRINTF(("not enough room in page %"Yu", got %u ptrs",
+	DPRINTF(("not enough room in page %" Yu ", got %u ptrs",
 		mdb_dbg_pgno(mp), NUMKEYS(mp)));
-	DPRINTF(("upper-lower = %u - %u = %"Z"d", MP_UPPER(mp),MP_LOWER(mp),room));
-	DPRINTF(("node size = %"Z"u", node_size));
+	DPRINTF(("upper-lower = %u - %u = %" Z "d", MP_UPPER(mp),MP_LOWER(mp),room));
+	DPRINTF(("node size = %" Z "u", node_size));
 	mc->mc_txn->mt_flags |= MDB_TXN_ERROR;
 	return MDB_PAGE_FULL;
 }
@@ -1714,7 +1714,7 @@ mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft)
 			return rc;
 	}
 
-	DPRINTF(("moving %s node %u [%s] on page %"Yu" to node %u on page %"Yu,
+	DPRINTF(("moving %s node %u [%s] on page %" Yu " to node %u on page %"Yu,
 	    IS_LEAF(csrc->mc_pg[csrc->mc_top]) ? "leaf" : "branch",
 	    csrc->mc_ki[csrc->mc_top],
 		DKEY(&key),
@@ -1800,7 +1800,7 @@ mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft)
 				key.mv_size = NODEKSZ(srcnode);
 				key.mv_data = NODEKEY(srcnode);
 			}
-			DPRINTF(("update separator for source page %"Yu" to [%s]",
+			DPRINTF(("update separator for source page %" Yu " to [%s]",
 				csrc->mc_pg[csrc->mc_top]->mp_pgno, DKEY(&key)));
 			mdb_cursor_copy(csrc, &mn);
 			mn.mc_snum--;
@@ -1831,7 +1831,7 @@ mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft)
 				key.mv_size = NODEKSZ(srcnode);
 				key.mv_data = NODEKEY(srcnode);
 			}
-			DPRINTF(("update separator for destination page %"Yu" to [%s]",
+			DPRINTF(("update separator for destination page %" Yu " to [%s]",
 				cdst->mc_pg[cdst->mc_top]->mp_pgno, DKEY(&key)));
 			mdb_cursor_copy(cdst, &mn);
 			mn.mc_snum--;
@@ -1877,7 +1877,7 @@ mdb_page_merge(MDB_cursor *csrc, MDB_cursor *cdst)
 	psrc = csrc->mc_pg[csrc->mc_top];
 	pdst = cdst->mc_pg[cdst->mc_top];
 
-	DPRINTF(("merging page %"Yu" into %"Yu, psrc->mp_pgno, pdst->mp_pgno));
+	DPRINTF(("merging page %" Yu " into %"Yu, psrc->mp_pgno, pdst->mp_pgno));
 
 	mdb_cassert(csrc, csrc->mc_snum > 1);	/* can't merge root page */
 	mdb_cassert(csrc, cdst->mc_snum > 1);
@@ -1934,7 +1934,7 @@ mdb_page_merge(MDB_cursor *csrc, MDB_cursor *cdst)
 		}
 	}
 
-	DPRINTF(("dst page %"Yu" now has %u keys (%.1f%% filled)",
+	DPRINTF(("dst page %" Yu " now has %u keys (%.1f%% filled)",
 	    pdst->mp_pgno, NUMKEYS(pdst),
 		(float)PAGEFILL(cdst->mc_txn->mt_env, pdst) / 10));
 
@@ -2023,14 +2023,14 @@ mdb_rebalance(MDB_cursor *mc)
 		minkeys = 1;
 		thresh = FILL_THRESHOLD;
 	}
-	DPRINTF(("rebalancing %s page %"Yu" (has %u keys, %.1f%% full)",
+	DPRINTF(("rebalancing %s page %" Yu " (has %u keys, %.1f%% full)",
 	    IS_LEAF(mc->mc_pg[mc->mc_top]) ? "leaf" : "branch",
 	    mdb_dbg_pgno(mc->mc_pg[mc->mc_top]), NUMKEYS(mc->mc_pg[mc->mc_top]),
 		(float)PAGEFILL(mc->mc_txn->mt_env, mc->mc_pg[mc->mc_top]) / 10));
 
 	if (PAGEFILL(mc->mc_txn->mt_env, mc->mc_pg[mc->mc_top]) >= thresh &&
 		NUMKEYS(mc->mc_pg[mc->mc_top]) >= minkeys) {
-		DPRINTF(("no need to rebalance page %"Yu", above fill threshold",
+		DPRINTF(("no need to rebalance page %" Yu ", above fill threshold",
 		    mdb_dbg_pgno(mc->mc_pg[mc->mc_top])));
 		return MDB_SUCCESS;
 	}
@@ -2159,7 +2159,7 @@ mdb_rebalance(MDB_cursor *mc)
 		fromleft = 1;
 	}
 
-	DPRINTF(("found neighbor page %"Yu" (%u keys, %.1f%% full)",
+	DPRINTF(("found neighbor page %" Yu " (%u keys, %.1f%% full)",
 	    mn.mc_pg[mn.mc_top]->mp_pgno, NUMKEYS(mn.mc_pg[mn.mc_top]),
 		(float)PAGEFILL(mc->mc_txn->mt_env, mn.mc_pg[mn.mc_top]) / 10));
 
@@ -2223,7 +2223,7 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 	newindx = mc->mc_ki[mc->mc_top];
 	nkeys = NUMKEYS(mp);
 
-	DPRINTF(("-----> splitting %s page %"Yu" and adding [%s] at index %i/%i",
+	DPRINTF(("-----> splitting %s page %" Yu " and adding [%s] at index %i/%i",
 	    IS_LEAF(mp) ? "leaf" : "branch", mp->mp_pgno,
 	    DKEY(newkey), mc->mc_ki[mc->mc_top], nkeys));
 
