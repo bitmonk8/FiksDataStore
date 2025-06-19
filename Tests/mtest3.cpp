@@ -79,8 +79,8 @@ int main(int argc,char * argv[])
 	printf("Adding %d values\n", count);
 	for (i=0;i<count;i++) {
 		if (!(i & 0x0f))
-			sprintf(kval, "%03x", values[i]);
-		sprintf(sval, "%03x %d foo bar", values[i], values[i]);
+			snprintf(kval, sizeof(kval), "%03x", values[i]);
+		snprintf(sval, sizeof(sval), "%03x %d foo bar", values[i], values[i]);
 		if (RES(MDB_KEYEXIST, mdb_put(txn, dbi, &key, &data, MDB_NODUPDATA)))
 			j++;
 	}
@@ -105,8 +105,8 @@ int main(int argc,char * argv[])
 		j++;
 		txn=NULL;
 		E(mdb_txn_begin(env, NULL, 0, &txn));
-		sprintf(kval, "%03x", values[i & ~0x0f]);
-		sprintf(sval, "%03x %d foo bar", values[i], values[i]);
+		snprintf(kval, sizeof(kval), "%03x", values[i & ~0x0f]);
+		snprintf(sval, sizeof(sval), "%03x %d foo bar", values[i], values[i]);
 		key.mv_size = sizeof(int);
 		key.mv_data = kval;
 		data.mv_size = sizeof(sval);

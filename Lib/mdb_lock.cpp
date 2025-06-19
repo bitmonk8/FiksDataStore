@@ -73,7 +73,7 @@ mdb_reader_list(MDB_env *env, MDB_msg_func *func, void *ctx)
 	for (i=0; i<rdrs; i++) {
 		if (mr[i].mr_pid) {
 			txnid_t	txnid = mr[i].mr_txnid;
-			sprintf(buf, txnid == (txnid_t)-1 ?
+			snprintf(buf, sizeof(buf), txnid == (txnid_t)-1 ?
 				"%10d %" Z "x -\n" : "%10d %" Z "x %" Yu "\n",
 				(int)mr[i].mr_pid, (size_t)mr[i].mr_tid, txnid);
 			if (first) {

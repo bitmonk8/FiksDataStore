@@ -73,7 +73,7 @@ int main(int argc,char * argv[])
 
 	printf("Adding %d values\n", count);
 	for (i=0;i<count;i++) {	
-		sprintf(sval, "%03x %d foo bar", values[i], values[i]);
+		snprintf(sval, sizeof(sval), "%03x %d foo bar", values[i], values[i]);
 		data.mv_size = sizeof(sval);
 		data.mv_data = sval;
 		if (RES(MDB_KEYEXIST, mdb_put(txn, dbi, &key, &data, MDB_NOOVERWRITE)))
@@ -100,7 +100,7 @@ int main(int argc,char * argv[])
 		j++;
 		txn=NULL;
 		E(mdb_txn_begin(env, NULL, 0, &txn));
-		sprintf(sval, "%03x ", values[i]);
+		snprintf(sval, sizeof(sval), "%03x ", values[i]);
 		if (RES(MDB_NOTFOUND, mdb_del(txn, dbi, &key, NULL))) {
 			j--;
 			mdb_txn_abort(txn);

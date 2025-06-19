@@ -52,6 +52,10 @@ mdb_dbg_pgno(MDB_page *mp)
 char *
 mdb_dkey(MDB_val *key, char *buf)
 {
+#ifdef __clang__
+#   pragma clang diagnostic push
+#   pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
 	char *ptr = buf;
 	unsigned char *c = key->mv_data;
 	unsigned int i;
@@ -68,6 +72,10 @@ mdb_dkey(MDB_val *key, char *buf)
 	for (i=0; i<key->mv_size; i++)
 		ptr += sprintf(ptr, "%02x", *c++);
 	return buf;
+
+#ifdef __clang__
+#   pragma clang diagnostic pop
+#endif	
 }
 
 char *

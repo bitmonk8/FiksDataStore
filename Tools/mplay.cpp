@@ -405,7 +405,7 @@ void child()
 				data.mv_data = dbuf;
 				ptr += data.mv_size * 2 + 2;
 			} else {
-				sprintf(dbuf, "%09ld", (long)mdb_txn_id(lasttxn->rtxn));
+				snprintf(dbuf, dbufsize, "%09ld", (long)mdb_txn_id(lasttxn->rtxn));
 			}
 			sscanf(ptr+1, "%u", &flags);
 			E(mdb_cursor_put(cp->rcrs, &key, &data, flags));
@@ -438,7 +438,7 @@ void child()
 				inhex(ptr+1, dbuf);
 				ptr += data.mv_size * 2 + 2;
 			} else {
-				sprintf(dbuf, "%09ld", (long)mdb_txn_id(tp->rtxn));
+				snprintf(dbuf, dbufsize, "%09ld", (long)mdb_txn_id(tp->rtxn));
 			}
 			data.mv_data = dbuf;
 			sscanf(ptr+1, "%u", &flags);
@@ -464,7 +464,7 @@ void child()
 			if (*ptr == '[') {
 				inhex(ptr+1, dbuf);
 			} else {
-				sprintf(dbuf, "%09ld", (long)mdb_txn_id(tp->rtxn));
+				snprintf(dbuf, dbufsize, "%09ld", (long)mdb_txn_id(tp->rtxn));
 			}
 			data.mv_data = dbuf;
 			RES(MDB_NOTFOUND,mdb_del(tp->rtxn, tdbi, &key, &data));
