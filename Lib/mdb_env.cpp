@@ -1235,7 +1235,7 @@ mdb_env_setup_locks(MDB_env *env, MDB_name *fname, int mode, int *excl)
 		void *m = mmap(NULL, rsize, PROT_READ|PROT_WRITE, MAP_SHARED,
 			env->me_lfd, 0);
 		if (m == MAP_FAILED) goto fail_errno;
-		env->me_txns = m;
+		env->me_txns = (MDB_txninfo*)m;
 #endif
 	}
 	if (*excl > 0) {
@@ -1983,7 +1983,7 @@ mdb_env_copyfd1(MDB_env *env, HANDLE fd)
 		void *p;
 		if ((rc = posix_memalign(&p, env->me_os_psize, MDB_WBUF*2)) != 0)
 			goto done;
-		my.mc_wbuf[0] = p;
+		my.mc_wbuf[0] = (char*)p;
 	}
 #endif
 #endif
