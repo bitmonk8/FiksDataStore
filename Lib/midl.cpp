@@ -1,5 +1,5 @@
-//	@file midl.c
-//	@brief ldap bdb back-end ID List functions
+// midl.c
+// ldap bdb back-end ID List functions
 // $OpenLDAP$
 // This work is part of OpenLDAP Software <http://www.openldap.org/>.
 //
@@ -23,11 +23,9 @@
 #include <errno.h>
 #include <sys/types.h>
 
-// @defgroup internal	LMDB Internals
-//	@{
+// LMDB Internals
 //
-// @defgroup idls	ID List Management
-//	@{
+// ID List Management
 //
 #define CMP(x,y)	 ( (x) < (y) ? -1 : (x) > (y) )
 
@@ -280,11 +278,9 @@ mdb_midl_sort( MDB_IDL ids )
 
 unsigned mdb_mid2l_search( MDB_ID2L ids, MDB_ID id )
 {
-	//
 	// binary search of id in ids
 	// if found, returns position of id
 	// if not found, returns first position greater than id
-	//
 	unsigned base = 0;
 	unsigned cursor = 1;
 	int val = 0;
@@ -355,5 +351,3 @@ int mdb_mid2l_append( MDB_ID2L ids, MDB_ID2 *id )
 	return 0;
 }
 
-// @}
-// @}

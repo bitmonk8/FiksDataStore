@@ -4,7 +4,7 @@
 #include "mdb_util.h"
 #include "midl.h"
 
-// Common header for all page types. The page type depends on #mp_flags.
+// Common header for all page types. The page type depends on mp_flags.
 struct MDB_page {
 #define	mp_pgno	mp_p.p_pgno
 #define	mp_next	mp_p.p_next
@@ -13,7 +13,7 @@ struct MDB_page {
 		struct MDB_page *p_next; // for in-memory list of freed pages
 	} mp_p;
 	uint16_t	mp_pad;			// key size if this is a LEAF2 page
-	uint16_t	mp_flags;		// @ref mdb_page
+	uint16_t	mp_flags;		// mdb_page
 #define mp_lower	mp_pb.pb.pb_lower
 #define mp_upper	mp_pb.pb.pb_upper
 #define mp_pages	mp_pb.pb_pages
@@ -60,9 +60,9 @@ struct MDB_page2 {
 #define	P_LEAF		 0x02		// leaf page
 #define	P_OVERFLOW	 0x04		// overflow page
 #define	P_META		 0x08		// meta page
-#define	P_DIRTY		 0x10		// dirty page, also set for #P_SUBP pages
-#define	P_LEAF2		 0x20		// for #MDB_DUPFIXED records
-#define	P_SUBP		 0x40		// for #MDB_DUPSORT sub-pages
+#define	P_DIRTY		 0x10		// dirty page, also set for P_SUBP pages
+#define	P_LEAF2		 0x20		// for MDB_DUPFIXED records
+#define	P_SUBP		 0x40		// for MDB_DUPSORT sub-pages
 #define	P_LOOSE		 0x4000		// page was dirtied then freed, can be reused
 #define	P_KEEP		 0x8000		// leave this page alone during spill
 
@@ -84,12 +84,12 @@ struct MDB_page2 {
 #define C_ORIG_RDONLY	MDB_TXN_RDONLY
 
 /* from mdb.c, for MDB_txn */
-#define MDB_TXN_WRITEMAP	MDB_WRITEMAP	// copy of #MDB_env flag in writers
+#define MDB_TXN_WRITEMAP	MDB_WRITEMAP	// copy of MDB_env flag in writers
 #define MDB_TXN_FINISHED	0x01		// txn is finished or never began
 #define MDB_TXN_ERROR		0x02		// txn is unusable after an error
 #define MDB_TXN_DIRTY		0x04		// must write, even if dirty list is empty
 #define MDB_TXN_SPILLS		0x08		// txn or a parent has spilled pages
-#define MDB_TXN_HAS_CHILD	0x10		// txn has an #MDB_txn.%mt_child
+#define MDB_TXN_HAS_CHILD	0x10		// txn has an MDB_txn.mt_child
 #define MDB_TXN_BLOCKED		(MDB_TXN_FINISHED|MDB_TXN_ERROR|MDB_TXN_HAS_CHILD)
 
 /* from mdb.c, for MDB_node */
@@ -99,8 +99,8 @@ struct MDB_page2 {
 #define	NODE_ADD_FLAGS	(F_DUPDATA|F_SUBDATA|MDB_RESERVE|MDB_APPEND)
 
 	// The address of a key in a LEAF2 page.
-	//	LEAF2 pages are used for #MDB_DUPFIXED sorted-duplicate sub-DBs.
-	//	There are no node headers, keys are stored contiguously.
+	// LEAF2 pages are used for MDB_DUPFIXED sorted-duplicate sub-DBs.
+	// There are no node headers, keys are stored contiguously.
 #define LEAF2KEY(p, i, ks)	((char *)(p) + PAGEHDRSZ + ((i)*(ks)))
 
 	// The amount of space remaining in the page
@@ -110,7 +110,7 @@ struct MDB_page2 {
 #define PAGEFILL(env, p) (1000L * ((env)->me_psize - PAGEHDRSZ - SIZELEFT(p)) / \
 				((env)->me_psize - PAGEHDRSZ))
 	// The minimum page fill factor, in tenths of a percent.
-	//	Pages emptier than this are candidates for merging.
+	// Pages emptier than this are candidates for merging.
 #define FILL_THRESHOLD	 250
 
 	// Test if a page is a leaf page
@@ -127,34 +127,32 @@ struct MDB_page2 {
 	// The number of overflow pages needed to store the given size.
 #define OVPAGES(size, psize)	((PAGEHDRSZ-1 + (size)) / (psize) + 1)
 
-	// Link in #MDB_txn.%mt_loose_pgs list.
+	// Link in MDB_txn.mt_loose_pgs list.
 	// Kept outside the page header, which is needed when reusing the page.
 #define NEXT_LOOSE_PAGE(p)		(*(MDB_page **)((p) + 2))
 
 	// Header for a single key/data pair within a page.
-	// Used in pages of type #P_BRANCH and #P_LEAF without #P_LEAF2.
+	// Used in pages of type P_BRANCH and P_LEAF without P_LEAF2.
 	// We guarantee 2-byte alignment for 'MDB_node's.
 	//
-	// #mn_lo and #mn_hi are used for data size on leaf nodes, and for child
-	// pgno on branch nodes.  On 64 bit platforms, #mn_flags is also used
-	// for pgno.  (Branch nodes have no flags).  Lo and hi are in host byte
+	// mn_lo and mn_hi are used for data size on leaf nodes, and for child
+	// pgno on branch nodes. On 64 bit platforms, mn_flags is also used
+	// for pgno. (Branch nodes have no flags). Lo and hi are in host byte
 	// order in case some accesses can be optimized to 32-bit word access.
 	//
-	// Leaf node flags describe node contents.  #F_BIGDATA says the node's
+	// Leaf node flags describe node contents. F_BIGDATA says the node's
 	// data part is the page number of an overflow page with actual data.
-	// #F_DUPDATA and #F_SUBDATA can be combined giving duplicate data in
-	// a sub-page/sub-database, and named databases (just #F_SUBDATA).
+	// F_DUPDATA and F_SUBDATA can be combined giving duplicate data in
+	// a sub-page/sub-database, and named databases (just F_SUBDATA).
 struct MDB_node
 {
 	// part of data size or pgno
-	//	@{
 #if BYTE_ORDER == LITTLE_ENDIAN
 	unsigned short	mn_lo, mn_hi;
 #else
 	unsigned short	mn_hi, mn_lo;
 #endif
-	// @}
-	unsigned short	mn_flags;		// @ref mdb_node
+	unsigned short	mn_flags;		// mdb_node
 	unsigned short	mn_ksize;		// key size
 	char		mn_data[1];			// key and data are appended here
 };
@@ -166,14 +164,14 @@ struct MDB_node
 #define PGNO_TOPWORD ((pgno_t)-1 > 0xffffffffu ? 32 : 0)
 
 	// Size of a node in a branch page with a given key.
-	//	This is just the node header plus the key, there is no data.
+	// This is just the node header plus the key, there is no data.
 #define INDXSIZE(k)	 (NODESIZE + ((k) == NULL ? 0 : (k)->mv_size))
 
 	// Size of a node in a leaf page with a given key and data.
-	//	This is node header plus key plus data size.
+	// This is node header plus key plus data size.
 #define LEAFSIZE(k, d)	 (NODESIZE + (k)->mv_size + (d)->mv_size)
 
-	// Address of node \b i in page \b p
+	// Address of node i in page p
 #define NODEPTR(p, i)	 ((MDB_node *)((char *)(p) + MP_PTRS(p)[i] + PAGEBASE))
 
 	// Address of the key for the node
@@ -226,11 +224,11 @@ struct MDB_node
 #endif
 #endif
 
-	// Set the \b node's key into \b keyptr, if requested.
+	// Set the node's key into keyptr, if requested.
 #define MDB_GET_KEY(node, keyptr)	{ if ((keyptr) != NULL) { \
 	(keyptr)->mv_size = NODEKSZ(node); (keyptr)->mv_data = NODEKEY(node); } }
 
-	// Set the \b node's key into \b key.
+	// Set the node's key into key.
 #define MDB_GET_KEY2(node, key)	{ key.mv_size = NODEKSZ(node); key.mv_data = NODEKEY(node); }
 
 // Page Management Functions

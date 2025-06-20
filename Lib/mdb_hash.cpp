@@ -2,13 +2,8 @@
 
 // hash_64 - 64 bit Fowler/Noll/Vo-0 FNV-1a hash code
 //
-// @(#) $Revision: 5.1 $
-// @(#) $Id: hash_64a.c,v 5.1 2009/06/30 09:01:38 chongo Exp $
-// @(#) $Source: /usr/local/src/cmd/fnv/RCS/hash_64a.c,v $
-//
 //	  http://www.isthe.com/chongo/tech/comp/fnv/index.html
 //
-// ***
 //
 // Please do not copyright this code.  This code is in the public domain.
 //
@@ -26,10 +21,12 @@
 //
 // Share and Enjoy!	:-)
 
-/** perform a 64 bit Fowler/Noll/Vo FNV-1a hash on a buffer
- * @param[in] val	value to hash
- * @param[in] len	length of value
- * @return 64 bit hash
+/*
+ * Perform a 64-bit Fowler/Noll/Vo FNV-1a hash on a buffer.
+ *
+ * @param val: Value to hash.
+ * @param len: Length of value.
+ * @return: 64-bit hash.
  */
 mdb_hash_t
 mdb_hash(const void *val, size_t len)
@@ -45,14 +42,16 @@ mdb_hash(const void *val, size_t len)
 	return hval;
 }
 
-/** The ASCII-85 character set for encoding 64-bit integers */
+/* The ASCII-85 character set for encoding 64-bit integers */
 static const char mdb_a85[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~";
 
-/** Pack a 64-bit integer into an ASCII-85 string.
+/*
+ * Pack a 64-bit integer into an ASCII-85 string.
  * This is a custom implementation, not fully compliant with Z85.
  * It is used for printing database names.
- * @param[in] l The 64-bit value to pack.
- * @param[in] out The destination buffer. Must be at least 11 bytes.
+ *
+ * @param l: The 64-bit value to pack.
+ * @param out: The destination buffer. Must be at least 11 bytes.
  */
 void
 mdb_pack85(unsigned long long l, char *out)

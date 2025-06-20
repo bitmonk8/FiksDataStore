@@ -16,7 +16,7 @@ const char* mdb_version(int *major, int *minor, int *patch)
 	return MDB_VERSION_STRING;
 }
 
-// Table of descriptions for LMDB @ref errors
+// Table of descriptions for LMDB errors
 static const char *const mdb_errstr[] = {
 	"MDB_KEYEXIST: Key/data pair already exists",
 	"MDB_NOTFOUND: No matching key/data pair found",

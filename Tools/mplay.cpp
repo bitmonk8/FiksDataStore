@@ -45,11 +45,16 @@ int maxkey;
 
 #define MAXPIDS	16
 
+/** A pair of cursors, one for scanned text and one for MDB.
+ This is a test note.
+ */
 struct crspair {
 	void *tcrs;	// scanned text pointer
 	MDB_cursor *rcrs;
 };
 
+/** A pair of transactions, one for scanned text and one for MDB.
+ */
 struct txnpair {
 	void *ttxn;	// scanned text pointer
 	MDB_txn *rtxn;
@@ -57,6 +62,8 @@ struct txnpair {
 	int ncursors;
 };
 
+/** A pair of environments, one for scanned text and one for MDB.
+ */
 struct envpair {
 	void *tenv;
 	MDB_env *renv;
@@ -84,6 +91,7 @@ int npids;
 
 unsigned long lcount;
 
+// Helper function to unhex a character.
 static int unhex(unsigned char *c2)
 {
 	int x, c;
@@ -98,6 +106,7 @@ static int unhex(unsigned char *c2)
 	return c;
 }
 
+// Converts a hex string to a byte array.
 int inhex(char *in, char *out)
 {
 	char *c2 = out;
@@ -393,7 +402,7 @@ void child()
 			*ptr++ = '\0';
 			if (!strcmp(dbname, "(null)"))
 				dbname = NULL;
-			sscanf(ptr, "%u = %u", &flags, &tdbi);
+			sscanf(ptr, "%u, %o", &flags, &tdbi);
 			tp = findtxn(ttxn);
 			E(mdb_dbi_open(tp->rtxn, dbname, flags, &dbi));
 		}

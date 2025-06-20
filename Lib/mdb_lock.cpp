@@ -8,7 +8,7 @@
 #elif defined MDB_USE_SYSV_SEM
 #define MDB_OWNERDEAD	(MDB_LAST_ERRCODE + 11)
 #elif defined(MDB_USE_POSIX_MUTEX)
-#define MDB_OWNERDEAD	EOWNERDEAD	/**< #LOCK_MUTEX0() result if dead owner */
+#define MDB_OWNERDEAD	EOWNERDEAD	/* LOCK_MUTEX0() result if dead owner */
 #endif
 
 // Set or check a pid lock. Set returns 0 on success.
@@ -159,10 +159,10 @@ mdb_reader_check(MDB_env *env, int *dead)
 
 // Handle #LOCK_MUTEX0() failure.
 // Try to repair the lock file if the mutex owner died.
-// @param[in] env	the environment handle
-// @param[in] mutex	LOCK_MUTEX0() mutex
-// @param[in] rc	LOCK_MUTEX0() error (nonzero)
-// @return 0 on success with the mutex locked, or an error code on failure.
+// env: the environment handle
+// mutex: LOCK_MUTEX0() mutex
+// rc: LOCK_MUTEX0() error (nonzero)
+// Returns 0 on success with the mutex locked, or an error code on failure.
 int ESECT
 mdb_mutex_failed(MDB_env *env, mdb_mutexref_t mutex, int rc)
 {
@@ -210,7 +210,7 @@ mdb_mutex_failed(MDB_env *env, mdb_mutexref_t mutex, int rc)
 	return rc;
 }
 
-/** As #mdb_reader_check(). \b rlocked is set if caller locked #me_rmutex. */
+// As #mdb_reader_check(). rlocked is set if caller locked #me_rmutex.
 int ESECT
 mdb_reader_check0(MDB_env *env, int rlocked, int *dead)
 {

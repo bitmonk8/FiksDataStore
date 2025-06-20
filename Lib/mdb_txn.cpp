@@ -14,8 +14,8 @@ struct MDB_ntxn {
 };
 
 // Common code for #mdb_txn_begin() and #mdb_txn_renew().
-// @param[in] txn the transaction handle to initialize
-// @return 0 on success, non-zero on failure.
+// [in] txn the transaction handle to initialize
+//  0 on success, non-zero on failure.
 int
 mdb_txn_renew0(MDB_txn *txn)
 {
@@ -399,9 +399,9 @@ static void mdb_dbis_update(MDB_txn *txn, int keep)
 }
 
 // Close this write txn's cursors, give parent txn's cursors back to parent.
-// @param[in] txn the transaction handle.
-// @param[in] merge true to keep changes to parent cursors, false to revert.
-// @return 0 on success, non-zero on failure.
+// [in] txn the transaction handle.
+// [in] merge true to keep changes to parent cursors, false to revert.
+//  0 on success, non-zero on failure.
 static void mdb_cursors_close(MDB_txn *txn, unsigned merge)
 {
 	MDB_cursor **cursors = txn->mt_cursors, *mc, *next, *bk;
@@ -461,8 +461,8 @@ static void mdb_dlist_free(MDB_txn *txn)
 
 // End a transaction, except successful commit of a nested transaction.
 // May be called twice for readonly txns: First reset it, then abort.
-// @param[in] txn the transaction handle to end
-// @param[in] mode why and how to end the transaction
+// [in] txn the transaction handle to end
+// [in] mode why and how to end the transaction
 void
 mdb_txn_end(MDB_txn *txn, unsigned mode)
 {

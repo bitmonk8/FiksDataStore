@@ -6,7 +6,7 @@
 struct MDB_db
 {
 	uint32_t	md_pad;		// also ksize for LEAF2 pages
-	uint16_t	md_flags;	// @ref mdb_dbi_open
+	uint16_t	md_flags;	// mdb_dbi_open
 	uint16_t	md_depth;	// depth of this tree
 	pgno_t		md_branch_pages;	// number of internal pages
 	pgno_t		md_leaf_pages;		// number of leaf pages
@@ -27,11 +27,11 @@ struct MDB_dbx
 	void		*md_relctx;		// user-provided context for md_rel
 };
 
-// Check \b txn and \b dbi arguments to a function
+// Check txn and dbi arguments to a function
 #define TXN_DBI_EXIST(txn, dbi, validity) \
 	((txn) && (dbi)<(txn)->mt_numdbs && ((txn)->mt_dbflags[dbi] & (validity)))
 
-// Check for misused \b dbi handles
+// Check for misused dbi handles
 #define TXN_DBI_CHANGED(txn, dbi) \
 	((txn)->mt_dbiseqs[dbi] != (txn)->mt_env->me_dbiseqs[dbi])
 

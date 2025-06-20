@@ -35,7 +35,7 @@ mdb_assert_fail(MDB_env *env,
 #endif /* NDEBUG */
 
 #if MDB_DEBUG
-// Return the page number of \b mp which may be sub-page, for debug output
+// Return the page number of mp which may be sub-page, for debug output
 pgno_t
 mdb_dbg_pgno(MDB_page *mp)
 {
@@ -45,9 +45,9 @@ mdb_dbg_pgno(MDB_page *mp)
 }
 
 // Display a key in hexadecimal and return the address of the result.
-// @param[in] key the key to display
-// @param[in] buf the buffer to write into. Should always be #DKBUF.
-// @return The key in hexadecimal form.
+// key the key to display
+// buf the buffer to write into. Should always be DKBUF.
+// The key in hexadecimal form.
 char *
 mdb_dkey(MDB_val *key, char *buf)
 {

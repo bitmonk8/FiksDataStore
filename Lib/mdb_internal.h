@@ -200,22 +200,22 @@ union semun {
 #define CALL_CONV
 #endif
 
-// @defgroup internal	LMDB Internals
-//	@{
-// @defgroup compat	Compatibility Macros
-//	A bunch of macros to minimize the amount of platform-specific ifdefs
-//	needed throughout the rest of the code. When the features this library
-//	needs are similar enough to POSIX to be hidden in a one-or-two line
-//	replacement, this macro approach is used.
-//	@{
+// LMDB Internals
+//
+// Compatibility Macros
+// A bunch of macros to minimize the amount of platform-specific ifdefs
+// needed throughout the rest of the code. When the features this library
+// needs are similar enough to POSIX to be hidden in a one-or-two line
+// replacement, this macro approach is used.
+//
 
 #ifdef __GLIBC__
 #define	GLIBC_VER	((__GLIBC__ << 16 )| __GLIBC_MINOR__)
 #endif
 
 #define	Z	MDB_FMT_Z	// printf/scanf format modifier for size_t
-#define	Yu	MDB_PRIy(u)	// printf format for #mdb_size_t
-#define	Yd	MDB_PRIy(d)	// printf format for 'signed #mdb_size_t'
+#define	Yu	MDB_PRIy(u)	// printf format for mdb_size_t
+#define	Yd	MDB_PRIy(d)	// printf format for 'signed mdb_size_t'
 
 #if defined(MDB_USE_POSIX_MUTEX)
 // glibc < 2.12 only provided _np API
@@ -304,14 +304,14 @@ int mdb_sem_wait(mdb_mutexref_t sem);
 #else	// MDB_USE_POSIX_MUTEX:
 // Shared mutex/semaphore as the original is stored.
 //
-//	Not for copies.  Instead it can be assigned to an #mdb_mutexref_t.
-//	When mdb_mutexref_t is a pointer and mdb_mutex_t is not, then it
-//	is array[size 1] so it can be assigned to the pointer.
+// Not for copies. Instead it can be assigned to an mdb_mutexref_t.
+// When mdb_mutexref_t is a pointer and mdb_mutex_t is not, then it
+// is array[size 1] so it can be assigned to the pointer.
 typedef pthread_mutex_t mdb_mutex_t[1];
-// Reference to an #mdb_mutex_t
+// Reference to an mdb_mutex_t
 typedef pthread_mutex_t *mdb_mutexref_t;
 // Lock the reader or writer mutex.
-//	Returns 0 or a code to give #mdb_mutex_failed(), as in #LOCK_MUTEX().
+// Returns 0 or a code to give mdb_mutex_failed(), as in LOCK_MUTEX().
 //
 #define LOCK_MUTEX0(mutex)	pthread_mutex_lock(mutex)
 // Unlock the reader or writer mutex.
@@ -327,20 +327,20 @@ typedef pthread_mutex_t *mdb_mutexref_t;
 #define	ErrCode()	errno
 
 // An abstraction for a file handle.
-//	On POSIX systems file handles are small integers. On Windows
-//	they're opaque pointers.
+// On POSIX systems file handles are small integers. On Windows
+// they're opaque pointers.
 //
 #define	HANDLE	int
 
-//	A value for an invalid file handle.
-//	Mainly used to initialize file variables and signify that they are
-//	unused.
+// A value for an invalid file handle.
+// Mainly used to initialize file variables and signify that they are
+// unused.
 //
 #define INVALID_HANDLE_VALUE	(-1)
 
 // Get the size of a memory page for the system.
-//	This is the basic size that the platform's memory manager uses, and is
-//	fundamental to the use of memory-mapped files.
+// This is the basic size that the platform's memory manager uses, and is
+// fundamental to the use of memory-mapped files.
 //
 #define	GET_PAGESIZE(x)	((x) = sysconf(_SC_PAGE_SIZE))
 #endif
@@ -352,110 +352,110 @@ typedef pthread_mutex_t *mdb_mutexref_t;
 #endif
 
 
-// @}
-//	The version number for a database's lockfile format.
+//
+// The version number for a database's lockfile format.
 #define MDB_LOCK_VERSION	 2
-// Number of bits representing #MDB_LOCK_VERSION in #MDB_LOCK_FORMAT.
-//	The remaining bits must leave room for #MDB_lock_desc.
+// Number of bits representing MDB_LOCK_VERSION in MDB_LOCK_FORMAT.
+// The remaining bits must leave room for MDB_lock_desc.
 //
 #define MDB_LOCK_VERSION_BITS 12
 
-//	@brief The max size of a key we can write, or 0 for computed max.
+// The max size of a key we can write, or 0 for computed max.
 //
-//	This macro should normally be left alone or set to 0.
-//	Note that a database with big keys or dupsort data cannot be
-//	reliably modified by a liblmdb which uses a smaller max.
-//	The default is 511 for backwards compat.
+// This macro should normally be left alone or set to 0.
+// Note that a database with big keys or dupsort data cannot be
+// reliably modified by a liblmdb which uses a smaller max.
+// The default is 511 for backwards compat.
 //
-//	Other values are allowed, for backwards compat.  However:
-//	A value bigger than the computed max can break if you do not
-//	know what you are doing, and liblmdb <= 0.9.10 can break when
-//	modifying a DB with keys/dupsort data bigger than its max.
+// Other values are allowed, for backwards compat. However:
+// A value bigger than the computed max can break if you do not
+// know what you are doing, and liblmdb <= 0.9.10 can break when
+// modifying a DB with keys/dupsort data bigger than its max.
 //
-//	Data items in an #MDB_DUPSORT database are also limited to
-//	this size, since they're actually keys of a sub-DB.  Keys and
-//	#MDB_DUPSORT data items must fit on a node in a regular page.
+// Data items in an MDB_DUPSORT database are also limited to
+// this size, since they're actually keys of a sub-DB. Keys and
+// MDB_DUPSORT data items must fit on a node in a regular page.
 //
 #ifndef MDB_MAXKEYSIZE
 #define MDB_MAXKEYSIZE	 511
 #endif
 
-//	The maximum size of a key we can write to the environment.
+// The maximum size of a key we can write to the environment.
 #if MDB_MAXKEYSIZE
 #define ENV_MAXKEY(env)	(MDB_MAXKEYSIZE)
 #else
 #define ENV_MAXKEY(env)	((env)->me_maxkey)
 #endif
 
-//	@brief The maximum size of a data item.
+// The maximum size of a data item.
 //
-//	We only store a 32 bit value for node sizes.
+// We only store a 32 bit value for node sizes.
 //
 #define MAXDATASIZE	0xffffffffUL
 
 // An invalid page number.
-//	Mainly used to denote an empty tree.
+// Mainly used to denote an empty tree.
 //
 #define P_INVALID	 (~(pgno_t)0)
 
 
 
 
-//	Default size of memory map.
-//	This is certainly too small for any actual applications. Apps should always set
-//	the size explicitly using #mdb_env_set_mapsize().
+// Default size of memory map.
+// This is certainly too small for any actual applications. Apps should always set
+// the size explicitly using mdb_env_set_mapsize().
 //
 #define DEFAULT_MAPSIZE	1048576
 
-//	@defgroup readers	Reader Lock Table
-//	Readers don't acquire any locks for their data access. Instead, they
-//	simply record their transaction ID in the reader table. The reader
-//	mutex is needed just to find an empty slot in the reader table. The
-//	slot's address is saved in thread-specific data so that subsequent read
-//	transactions started by the same thread need no further locking to proceed.
+// Reader Lock Table
+// Readers don't acquire any locks for their data access. Instead, they
+// simply record their transaction ID in the reader table. The reader
+// mutex is needed just to find an empty slot in the reader table. The
+// slot's address is saved in thread-specific data so that subsequent read
+// transactions started by the same thread need no further locking to proceed.
 //
-//	If #MDB_NOTLS is set, the slot address is not saved in thread-specific data.
+// If MDB_NOTLS is set, the slot address is not saved in thread-specific data.
 //
-//	No reader table is used if the database is on a read-only filesystem, or
-//	if #MDB_NOLOCK is set.
+// No reader table is used if the database is on a read-only filesystem, or
+// if MDB_NOLOCK is set.
 //
-//	Since the database uses multi-version concurrency control, readers don't
-//	actually need any locking. This table is used to keep track of which
-//	readers are using data from which old transactions, so that we'll know
-//	when a particular old transaction is no longer in use. Old transactions
-//	that have discarded any data pages can then have those pages reclaimed
-//	for use by a later write transaction.
+// Since the database uses multi-version concurrency control, readers don't
+// actually need any locking. This table is used to keep track of which
+// readers are using data from which old transactions, so that we'll know
+// when a particular old transaction is no longer in use. Old transactions
+// that have discarded any data pages can then have those pages reclaimed
+// for use by a later write transaction.
 //
-//	The lock table is constructed such that reader slots are aligned with the
-//	processor's cache line size. Any slot is only ever used by one thread.
-//	This alignment guarantees that there will be no contention or cache
-//	thrashing as threads update their own slot info, and also eliminates
-//	any need for locking when accessing a slot.
+// The lock table is constructed such that reader slots are aligned with the
+// processor's cache line size. Any slot is only ever used by one thread.
+// This alignment guarantees that there will be no contention or cache
+// thrashing as threads update their own slot info, and also eliminates
+// any need for locking when accessing a slot.
 //
-//	A writer thread will scan every slot in the table to determine the oldest
-//	outstanding reader transaction. Any freed pages older than this will be
-//	reclaimed by the writer. The writer doesn't use any locks when scanning
-//	this table. This means that there's no guarantee that the writer will
-//	see the most up-to-date reader info, but that's not required for correct
-//	operation - all we need is to know the upper bound on the oldest reader,
-//	we don't care at all about the newest reader. So the only consequence of
-//	reading stale information here is that old pages might hang around a
-//	while longer before being reclaimed. That's actually good anyway, because
-//	the longer we delay reclaiming old pages, the more likely it is that a
-//	string of contiguous pages can be found after coalescing old pages from
-//	many old transactions together.
-//	@{
-//	Number of slots in the reader table.
-//	This value was chosen somewhat arbitrarily. 126 readers plus a
-//	couple mutexes fit exactly into 8KB on my development machine.
-//	Applications should set the table size using #mdb_env_set_maxreaders().
+// A writer thread will scan every slot in the table to determine the oldest
+// outstanding reader transaction. Any freed pages older than this will be
+// reclaimed by the writer. The writer doesn't use any locks when scanning
+// this table. This means that there's no guarantee that the writer will
+// see the most up-to-date reader info, but that's not required for correct
+// operation - all we need is to know the upper bound on the oldest reader,
+// we don't care at all about the newest reader. So the only consequence of
+// reading stale information here is that old pages might hang around a
+// while longer before being reclaimed. That's actually good anyway, because
+// the longer we delay reclaiming old pages, the more likely it is that a
+// string of contiguous pages can be found after coalescing old pages from
+// many old transactions together.
+//
+// Number of slots in the reader table.
+// This value was chosen somewhat arbitrarily. 126 readers plus a
+// couple mutexes fit exactly into 8KB on my development machine.
+// Applications should set the table size using mdb_env_set_maxreaders().
 //
 #define DEFAULT_READERS	126
 
-//	The size of a CPU cache line in bytes. We want our lock structures
-//	aligned to this size to avoid false cache line sharing in the
-//	lock table.
-//	This value works for most CPUs. For Itanium this should be 128.
+// The size of a CPU cache line in bytes. We want our lock structures
+// aligned to this size to avoid false cache line sharing in the
+// lock table.
+// This value works for most CPUs. For Itanium this should be 128.
 //
 #ifndef CACHELINE
 #define CACHELINE	64
@@ -473,8 +473,8 @@ typedef pthread_mutex_t *mdb_mutexref_t;
 	 (((MDB_LOCK_VERSION) % (1U << MDB_LOCK_VERSION_BITS)) \
 	  + MDB_lock_desc     * (1U << MDB_LOCK_VERSION_BITS)))
 
-// Lock type and layout. Values 0-119. _WIN32 implies #MDB_PIDLOCK.
-//	Some low values are reserved for future tweaks.
+// Lock type and layout. Values 0-119. _WIN32 implies MDB_PIDLOCK.
+// Some low values are reserved for future tweaks.
 //
 #ifdef _WIN32
 # define MDB_LOCK_TYPE	(0 + ALIGNOF2(mdb_hash_t)/8 % 2)
@@ -495,11 +495,11 @@ enum {
 	// Magic number for lockfile layout and features.
 	MDB_lock_desc = 42
 };
-// @}
+//
 
 #define MDB_VALID	0x8000		// DB handle is valid, for me_dbflags
 #define PERSISTENT_FLAGS	(0xffff & ~(MDB_VALID))
-// #mdb_dbi_open() flags
+// mdb_dbi_open() flags
 #define VALID_FLAGS	(MDB_REVERSEKEY|MDB_DUPSORT|MDB_INTEGERKEY|MDB_DUPFIXED|\
 	MDB_INTEGERDUP|MDB_REVERSEDUP|MDB_CREATE)
 
@@ -514,13 +514,13 @@ enum {
 #define NUM_METAS	2
 
 // A transaction ID.
-//	See struct MDB_txn.mt_txnid for details.
+// See struct MDB_txn.mt_txnid for details.
 //
 typedef MDB_ID	txnid_t;
 
-//	Used for offsets within a single page.
-//	Since memory pages are typically 4 or 8KB in size, 12-13 bits,
-//	this is plenty.
+// Used for offsets within a single page.
+// Since memory pages are typically 4 or 8KB in size, 12-13 bits,
+// this is plenty.
 //
 typedef uint16_t	 indx_t;
 
@@ -529,11 +529,11 @@ static_assert(sizeof(ssize_t) == 8); // MAX_WRITE depends on 64 bit architecture
 #define MAX_WRITE		0x40000000U
 
 // A page number in the database.
-//	Note that 64 bit page numbers are overkill, since pages themselves
-//	already represent 12-13 bits of addressable memory, and the OS will
-//	always limit applications to a maximum of 63 bits of address space.
+// Note that 64 bit page numbers are overkill, since pages themselves
+// already represent 12-13 bits of addressable memory, and the OS will
+// always limit applications to a maximum of 63 bits of address space.
 //
-//	@note In the #MDB_node structure, we only store 48 bits of this value,
-//	which thus limits us to only 60 bits of addressable data.
+// In the MDB_node structure, we only store 48 bits of this value,
+// which thus limits us to only 60 bits of addressable data.
 //
 typedef MDB_ID	pgno_t;

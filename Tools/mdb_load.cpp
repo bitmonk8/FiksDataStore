@@ -496,7 +496,7 @@ int main(int argc, char *argv[])
 		if (rc)
 		{
 			fprintf(stderr, "mdb_txn_begin failed, error %d %s\n", rc, mdb_strerror(rc));
-			goto env_close;
+			return EXIT_FAILURE;
 		}
 
 		rc = mdb_dbi_open(txn, subname, flags|MDB_CREATE, &dbi);

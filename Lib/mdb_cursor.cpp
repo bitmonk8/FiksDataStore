@@ -79,7 +79,7 @@ mdb_node_search(MDB_cursor *mc, MDB_val *key, int *exactp)
 	if (IS_LEAF2(mp))
 	{
 		nodekey.mv_size = mc->mc_db->md_pad;
-		node = NODEPTR(mp, 0);	// fake
+		nodekey.mv_data = LEAF2KEY(mp, i, nodekey.mv_size);
 		while (low <= high)
 		{
 			i = (low + high) >> 1;
@@ -184,10 +184,11 @@ mdb_cursor_push(MDB_cursor *mc, MDB_page *mp)
 }
 
 // Return the data associated with a given node.
-// @param[in] mc The cursor for this operation.
-// @param[in] leaf The node being read.
-// @param[out] data Updated to point to the node's data.
-// @return 0 on success, non-zero on failure.
+//
+// mc The cursor for this operation.
+// leaf The node being read.
+// data Updated to point to the node's data.
+// 0 on success, non-zero on failure.
 int
 mdb_node_read(MDB_cursor *mc, MDB_node *leaf, MDB_val *data)
 {
@@ -223,10 +224,11 @@ mdb_node_read(MDB_cursor *mc, MDB_node *leaf, MDB_val *data)
 // Find a sibling for a page.
 // Replaces the page at the top of the cursor's stack with the
 // specified sibling, if one exists.
-// @param[in] mc The cursor for this operation.
-// @param[in] move_right Non-zero if the right sibling is requested,
+//
+// mc The cursor for this operation.
+// move_right Non-zero if the right sibling is requested,
 // otherwise the left sibling.
-// @return 0 on success, non-zero on failure.
+// 0 on success, non-zero on failure.
 int
 mdb_cursor_sibling(MDB_cursor *mc, int move_right)
 {
@@ -1047,7 +1049,8 @@ fetchm:
 
 // Touch all the pages in the cursor stack. Set mc_top.
 // Makes sure all the pages are writable, before attempting a write operation.
-// @param[in] mc The cursor to operate on.
+//
+// mc The cursor to operate on.
 int
 mdb_cursor_touch(MDB_cursor *mc)
 {
@@ -1492,7 +1495,7 @@ current:
 					mdb_cassert(mc, rc2 == 0);
 					// Currently we make the page look as with put() in the
 					// parent txn, in case the user peeks at MDB_RESERVEd
-					// or unused parts. Some users treat ovpages specially.
+					// or unused parts. Some users treats ovpages specially.
 					if (!(flags & MDB_RESERVE))
 					{
 						// Skip the part where LMDB will put *data.
@@ -1836,7 +1839,8 @@ mdb_cursor_del(MDB_cursor *mc, unsigned int flags)
 // initialized when the sub-database is first accessed. This function does
 // the preliminary setup of the sub-cursor, filling in the fields that
 // depend only on the parent DB.
-// @param[in] mc The main cursor whose sorted-dups cursor is to be initialized.
+//
+// mc The main cursor whose sorted-dups cursor is to be initialized.
 void
 mdb_xcursor_init0(MDB_cursor *mc)
 {
@@ -1861,8 +1865,9 @@ mdb_xcursor_init0(MDB_cursor *mc)
 
 // Final setup of a sorted-dups cursor.
 // Sets up the fields that depend on the data from the main cursor.
-// @param[in] mc The main cursor whose sorted-dups cursor is to be initialized.
-// @param[in] node The data containing the #MDB_db record for the
+//
+// mc The main cursor whose sorted-dups cursor is to be initialized.
+// node The data containing the #MDB_db record for the
 // sorted-dup database.
 void
 mdb_xcursor_init1(MDB_cursor *mc, MDB_node *node)
@@ -1913,9 +1918,10 @@ mdb_xcursor_init1(MDB_cursor *mc, MDB_node *node)
 // Sets up some fields that depend on the data from the main cursor.
 // Almost the same as init1, but skips initialization steps if the
 // xcursor had already been used.
-// @param[in] mc The main cursor whose sorted-dups cursor is to be fixed up.
-// @param[in] src_mx The xcursor of an up-to-date cursor.
-// @param[in] new_dupdata True if converting from a non-#F_DUPDATA item.
+//
+// mc The main cursor whose sorted-dups cursor is to be fixed up.
+// src_mx The xcursor of an up-to-date cursor.
+// new_dupdata True if converting from a non-#F_DUPDATA item.
 void
 mdb_xcursor_init2(MDB_cursor *mc, MDB_xcursor *src_mx, int new_dupdata)
 {
@@ -2108,8 +2114,9 @@ mdb_cursor_dbi(MDB_cursor *mc)
 }
 
 // Copy the contents of a cursor.
-// @param[in] csrc The cursor to copy from.
-// @param[out] cdst The cursor to copy to.
+//
+// csrc The cursor to copy from.
+// cdst The cursor to copy to.
 void
 mdb_cursor_copy(const MDB_cursor *csrc, MDB_cursor *cdst)
 {
@@ -2256,9 +2263,10 @@ fail:
 
 // Replace the key for a branch node with a new key.
 // Set #MDB_TXN_ERROR on failure.
-// @param[in] mc Cursor pointing to the node to operate on.
-// @param[in] key The new key to use.
-// @return 0 on success, non-zero on failure.
+//
+// mc Cursor pointing to the node to operate on.
+// key The new key to use.
+// 0 on success, non-zero on failure.
 int mdb_update_key(MDB_cursor *mc, MDB_val *key)
 {
 	MDB_page		*mp;
