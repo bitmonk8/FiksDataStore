@@ -9,45 +9,42 @@
 #include "mdb_hash.h"
 #include "mdb_db.h"
 
-	/**	@brief The maximum size of a database page.
-	 *
-	 *	It is 32k or 64k, since value-PAGEBASE must fit in
-	 *	#MDB_page.%mp_upper.
-	 *
-	 *	LMDB will use database pages < OS pages if needed.
-	 *	That causes more I/O in write transactions: The OS must
-	 *	know (read) the whole page before writing a partial page.
-	 *
-	 *	Note that we don't currently support Huge pages. On Linux,
-	 *	regular data files cannot use Huge pages, and in general
-	 *	Huge pages aren't actually pageable. We rely on the OS
-	 *	demand-pager to read our data and page it out when memory
-	 *	pressure from other processes is high. So until OSs have
-	 *	actual paging support for Huge pages, they're not viable.
-	 */
+	// @brief The maximum size of a database page.
+	//
+	// It is 32k or 64k, since value-PAGEBASE must fit in
+	// #MDB_page.%mp_upper.
+	//
+	// LMDB will use database pages < OS pages if needed.
+	// That causes more I/O in write transactions: The OS must
+	// know (read) the whole page before writing a partial page.
+	//
+	// Note that we don't currently support Huge pages. On Linux,
+	// regular data files cannot use Huge pages, and in general
+	// Huge pages aren't actually pageable. We rely on the OS
+	// demand-pager to read our data and page it out when memory
+	// pressure from other processes is high. So until OSs have
+	// actual paging support for Huge pages, they're not viable.
 #define MAX_PAGESIZE	 (PAGEBASE ? 0x10000 : 0x8000)
 
-	/** The minimum number of keys required in a database page.
-	 *	Setting this to a larger value will place a smaller bound on the
-	 *	maximum size of a data item. Data items larger than this size will
-	 *	be pushed into overflow pages instead of being stored directly in
-	 *	the B-tree node. This value used to default to 4. With a page size
-	 *	of 4096 bytes that meant that any item larger than 1024 bytes would
-	 *	go into an overflow page. That also meant that on average 2-3KB of
-	 *	each overflow page was wasted space. The value cannot be lower than
-	 *	2 because then there would no longer be a tree structure. With this
-	 *	value, items larger than 2KB will go into overflow pages, and on
-	 *	average only 1KB will be wasted.
-	 */
+	// The minimum number of keys required in a database page.
+	// Setting this to a larger value will place a smaller bound on the
+	// maximum size of a data item. Data items larger than this size will
+	// be pushed into overflow pages instead of being stored directly in
+	// the B-tree node. This value used to default to 4. With a page size
+	// of 4096 bytes that meant that any item larger than 1024 bytes would
+	// go into an overflow page. That also meant that on average 2-3KB of
+	// each overflow page was wasted space. The value cannot be lower than
+	// 2 because then there would no longer be a tree structure. With this
+	// value, items larger than 2KB will go into overflow pages, and on
+	// average only 1KB will be wasted.
 #define MDB_MINKEYS	 2
 
-	/**	A stamp that identifies a file as an LMDB file.
-	 *	There's nothing special about this value other than that it is easily
-	 *	recognizable, and it will reflect any byte order mismatches.
-	 */
+	// A stamp that identifies a file as an LMDB file.
+	// There's nothing special about this value other than that it is easily
+	// recognizable, and it will reflect any byte order mismatches.
 #define MDB_MAGIC	 0xBEEFC0DE
 
-	/**	The version number for a database's datafile format. */
+	// The version number for a database's datafile format.
 #define MDB_DATA_VERSION	 1
 
 static void mdb_env_reader_dest(void *ptr);
@@ -57,10 +54,10 @@ typedef wchar_t	mdb_nchar_t;
 # define MDB_NAME(str)	L##str
 # define mdb_name_cpy	wcscpy
 #else
-/** Character type for file names: char on Unix, wchar_t on Windows */
+// Character type for file names: char on Unix, wchar_t on Windows
 typedef char	mdb_nchar_t;
-# define MDB_NAME(str)	str		/**< #mdb_nchar_t[] string literal */
-# define mdb_name_cpy	strcpy	/**< Copy name (#mdb_nchar_t string) */
+# define MDB_NAME(str)	str		// #mdb_nchar_t[] string literal
+# define mdb_name_cpy	strcpy	// Copy name (#mdb_nchar_t string)
 #endif
 
 #ifdef O_CLOEXEC /* POSIX.1-2008: Set FD_CLOEXEC atomically at open() */
@@ -80,11 +77,10 @@ typedef char	mdb_nchar_t;
 #define MAX_TLS_KEYS	64
 #endif
 
-/** Junk for arranging thread-specific callbacks on Windows. This is
- *	necessarily platform and compiler-specific. Windows supports up
- *	to 1088 keys. Let's assume nobody opens more than 64 environments
- *	in a single process, for now. They can override this if needed.
- */
+// Junk for arranging thread-specific callbacks on Windows. This is
+// necessarily platform and compiler-specific. Windows supports up
+// to 1088 keys. Let's assume nobody opens more than 64 environments
+// in a single process, for now. They can override this if needed.
 pthread_key_t mdb_tls_keys[MAX_TLS_KEYS];
 int mdb_tls_nkeys;
 
@@ -155,22 +151,20 @@ static NtMapViewOfSectionFunc *NtMapViewOfSection;
 #define	MDB_MSYNC(addr,len,flags)	(!FlushViewOfFile(addr,len))
 #endif
 
-/** Function for flushing the data of a file. Define this to fsync
- *	if fdatasync() is not supported.
- */
+// Function for flushing the data of a file. Define this to fsync
+// if fdatasync() is not supported.
 #ifndef MDB_FDATASYNC
 # define MDB_FDATASYNC	fdatasync
 #endif
 
 #ifndef _WIN32
-/**	A flag for opening a file and requesting synchronous data writes.
- *	This is only used when writing a meta page. It's not strictly needed;
- *	we could just do a normal write and then immediately perform a flush.
- *	But if this flag is available it saves us an extra system call.
- *
- *	@note If O_DSYNC is undefined but exists in /usr/include,
- * preferably set some compiler flag to get the definition.
- */
+// A flag for opening a file and requesting synchronous data writes.
+// This is only used when writing a meta page. It's not strictly needed;
+// we could just do a normal write and then immediately perform a flush.
+// But if this flag is available it saves us an extra system call.
+//
+// @note If O_DSYNC is undefined but exists in /usr/include,
+// preferably set some compiler flag to get the definition.
 #ifndef MDB_DSYNC
 # ifdef O_DSYNC
 # define MDB_DSYNC	O_DSYNC
@@ -193,28 +187,28 @@ static NtMapViewOfSectionFunc *NtMapViewOfSection;
 #endif
 
 
-/** Filename - string of #mdb_nchar_t[] */
+// Filename - string of #mdb_nchar_t[]
 struct MDB_name {
-	int mn_len;					/**< Length  */
-	int mn_alloced;				/**< True if #mn_val was malloced */
-	mdb_nchar_t	*mn_val;		/**< Contents */
+	int mn_len;					// Length
+	int mn_alloced;				// True if #mn_val was malloced
+	mdb_nchar_t	*mn_val;		// Contents
 };
 
-/** Filename suffixes [datafile,lockfile][without,with MDB_NOSUBDIR] */
+// Filename suffixes [datafile,lockfile][without,with MDB_NOSUBDIR]
 static const mdb_nchar_t *const mdb_suffixes[2][2] = {
 	{ MDB_NAME("/data.mdb"), MDB_NAME("")      },
 	{ MDB_NAME("/lock.mdb"), MDB_NAME("-lock") }
 };
 
-#define MDB_SUFFLEN 9	/**< Max string length in #mdb_suffixes[] */
+#define MDB_SUFFLEN 9	// Max string length in #mdb_suffixes[]
 
-/** Destroy \b fname from #mdb_fname_init() */
+// Destroy \b fname from #mdb_fname_init()
 #define mdb_fname_destroy(fname) \
 	do { if ((fname).mn_alloced) free((fname).mn_val); } while (0)
 
 #if defined(_WIN32)
 
-/** Convert \b src to new wchar_t[] string with room for \b xtra extra chars */
+// Convert \b src to new wchar_t[] string with room for \b xtra extra chars
 static int ESECT utf8_to_utf16(const char *src, MDB_name *dst, int xtra)
 {
 	int rc, need = 0;
@@ -240,14 +234,13 @@ static int ESECT utf8_to_utf16(const char *src, MDB_name *dst, int xtra)
 }
 #endif /* defined(_WIN32) */
 
-/** Set up filename + scratch area for filename suffix, for opening files.
- * It should be freed with #mdb_fname_destroy().
- * On Windows, paths are converted from char *UTF-8 to wchar_t *UTF-16.
- *
- * @param[in] path Pathname for #mdb_env_open().
- * @param[in] envflags Whether a subdir and/or lockfile will be used.
- * @param[out] fname Resulting filename, with room for a suffix if necessary.
- */
+// Set up filename + scratch area for filename suffix, for opening files.
+// It should be freed with #mdb_fname_destroy().
+// On Windows, paths are converted from char *UTF-8 to wchar_t *UTF-16.
+//
+// @param[in] path Pathname for #mdb_env_open().
+// @param[in] envflags Whether a subdir and/or lockfile will be used.
+// @param[out] fname Resulting filename, with room for a suffix if necessary.
 static int ESECT mdb_fname_init(const char *path, unsigned envflags, MDB_name *fname)
 {
 	int no_suffix = F_ISSET(envflags, MDB_NOSUBDIR|MDB_NOLOCK);
@@ -268,33 +261,31 @@ static int ESECT mdb_fname_init(const char *path, unsigned envflags, MDB_name *f
 #endif
 }
 
-/** File type, access mode etc. for #mdb_fopen() */
+// File type, access mode etc. for #mdb_fopen()
 enum mdb_fopen_type {
 #ifdef _WIN32
 	MDB_O_RDONLY, MDB_O_RDWR, MDB_O_OVERLAPPED, MDB_O_META, MDB_O_COPY, MDB_O_LOCKS
 #else
 	/* A comment in mdb_fopen() explains some O_* flag choices. */
-	MDB_O_RDONLY= O_RDONLY,                            /**< for RDONLY me_fd */
-	MDB_O_RDWR  = O_RDWR  |O_CREAT,                    /**< for me_fd */
-	MDB_O_META  = O_WRONLY|MDB_DSYNC     |MDB_CLOEXEC, /**< for me_mfd */
-	MDB_O_COPY  = O_WRONLY|O_CREAT|O_EXCL|MDB_CLOEXEC, /**< for #mdb_env_copy() */
-	/** Bitmask for open() flags in enum #mdb_fopen_type.  The other bits
-	 * distinguish otherwise-equal MDB_O_* constants from each other.
-	 */
+	MDB_O_RDONLY= O_RDONLY,                            // for RDONLY me_fd
+	MDB_O_RDWR  = O_RDWR  |O_CREAT,                    // for me_fd
+	MDB_O_META  = O_WRONLY|MDB_DSYNC     |MDB_CLOEXEC, // for me_mfd
+	MDB_O_COPY  = O_WRONLY|O_CREAT|O_EXCL|MDB_CLOEXEC, // for #mdb_env_copy()
+	// Bitmask for open() flags in enum #mdb_fopen_type.  The other bits
+	// distinguish otherwise-equal MDB_O_* constants from each other.
 	MDB_O_MASK  = MDB_O_RDWR|MDB_CLOEXEC | MDB_O_RDONLY|MDB_O_META|MDB_O_COPY,
-	MDB_O_LOCKS = MDB_O_RDWR|MDB_CLOEXEC | ((MDB_O_MASK+1) & ~MDB_O_MASK) /**< for me_lfd */
+	MDB_O_LOCKS = MDB_O_RDWR|MDB_CLOEXEC | ((MDB_O_MASK+1) & ~MDB_O_MASK) // for me_lfd
 #endif
 };
 
-/** Open an LMDB file.
- * @param[in] env	The LMDB environment.
- * @param[in,out] fname	Path from from #mdb_fname_init().  A suffix is
- * appended if necessary to create the filename, without changing mn_len.
- * @param[in] which	Determines file type, access mode, etc.
- * @param[in] mode	The Unix permissions for the file, if we create it.
- * @param[out] res	Resulting file handle.
- * @return 0 on success, non-zero on failure.
- */
+// Open an LMDB file.
+// @param[in] env	The LMDB environment.
+// @param[in,out] fname	Path from from #mdb_fname_init().  A suffix is
+// appended if necessary to create the filename, without changing mn_len.
+// @param[in] which	Determines file type, access mode, etc.
+// @param[in] mode	The Unix permissions for the file, if we create it.
+// @param[out] res	Resulting file handle.
+// @return 0 on success, non-zero on failure.
 static int ESECT mdb_fopen(const MDB_env *env, MDB_name *fname,
 	enum mdb_fopen_type which, mdb_mode_t mode,
 	HANDLE *res)
@@ -423,21 +414,19 @@ mdb_env_sync(MDB_env *env, int force)
 	return mdb_env_sync0(env, force, m->mm_last_pg+1);
 }
 
-/** Read the environment parameters of a DB environment before
- * mapping it into memory.
- * @param[in] env the environment handle
- * @param[in] prev whether to read the backup meta page
- * @param[out] meta address of where to store the meta information
- * @return 0 on success, non-zero on failure.
- */
+// Read the environment parameters of a DB environment before
+// mapping it into memory.
+// @param[in] env the environment handle
+// @param[in] prev whether to read the backup meta page
+// @param[out] meta address of where to store the meta information
+// @return 0 on success, non-zero on failure.
 int ESECT
 mdb_env_read_header(MDB_env *env, int prev, MDB_meta *meta)
 {
-		/** Buffer for a stack-allocated meta page.
-	 *	The members define size and alignment, and silence type
-	 *	aliasing warnings.  They are not used directly; that could
-	 *	mean incorrectly using several union members in parallel.
-	 */
+		// Buffer for a stack-allocated meta page.
+	// The members define size and alignment, and silence type
+	// aliasing warnings.  They are not used directly; that could
+	// mean incorrectly using several union members in parallel.
 	union MDB_metabuf {
 		MDB_page	mb_page;
 		struct {
@@ -501,7 +490,7 @@ mdb_env_read_header(MDB_env *env, int prev, MDB_meta *meta)
 	return 0;
 }
 
-/** Fill in most of the zeroed #MDB_meta for an empty database environment */
+// Fill in most of the zeroed #MDB_meta for an empty database environment
 void ESECT
 mdb_env_init_meta0(MDB_env *env, MDB_meta *meta)
 {
@@ -516,11 +505,10 @@ mdb_env_init_meta0(MDB_env *env, MDB_meta *meta)
 	meta->mm_dbs[MAIN_DBI].md_root = P_INVALID;
 }
 
-/** Write the environment parameters of a freshly created DB environment.
- * @param[in] env the environment handle
- * @param[in] meta the #MDB_meta to write
- * @return 0 on success, non-zero on failure.
- */
+// Write the environment parameters of a freshly created DB environment.
+// @param[in] env the environment handle
+// @param[in] meta the #MDB_meta to write
+// @return 0 on success, non-zero on failure.
 int ESECT
 mdb_env_init_meta(MDB_env *env, MDB_meta *meta)
 {
@@ -568,10 +556,9 @@ mdb_env_init_meta(MDB_env *env, MDB_meta *meta)
 	return rc;
 }
 
-/** Update the environment info to commit a transaction.
- * @param[in] txn the transaction that's being committed
- * @return 0 on success, non-zero on failure.
- */
+// Update the environment info to commit a transaction.
+// @param[in] txn the transaction that's being committed
+// @return 0 on success, non-zero on failure.
 int
 mdb_env_write_meta(MDB_txn *txn)
 {
@@ -697,10 +684,9 @@ done:
 	return MDB_SUCCESS;
 }
 
-/** Check both meta pages to see which one is newer.
- * @param[in] env the environment handle
- * @return newest #MDB_meta.
- */
+// Check both meta pages to see which one is newer.
+// @param[in] env the environment handle
+// @return newest #MDB_meta.
 MDB_meta *
 mdb_env_pick_meta(const MDB_env *env)
 {
@@ -739,7 +725,7 @@ mdb_env_create(MDB_env **env)
 }
 
 #ifdef _WIN32
-/** @brief Map a result from an NTAPI call to WIN32. */
+// @brief Map a result from an NTAPI call to WIN32.
 static DWORD mdb_nt2win32(NTSTATUS st)
 {
 	OVERLAPPED o = {0};
@@ -777,11 +763,10 @@ mdb_env_map(MDB_env *env, void *addr)
 		alloctype = MEM_RESERVE;
 	}
 
-	/** Some users are afraid of seeing their disk space getting used
-	 * all at once, so the default is now to do incremental file growth.
-	 * But that has a large performance impact, so give the option of
-	 * allocating the file up front.
-	 */
+	// Some users are afraid of seeing their disk space getting used
+	// all at once, so the default is now to do incremental file growth.
+	// But that has a large performance impact, so give the option of
+	// allocating the file up front.
 #ifdef MDB_FIXEDSIZE
 	LARGE_INTEGER fsize;
 	fsize.LowPart = msize & 0xffffffff;
@@ -910,8 +895,7 @@ mdb_env_get_maxreaders(MDB_env *env, unsigned int *readers)
 	return MDB_SUCCESS;
 }
 
-/** Further setup required for opening an LMDB environment
- */
+// Further setup required for opening an LMDB environment
 int ESECT
 mdb_env_open2(MDB_env *env, int prev)
 {
@@ -1044,10 +1028,9 @@ mdb_env_open2(MDB_env *env, int prev)
 }
 
 
-/** Release a reader thread's slot in the reader lock table.
- *	This function is called automatically when a thread exits.
- * @param[in] ptr This points to the slot in the reader lock table.
- */
+// Release a reader thread's slot in the reader lock table.
+// This function is called automatically when a thread exits.
+// @param[in] ptr This points to the slot in the reader lock table.
 static void mdb_env_reader_dest(void *ptr)
 {
 	MDB_reader *reader = (MDB_reader*) ptr;
@@ -1059,7 +1042,7 @@ static void mdb_env_reader_dest(void *ptr)
 		reader->mr_pid = 0;
 }
 
-/** Downgrade the exclusive lock on the region back to shared */
+// Downgrade the exclusive lock on the region back to shared
 int ESECT
 mdb_env_share_locks(MDB_env *env, int *excl)
 {
@@ -1100,9 +1083,8 @@ mdb_env_share_locks(MDB_env *env, int *excl)
 	return rc;
 }
 
-/** Try to get exclusive lock, otherwise shared.
- *	Maintain *excl = -1: no/unknown lock, 0: shared, 1: exclusive.
- */
+// Try to get exclusive lock, otherwise shared.
+// Maintain *excl = -1: no/unknown lock, 0: shared, 1: exclusive.
 int ESECT
 mdb_env_excl_lock(MDB_env *env, int *excl)
 {
@@ -1147,9 +1129,8 @@ mdb_env_excl_lock(MDB_env *env, int *excl)
 
 #if defined(_WIN32) || defined(MDB_USE_POSIX_SEM)
 
-/** Init #MDB_env.me_mutexname[] except the char which #MUTEXNAME() will set.
- *	Changes to this code must be reflected in #MDB_LOCK_FORMAT.
- */
+// Init #MDB_env.me_mutexname[] except the char which #MUTEXNAME() will set.
+// Changes to this code must be reflected in #MDB_LOCK_FORMAT.
 void ESECT
 mdb_env_mname_init(MDB_env *env)
 {
@@ -1158,20 +1139,19 @@ mdb_env_mname_init(MDB_env *env)
 	mdb_pack85(env->me_txns->mti_mutexid, nm + sizeof(MUTEXNAME_PREFIX));
 }
 
-/** Return env->me_mutexname after filling in ch ('r'/'w') for convenience */
+// Return env->me_mutexname after filling in ch ('r'/'w') for convenience
 #define MUTEXNAME(env, ch) ( \
 		(void) ((env)->me_mutexname[sizeof(MUTEXNAME_PREFIX)-1] = (ch)), \
 		(env)->me_mutexname)
 
 #endif
 
-/** Open and/or initialize the lock region for the environment.
- * @param[in] env The LMDB environment.
- * @param[in] fname Filename + scratch area, from #mdb_fname_init().
- * @param[in] mode The Unix permissions for the file, if we create it.
- * @param[in,out] excl In -1, out lock type: -1 none, 0 shared, 1 exclusive
- * @return 0 on success, non-zero on failure.
- */
+// Open and/or initialize the lock region for the environment.
+// @param[in] env The LMDB environment.
+// @param[in] fname Filename + scratch area, from #mdb_fname_init().
+// @param[in] mode The Unix permissions for the file, if we create it.
+// @param[in,out] excl In -1, out lock type: -1 none, 0 shared, 1 exclusive
+// @return 0 on success, non-zero on failure.
 int ESECT
 mdb_env_setup_locks(MDB_env *env, MDB_name *fname, int mode, int *excl)
 {
@@ -1411,10 +1391,9 @@ fail:
 	return rc;
 }
 
-	/** Only a subset of the @ref mdb_env flags can be changed
-	 *	at runtime. Changing other flags requires closing the
-	 *	environment and re-opening it with the new flags.
-	 */
+	// Only a subset of the @ref mdb_env flags can be changed
+	// at runtime. Changing other flags requires closing the
+	// environment and re-opening it with the new flags.
 #define	CHANGEABLE	(MDB_NOSYNC|MDB_NOMETASYNC|MDB_MAPASYNC|MDB_NOMEMINIT)
 #define	CHANGELESS	(MDB_FIXEDMAP|MDB_NOSUBDIR|MDB_RDONLY| \
 	MDB_WRITEMAP|MDB_NOTLS|MDB_NOLOCK|MDB_NORDAHEAD|MDB_PREVSNAPSHOT)
@@ -1536,7 +1515,7 @@ leave:
 	return rc;
 }
 
-/** Destroy resources from mdb_env_open(), clear our readers & DBIs */
+// Destroy resources from mdb_env_open(), clear our readers & DBIs
 void ESECT
 mdb_env_close0(MDB_env *env, int excl)
 {
@@ -1676,29 +1655,28 @@ mdb_env_close(MDB_env *env)
 #ifndef MDB_WBUF
 #define MDB_WBUF	(1024*1024)
 #endif
-#define MDB_EOF		0x10	/**< #mdb_env_copyfd1() is done reading */
+#define MDB_EOF		0x10	// #mdb_env_copyfd1() is done reading
 
-	/** State needed for a double-buffering compacting copy. */
+	// State needed for a double-buffering compacting copy.
 struct mdb_copy {
 	MDB_env *mc_env;
 	MDB_txn *mc_txn;
 	pthread_mutex_t mc_mutex;
-	pthread_cond_t mc_cond;	/**< Condition variable for #mc_new */
+	pthread_cond_t mc_cond;	// Condition variable for #mc_new
 	char *mc_wbuf[2];
 	char *mc_over[2];
 	int mc_wlen[2];
 	int mc_olen[2];
 	pgno_t mc_next_pgno;
 	HANDLE mc_fd;
-	int mc_toggle;			/**< Buffer number in provider */
-	int mc_new;				/**< (0-2 buffers to write) | (#MDB_EOF at end) */
-	/** Error code.  Never cleared if set.  Both threads can set nonzero
-	 *	to fail the copy.  Not mutex-protected, LMDB expects atomic int.
-	 */
+	int mc_toggle;			// Buffer number in provider
+	int mc_new;				// (0-2 buffers to write) | (#MDB_EOF at end)
+	// Error code.  Never cleared if set.  Both threads can set nonzero
+	// to fail the copy.  Not mutex-protected, LMDB expects atomic int.
 	volatile int mc_error;
 };
 
-	/** Dedicated writer thread for compacting copy. */
+	// Dedicated writer thread for compacting copy.
 THREAD_RET ESECT CALL_CONV
 mdb_env_copythr(void *arg)
 {
@@ -1775,11 +1753,10 @@ again:
 #undef DO_WRITE
 }
 
-	/** Give buffer and/or #MDB_EOF to writer thread, await unused buffer.
-	 *
-	 * @param[in] my control structure.
-	 * @param[in] adjust (1 to hand off 1 buffer) | (MDB_EOF when ending).
-	 */
+	// Give buffer and/or #MDB_EOF to writer thread, await unused buffer.
+	//
+	// @param[in] my control structure.
+	// @param[in] adjust (1 to hand off 1 buffer) | (MDB_EOF when ending).
 int ESECT
 mdb_env_cthr_toggle(mdb_copy *my, int adjust)
 {
@@ -1796,11 +1773,10 @@ mdb_env_cthr_toggle(mdb_copy *my, int adjust)
 	return my->mc_error;
 }
 
-	/** Depth-first tree traversal for compacting copy.
-	 * @param[in] my control structure.
-	 * @param[in,out] pg database root.
-	 * @param[in] flags includes #F_DUPDATA if it is a sorted-duplicate sub-DB.
-	 */
+	// Depth-first tree traversal for compacting copy.
+	// @param[in] my control structure.
+	// @param[in,out] pg database root.
+	// @param[in] flags includes #F_DUPDATA if it is a sorted-duplicate sub-DB.
 int ESECT
 mdb_env_cwalk(mdb_copy *my, pgno_t *pg, int flags)
 {
@@ -1957,7 +1933,7 @@ done:
 	return rc;
 }
 
-	/** Copy environment with compaction. */
+	// Copy environment with compaction.
 int ESECT
 mdb_env_copyfd1(MDB_env *env, HANDLE fd)
 {
@@ -2108,7 +2084,7 @@ static int ESECT mdb_fsize(HANDLE fd, mdb_size_t *size)
 	return MDB_SUCCESS;
 }
 
-	/** Copy environment as-is. */
+	// Copy environment as-is.
 int ESECT
 mdb_env_copyfd0(MDB_env *env, HANDLE fd)
 {
@@ -2317,12 +2293,11 @@ mdb_env_get_fd(MDB_env *env, mdb_filehandle_t *arg)
 	return MDB_SUCCESS;
 }
 
-/** Common code for #mdb_stat() and #mdb_env_stat().
- * @param[in] env the environment to operate in.
- * @param[in] db the #MDB_db record containing the stats to return.
- * @param[out] arg the address of an #MDB_stat structure to receive the stats.
- * @return 0, this function always succeeds.
- */
+// Common code for #mdb_stat() and #mdb_env_stat().
+// @param[in] env the environment to operate in.
+// @param[in] db the #MDB_db record containing the stats to return.
+// @param[out] arg the address of an #MDB_stat structure to receive the stats.
+// @return 0, this function always succeeds.
 static int ESECT mdb_stat0(MDB_env *env, MDB_db *db, MDB_stat *arg)
 {
 	arg->ms_psize = env->me_psize;

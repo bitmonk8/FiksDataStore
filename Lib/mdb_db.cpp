@@ -7,13 +7,12 @@
 #include "mdb_debug.h"
 #include "mdb_txn.h"
 
-/** Set the default comparison functions for a database.
- * Called immediately after a database is opened to set the defaults.
- * The user can then override them with #mdb_set_compare() or
- * #mdb_set_dupsort().
- * @param[in] txn A transaction handle returned by #mdb_txn_begin()
- * @param[in] dbi A database handle returned by #mdb_dbi_open()
- */
+// Set the default comparison functions for a database.
+// Called immediately after a database is opened to set the defaults.
+// The user can then override them with #mdb_set_compare() or
+// #mdb_set_dupsort().
+// @param[in] txn A transaction handle returned by #mdb_txn_begin()
+// @param[in] dbi A database handle returned by #mdb_dbi_open()
 static void mdb_default_cmp(MDB_txn *txn, MDB_dbi dbi)
 {
 	uint16_t f = txn->mt_dbs[dbi].md_flags;
@@ -176,11 +175,10 @@ int mdb_dbi_flags(MDB_txn *txn, MDB_dbi dbi, unsigned int *flags)
 	return MDB_SUCCESS;
 }
 
-/** Add all the DB's pages to the free list.
- * @param[in] mc Cursor on the DB to free.
- * @param[in] subs non-Zero to check for sub-DBs in this DB.
- * @return 0 on success, non-zero on failure.
- */
+// Add all the DB's pages to the free list.
+// @param[in] mc Cursor on the DB to free.
+// @param[in] subs non-Zero to check for sub-DBs in this DB.
+// @return 0 on success, non-zero on failure.
 int
 mdb_drop0(MDB_cursor *mc, int subs)
 {

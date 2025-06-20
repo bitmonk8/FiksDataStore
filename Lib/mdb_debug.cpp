@@ -35,7 +35,7 @@ mdb_assert_fail(MDB_env *env,
 #endif /* NDEBUG */
 
 #if MDB_DEBUG
-/** Return the page number of \b mp which may be sub-page, for debug output */
+// Return the page number of \b mp which may be sub-page, for debug output
 pgno_t
 mdb_dbg_pgno(MDB_page *mp)
 {
@@ -44,11 +44,10 @@ mdb_dbg_pgno(MDB_page *mp)
 	return ret;
 }
 
-/** Display a key in hexadecimal and return the address of the result.
- * @param[in] key the key to display
- * @param[in] buf the buffer to write into. Should always be #DKBUF.
- * @return The key in hexadecimal form.
- */
+// Display a key in hexadecimal and return the address of the result.
+// @param[in] key the key to display
+// @param[in] buf the buffer to write into. Should always be #DKBUF.
+// @return The key in hexadecimal form.
 char *
 mdb_dkey(MDB_val *key, char *buf)
 {
@@ -98,7 +97,7 @@ mdb_leafnode_type(MDB_node *n)
 		tp[F_ISSET(n->mn_flags, F_DUPDATA)][F_ISSET(n->mn_flags, F_SUBDATA)];
 }
 
-/** Display all the keys in the page. */
+// Display all the keys in the page.
 void
 mdb_page_list(MDB_page *mp)
 {
@@ -170,11 +169,10 @@ mdb_page_list(MDB_page *mp)
 #endif
 
 #if (MDB_DEBUG) > 2
-/** Count all the pages in each DB and in the freelist
- *  and make sure it matches the actual number of pages
- *  being used.
- *  All named DBs must be open for a correct count.
- */
+// Count all the pages in each DB and in the freelist
+// and make sure it matches the actual number of pages
+// being used.
+// All named DBs must be open for a correct count.
 void mdb_audit(MDB_txn *txn)
 {
 	MDB_cursor mc;
