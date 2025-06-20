@@ -11,14 +11,13 @@
 #define MDB_OWNERDEAD	EOWNERDEAD	/**< #LOCK_MUTEX0() result if dead owner */
 #endif
 
-/** Set or check a pid lock. Set returns 0 on success.
- * Check returns 0 if the process is certainly dead, nonzero if it may
- * be alive (the lock exists or an error happened so we do not know).
- *
- * On Windows Pidset is a no-op, we merely check for the existence
- * of the process with the given pid. On POSIX we use a single byte
- * lock on the lockfile, set at an offset equal to the pid.
- */
+// Set or check a pid lock. Set returns 0 on success.
+// Check returns 0 if the process is certainly dead, nonzero if it may
+// be alive (the lock exists or an error happened so we do not know).
+//
+// On Windows Pidset is a no-op, we merely check for the existence
+// of the process with the given pid. On POSIX we use a single byte
+// lock on the lockfile, set at an offset equal to the pid.
 int
 mdb_reader_pid(MDB_env *env, enum Pidlock_op op, MDB_PID_T pid)
 {

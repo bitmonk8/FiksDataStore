@@ -34,13 +34,12 @@ mdb_cursor_chk(MDB_cursor *mc)
 }
 #endif
 
-/** Search for key within a page, using binary search.
- * Returns the smallest entry larger or equal to the key.
- * If exactp is non-null, stores whether the found entry was an exact match
- * in *exactp (1 or 0).
- * Updates the cursor index with the index of the found entry.
- * If no entry larger or equal to the key is found, returns NULL.
- */
+// Search for key within a page, using binary search.
+// Returns the smallest entry larger or equal to the key.
+// If exactp is non-null, stores whether the found entry was an exact match
+// in *exactp (1 or 0).
+// Updates the cursor index with the index of the found entry.
+// If no entry larger or equal to the key is found, returns NULL.
 MDB_node *
 mdb_node_search(MDB_cursor *mc, MDB_val *key, int *exactp)
 {
@@ -132,7 +131,7 @@ mdb_node_search(MDB_cursor *mc, MDB_val *key, int *exactp)
 	return node;
 }
 
-/** Pop a page off the top of the cursor's stack. */
+// Pop a page off the top of the cursor's stack.
 void
 mdb_cursor_pop(MDB_cursor *mc)
 {
@@ -149,9 +148,8 @@ mdb_cursor_pop(MDB_cursor *mc)
 	}
 }
 
-/** Push a page onto the top of the cursor's stack.
- * Set #MDB_TXN_ERROR on failure.
- */
+// Push a page onto the top of the cursor's stack.
+// Set #MDB_TXN_ERROR on failure.
 int
 mdb_cursor_push(MDB_cursor *mc, MDB_page *mp)
 {
@@ -170,12 +168,11 @@ mdb_cursor_push(MDB_cursor *mc, MDB_page *mp)
 	return MDB_SUCCESS;
 }
 
-/** Return the data associated with a given node.
- * @param[in] mc The cursor for this operation.
- * @param[in] leaf The node being read.
- * @param[out] data Updated to point to the node's data.
- * @return 0 on success, non-zero on failure.
- */
+// Return the data associated with a given node.
+// @param[in] mc The cursor for this operation.
+// @param[in] leaf The node being read.
+// @param[out] data Updated to point to the node's data.
+// @return 0 on success, non-zero on failure.
 int
 mdb_node_read(MDB_cursor *mc, MDB_node *leaf, MDB_val *data)
 {
@@ -206,14 +203,13 @@ mdb_node_read(MDB_cursor *mc, MDB_node *leaf, MDB_val *data)
 	return MDB_SUCCESS;
 }
 
-/** Find a sibling for a page.
- * Replaces the page at the top of the cursor's stack with the
- * specified sibling, if one exists.
- * @param[in] mc The cursor for this operation.
- * @param[in] move_right Non-zero if the right sibling is requested,
- * otherwise the left sibling.
- * @return 0 on success, non-zero on failure.
- */
+// Find a sibling for a page.
+// Replaces the page at the top of the cursor's stack with the
+// specified sibling, if one exists.
+// @param[in] mc The cursor for this operation.
+// @param[in] move_right Non-zero if the right sibling is requested,
+// otherwise the left sibling.
+// @return 0 on success, non-zero on failure.
 int
 mdb_cursor_sibling(MDB_cursor *mc, int move_right)
 {
@@ -262,7 +258,7 @@ mdb_cursor_sibling(MDB_cursor *mc, int move_right)
 	return MDB_SUCCESS;
 }
 
-/** Move the cursor to the next data item. */
+// Move the cursor to the next data item.
 int
 mdb_cursor_next(MDB_cursor *mc, MDB_val *key, MDB_val *data, MDB_cursor_op op)
 {
@@ -347,7 +343,7 @@ skip:
 	return MDB_SUCCESS;
 }
 
-/** Move the cursor to the previous data item. */
+// Move the cursor to the previous data item.
 int
 mdb_cursor_prev(MDB_cursor *mc, MDB_val *key, MDB_val *data, MDB_cursor_op op)
 {
@@ -429,7 +425,7 @@ mdb_cursor_prev(MDB_cursor *mc, MDB_val *key, MDB_val *data, MDB_cursor_op op)
 	return MDB_SUCCESS;
 }
 
-/** Set the cursor on a specific data item. */
+// Set the cursor on a specific data item.
 int
 mdb_cursor_set(MDB_cursor *mc, MDB_val *key, MDB_val *data,
     MDB_cursor_op op, int *exactp)
@@ -626,7 +622,7 @@ set1:
 	return rc;
 }
 
-/** Move the cursor to the first item in the database. */
+// Move the cursor to the first item in the database.
 int
 mdb_cursor_first(MDB_cursor *mc, MDB_val *key, MDB_val *data)
 {
@@ -672,7 +668,7 @@ mdb_cursor_first(MDB_cursor *mc, MDB_val *key, MDB_val *data)
 	return MDB_SUCCESS;
 }
 
-/** Move the cursor to the last item in the database. */
+// Move the cursor to the last item in the database.
 int
 mdb_cursor_last(MDB_cursor *mc, MDB_val *key, MDB_val *data)
 {
@@ -904,10 +900,9 @@ fetchm:
 	return rc;
 }
 
-/** Touch all the pages in the cursor stack. Set mc_top.
- *	Makes sure all the pages are writable, before attempting a write operation.
- * @param[in] mc The cursor to operate on.
- */
+// Touch all the pages in the cursor stack. Set mc_top.
+// Makes sure all the pages are writable, before attempting a write operation.
+// @param[in] mc The cursor to operate on.
 int
 mdb_cursor_touch(MDB_cursor *mc)
 {
@@ -935,10 +930,10 @@ mdb_cursor_touch(MDB_cursor *mc)
 	return rc;
 }
 
-/** Do not spill pages to disk if txn is getting full, may fail instead */
+// Do not spill pages to disk if txn is getting full, may fail instead
 #define MDB_NOSPILL	0x8000
 
-/* Internal error codes, not exposed outside liblmdb */
+// Internal error codes, not exposed outside liblmdb
 #define	MDB_NO_ROOT		(MDB_LAST_ERRCODE + 10)
 
 int
@@ -1600,15 +1595,14 @@ mdb_cursor_del(MDB_cursor *mc, unsigned int flags)
 	return _mdb_cursor_del(mc, flags);
 }
 
-/** Initial setup of a sorted-dups cursor.
- * Sorted duplicates are implemented as a sub-database for the given key.
- * The duplicate data items are actually keys of the sub-database.
- * Operations on the duplicate data items are performed using a sub-cursor
- * initialized when the sub-database is first accessed. This function does
- * the preliminary setup of the sub-cursor, filling in the fields that
- * depend only on the parent DB.
- * @param[in] mc The main cursor whose sorted-dups cursor is to be initialized.
- */
+// Initial setup of a sorted-dups cursor.
+// Sorted duplicates are implemented as a sub-database for the given key.
+// The duplicate data items are actually keys of the sub-database.
+// Operations on the duplicate data items are performed using a sub-cursor
+// initialized when the sub-database is first accessed. This function does
+// the preliminary setup of the sub-cursor, filling in the fields that
+// depend only on the parent DB.
+// @param[in] mc The main cursor whose sorted-dups cursor is to be initialized.
 void
 mdb_xcursor_init0(MDB_cursor *mc)
 {
@@ -1631,12 +1625,11 @@ mdb_xcursor_init0(MDB_cursor *mc)
 	mx->mx_dbx.md_rel = mc->mc_dbx->md_rel;
 }
 
-/** Final setup of a sorted-dups cursor.
- *	Sets up the fields that depend on the data from the main cursor.
- * @param[in] mc The main cursor whose sorted-dups cursor is to be initialized.
- * @param[in] node The data containing the #MDB_db record for the
- * sorted-dup database.
- */
+// Final setup of a sorted-dups cursor.
+// Sets up the fields that depend on the data from the main cursor.
+// @param[in] mc The main cursor whose sorted-dups cursor is to be initialized.
+// @param[in] node The data containing the #MDB_db record for the
+// sorted-dup database.
 void
 mdb_xcursor_init1(MDB_cursor *mc, MDB_node *node)
 {
@@ -1678,14 +1671,13 @@ mdb_xcursor_init1(MDB_cursor *mc, MDB_node *node)
 }
 
 
-/** Fixup a sorted-dups cursor due to underlying update.
- *	Sets up some fields that depend on the data from the main cursor.
- *	Almost the same as init1, but skips initialization steps if the
- *	xcursor had already been used.
- * @param[in] mc The main cursor whose sorted-dups cursor is to be fixed up.
- * @param[in] src_mx The xcursor of an up-to-date cursor.
- * @param[in] new_dupdata True if converting from a non-#F_DUPDATA item.
- */
+// Fixup a sorted-dups cursor due to underlying update.
+// Sets up some fields that depend on the data from the main cursor.
+// Almost the same as init1, but skips initialization steps if the
+// xcursor had already been used.
+// @param[in] mc The main cursor whose sorted-dups cursor is to be fixed up.
+// @param[in] src_mx The xcursor of an up-to-date cursor.
+// @param[in] new_dupdata True if converting from a non-#F_DUPDATA item.
 void
 mdb_xcursor_init2(MDB_cursor *mc, MDB_xcursor *src_mx, int new_dupdata)
 {
@@ -1709,7 +1701,7 @@ mdb_xcursor_init2(MDB_cursor *mc, MDB_xcursor *src_mx, int new_dupdata)
 		mx->mx_db.md_root));
 }
 
-/** Initialize a cursor for a given transaction and database. */
+// Initialize a cursor for a given transaction and database.
 void
 mdb_cursor_init(MDB_cursor *mc, MDB_txn *txn, MDB_dbi dbi, MDB_xcursor *mx)
 {
@@ -1789,7 +1781,7 @@ mdb_cursor_renew(MDB_txn *txn, MDB_cursor *mc)
 	return MDB_SUCCESS;
 }
 
-/* Return the count of duplicate data items for the current key */
+// Return the count of duplicate data items for the current key
 int
 mdb_cursor_count(MDB_cursor *mc, mdb_size_t *countp)
 {
@@ -1860,10 +1852,9 @@ mdb_cursor_dbi(MDB_cursor *mc)
 	return mc->mc_dbi;
 }
 
-/** Copy the contents of a cursor.
- * @param[in] csrc The cursor to copy from.
- * @param[out] cdst The cursor to copy to.
- */
+// Copy the contents of a cursor.
+// @param[in] csrc The cursor to copy from.
+// @param[out] cdst The cursor to copy to.
 void
 mdb_cursor_copy(const MDB_cursor *csrc, MDB_cursor *cdst)
 {
@@ -1884,7 +1875,7 @@ mdb_cursor_copy(const MDB_cursor *csrc, MDB_cursor *cdst)
 	}
 }
 
-/** Complete a delete operation started by #mdb_cursor_del(). */
+// Complete a delete operation started by #mdb_cursor_del().
 int
 mdb_cursor_del0(MDB_cursor *mc)
 {
@@ -1990,12 +1981,11 @@ fail:
 	return rc;
 }
 
-/** Replace the key for a branch node with a new key.
- * Set #MDB_TXN_ERROR on failure.
- * @param[in] mc Cursor pointing to the node to operate on.
- * @param[in] key The new key to use.
- * @return 0 on success, non-zero on failure.
- */
+// Replace the key for a branch node with a new key.
+// Set #MDB_TXN_ERROR on failure.
+// @param[in] mc Cursor pointing to the node to operate on.
+// @param[in] key The new key to use.
+// @return 0 on success, non-zero on failure.
 int mdb_update_key(MDB_cursor *mc, MDB_val *key)
 {
 	MDB_page		*mp;

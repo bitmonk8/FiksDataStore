@@ -3,7 +3,7 @@
 #include "mdb_txn.h"
 #include "mdb_db.h"
 
-/** Compare two items pointing at aligned #mdb_size_t's */
+// Compare two items pointing at aligned #mdb_size_t's
 int
 mdb_cmp_long(const MDB_val *a, const MDB_val *b)
 {
@@ -11,11 +11,10 @@ mdb_cmp_long(const MDB_val *a, const MDB_val *b)
 		*(mdb_size_t *)a->mv_data > *(mdb_size_t *)b->mv_data;
 }
 
-/** Compare two items pointing at aligned unsigned int's.
- *
- *	This is also set as #MDB_INTEGERDUP|#MDB_DUPFIXED's #MDB_dbx.%md_dcmp,
- *	but #mdb_cmp_clong() is called instead if the data type is #mdb_size_t.
- */
+// Compare two items pointing at aligned unsigned int's.
+//
+// This is also set as #MDB_INTEGERDUP|#MDB_DUPFIXED's #MDB_dbx.%md_dcmp,
+// but #mdb_cmp_clong() is called instead if the data type is #mdb_size_t.
 int
 mdb_cmp_int(const MDB_val *a, const MDB_val *b)
 {
@@ -23,9 +22,8 @@ mdb_cmp_int(const MDB_val *a, const MDB_val *b)
 		*(unsigned int *)a->mv_data > *(unsigned int *)b->mv_data;
 }
 
-/** Compare two items pointing at unsigned ints of unknown alignment.
- *	Nodes and keys are guaranteed to be 2-byte aligned.
- */
+// Compare two items pointing at unsigned ints of unknown alignment.
+// Nodes and keys are guaranteed to be 2-byte aligned.
 int
 mdb_cmp_cint(const MDB_val *a, const MDB_val *b)
 {
@@ -55,7 +53,7 @@ mdb_cmp_cint(const MDB_val *a, const MDB_val *b)
 #endif
 }
 
-/** Compare two items lexically */
+// Compare two items lexically
 int
 mdb_cmp_memn(const MDB_val *a, const MDB_val *b)
 {
@@ -75,7 +73,7 @@ mdb_cmp_memn(const MDB_val *a, const MDB_val *b)
 	return diff ? diff : len_diff<0 ? -1 : len_diff;
 }
 
-/** Compare two items in reverse byte order */
+// Compare two items in reverse byte order
 int
 mdb_cmp_memnr(const MDB_val *a, const MDB_val *b)
 {
