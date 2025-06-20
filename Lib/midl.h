@@ -1,12 +1,33 @@
 /**	@file midl.h
  *	@brief LMDB ID List header file.
  *
+ *	MIDL stands for "Memory ID List" and provides specialized data structures
+ *	and operations for managing sorted arrays of IDs in the LMDB system.
+ *
  *	This file was originally part of back-bdb but has been
  *	modified for use in libmdb. Most of the macros defined
  *	in this file are unused, just left over from the original.
  *
  *	This file is only used internally in libmdb and its definitions
  *	are not exposed publicly.
+ *
+ *	@section usage Usage in LMDB Context
+ *	This code is used internally by LMDB for:
+ *	- Free page management: Tracking which database pages are available for reuse
+ *	- Transaction management: Managing transaction IDs and their associated data
+ *	- Index operations: Maintaining sorted lists of record IDs
+ *	- Memory mapping: Associating page IDs with memory locations
+ *
+ *	@section performance Performance Characteristics
+ *	- Search operations: O(log n) using binary search
+ *	- Insert operations: O(n) for maintaining sort order
+ *	- Append operations: O(1) for adding to end
+ *	- Sort operations: O(n log n) using hybrid quicksort/insertion sort
+ *	- Merge operations: O(n + m) for combining sorted lists
+ *
+ *	@section memory Memory Layout
+ *	IDLs use a compact array layout where allocation size is stored at ids[-1]
+ *	for efficient dynamic resizing with 25% overhead plus 256-element alignment.
  */
 /* $OpenLDAP$ */
 /* This work is part of OpenLDAP Software <http://www.openldap.org/>.
@@ -46,6 +67,11 @@ typedef mdb_size_t MDB_ID;
 	 * IDs are in the list. In the original back-bdb code, IDLs are
 	 * sorted in ascending order. For libmdb IDLs are sorted in
 	 * descending order.
+	 *
+	 * Memory layout: [count][id1][id2]...[idN]
+	 * - Element [0]: Contains count of actual IDs
+	 * - Elements [1] to [count]: Contains sorted IDs in descending order
+	 * - Used for managing page IDs, transaction IDs, and database identifiers
 	 */
 typedef MDB_ID *MDB_IDL;
 
@@ -77,6 +103,7 @@ typedef MDB_ID *MDB_IDL;
 	} while (0)
 
 	/** Search for an ID in an IDL.
+	 * Uses binary search for O(log n) performance.
 	 * @param[in] ids	The IDL to search.
 	 * @param[in] id	The ID to search for.
 	 * @return	The index of the first ID greater than or equal to \b id.
@@ -136,6 +163,7 @@ int mdb_midl_append_range( MDB_IDL *idp, MDB_ID id, unsigned n );
 void mdb_midl_xmerge( MDB_IDL idl, MDB_IDL merge );
 
 	/** Sort an IDL.
+	 * Uses hybrid quicksort with insertion sort optimization for small arrays.
 	 * @param[in,out] ids	The IDL to sort.
 	 */
 void mdb_midl_sort( MDB_IDL ids );
@@ -151,10 +179,17 @@ struct MDB_ID2 {
 	 * The first element's \b mid member is a count of how many actual
 	 * elements are in the array. The \b mptr member of the first element is unused.
 	 * The array is sorted in ascending order by \b mid.
+	 *
+	 * Memory layout: [count_entry][id2_1][id2_2]...[id2_N]
+	 * - Element [0].mid: Contains count of actual ID2 pairs
+	 * - Element [0].mptr: Unused
+	 * - Elements [1] to [count]: Contains ID/pointer pairs sorted by ID in ascending order
+	 * - Used for mapping IDs to memory locations or data structures
 	 */
 typedef MDB_ID2 *MDB_ID2L;
 
 	/** Search for an ID in an ID2L.
+	 * Uses binary search for O(log n) performance.
 	 * @param[in] ids	The ID2L to search.
 	 * @param[in] id	The ID to search for.
 	 * @return	The index of the first ID2 whose \b mid member is greater than or equal to \b id.
