@@ -3,11 +3,13 @@
 #include "mdb_internal.h"
 
 #if !(MDB_PIDLOCK)		/* Currently the same as defined(_WIN32) */
-enum Pidlock_op {
+enum Pidlock_op : int
+{
 	Pidset, Pidcheck
 };
 #else
-enum Pidlock_op {
+enum Pidlock_op : int
+{
 	Pidset = F_SETLK, Pidcheck = F_GETLK
 };
 #endif

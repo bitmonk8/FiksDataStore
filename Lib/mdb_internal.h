@@ -19,7 +19,7 @@ struct MDB_txbody;
 struct MDB_txn;
 struct MDB_txninfo;
 struct MDB_xcursor;
-enum Pidlock_op;
+enum Pidlock_op : int;
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE 1

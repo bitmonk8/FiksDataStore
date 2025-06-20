@@ -29,11 +29,11 @@ typedef struct MDB_env {
 ```
 
 ### 2. Comment Style
-**MANDATORY**: Prefer single-line `//` comments over multiline `/* */` comments.
+**MANDATORY**: Use single-line `//` comments for all regular code documentation. C style multiline `/* */` comments are to be avoided at all cost.
 
-**Rule**: Use `//` for regular comments. Reserve `/* */` comments exclusively for temporarily commenting out blocks of code during development.
+**Rule**: Use `//` for all regular comments, documentation, and code explanations. Reserve `/* */` comments exclusively for temporarily commenting out blocks of code during development and experimentation.
 
-**Rationale**: Single-line comments are more readable and easier to maintain. Multiline comments should be reserved for temporary code removal to avoid confusion.
+**Rationale**: Single-line comments are more readable, easier to maintain, and allow for easier temporary code commenting during development. Since C/C++ does not support nested multiline comments, avoiding `/* */` comments in regular code makes it much easier to temporarily comment out large blocks of code using `/* */` without conflicts. This greatly improves the development and debugging experience.
 
 **Examples**:
 ```cpp
@@ -213,10 +213,18 @@ These conventions are enforced by:
 
 To validate compliance with coding conventions:
 1. Check struct declarations use modern C++ style (no typedef patterns)
-2. Verify comment style follows single-line `//` preference
+2. Verify comment style follows single-line `//` preference and ensure no C style `/* */` comments are used for regular documentation
 3. Confirm brace placement follows separate-line rule
 4. Ensure consistency with existing codebase patterns
 5. Run `xmake test` to verify functionality is preserved
+
+### Comment Style Validation
+To check for prohibited C style multiline comments in regular code:
+```bash
+# Search for C style multiline comments (excluding temporary code blocks)
+grep -r "/\*" Lib/ Tools/ Tests/ --include="*.cpp" --include="*.h"
+```
+Any `/* */` comments found should be converted to single-line `//` comments unless they are clearly used for temporary code commenting during development.
 
 ## Future Conventions
 
