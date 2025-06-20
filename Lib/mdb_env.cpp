@@ -60,7 +60,7 @@ typedef char	mdb_nchar_t;
 # define mdb_name_cpy	strcpy	// Copy name (#mdb_nchar_t string)
 #endif
 
-#ifdef O_CLOEXEC /* POSIX.1-2008: Set FD_CLOEXEC atomically at open() */
+#ifdef O_CLOEXEC // POSIX.1-2008: Set FD_CLOEXEC atomically at open()
 # define MDB_CLOEXEC		O_CLOEXEC
 #else
 # define MDB_CLOEXEC		0
@@ -68,11 +68,10 @@ typedef char	mdb_nchar_t;
 
 #ifdef _WIN32
 
-/** Junk for arranging thread-specific callbacks on Windows. This is
- *	necessarily platform and compiler-specific. Windows supports up
- *	to 1088 keys. Let's assume nobody opens more than 64 environments
- *	in a single process, for now. They can override this if needed.
- */
+// Junk for arranging thread-specific callbacks on Windows. This is
+// necessarily platform and compiler-specific. Windows supports up
+// to 1088 keys. Let's assume nobody opens more than 64 environments
+// in a single process, for now. They can override this if needed.
 #ifndef MAX_TLS_KEYS
 #define MAX_TLS_KEYS	64
 #endif
@@ -102,15 +101,14 @@ void NTAPI mdb_tls_callback(PVOID module, DWORD reason, PVOID ptr)
 	}
 }
 
-/* We use native NT APIs to setup the memory map, so that we can
- * let the DB file grow incrementally instead of always preallocating
- * the full size. These APIs are defined in <wdm.h> and <ntifs.h>
- * but those headers are meant for driver-level development and
- * conflict with the regular user-level headers, so we explicitly
- * declare them here. We get pointers to these functions from
- * NTDLL.DLL at runtime, to avoid buildtime dependencies on any
- * NTDLL import libraries.
- */
+// We use native NT APIs to setup the memory map, so that we can
+// let the DB file grow incrementally instead of always preallocating
+// the full size. These APIs are defined in <wdm.h> and <ntifs.h>
+// but those headers are meant for driver-level development and
+// conflict with the regular user-level headers, so we explicitly
+// declare them here. We get pointers to these functions from
+// NTDLL.DLL at runtime, to avoid buildtime dependencies on any
+// NTDLL import libraries.
 typedef NTSTATUS (WINAPI NtCreateSectionFunc)
   (OUT PHANDLE sh, IN ACCESS_MASK acc,
   IN void * oa OPTIONAL,
@@ -213,7 +211,7 @@ static int ESECT utf8_to_utf16(const char *src, MDB_name *dst, int xtra)
 {
 	int rc, need = 0;
 	wchar_t *result = NULL;
-	for (;;) {					/* malloc result, then fill it in */
+	for (;;) {					// malloc result, then fill it in
 		need = MultiByteToWideChar(CP_UTF8, 0, src, -1, result, need);
 		if (!need) {
 			rc = ErrCode();
@@ -232,7 +230,7 @@ static int ESECT utf8_to_utf16(const char *src, MDB_name *dst, int xtra)
 		return MDB_SUCCESS;
 	}
 }
-#endif /* defined(_WIN32) */
+#endif // defined(_WIN32)
 
 // Set up filename + scratch area for filename suffix, for opening files.
 // It should be freed with #mdb_fname_destroy().
@@ -266,7 +264,7 @@ enum mdb_fopen_type {
 #ifdef _WIN32
 	MDB_O_RDONLY, MDB_O_RDWR, MDB_O_OVERLAPPED, MDB_O_META, MDB_O_COPY, MDB_O_LOCKS
 #else
-	/* A comment in mdb_fopen() explains some O_* flag choices. */
+	// A comment in mdb_fopen() explains some O_* flag choices.
 	MDB_O_RDONLY= O_RDONLY,                            // for RDONLY me_fd
 	MDB_O_RDWR  = O_RDWR  |O_CREAT,                    // for me_fd
 	MDB_O_META  = O_WRONLY|MDB_DSYNC     |MDB_CLOEXEC, // for me_mfd
@@ -298,23 +296,22 @@ static int ESECT mdb_fopen(const MDB_env *env, MDB_name *fname,
 	int flags;
 #endif
 
-	if (fname->mn_alloced)		/* modifiable copy */
+	if (fname->mn_alloced)		// modifiable copy
 		mdb_name_cpy(fname->mn_val + fname->mn_len,
 			mdb_suffixes[which==MDB_O_LOCKS][F_ISSET(env->me_flags, MDB_NOSUBDIR)]);
 
-	/* The directory must already exist.  Usually the file need not.
-	 * MDB_O_META requires the file because we already created it using
-	 * MDB_O_RDWR.  MDB_O_COPY must not overwrite an existing file.
-	 *
-	 * With MDB_O_COPY we do not want the OS to cache the writes, since
-	 * the source data is already in the OS cache.
-	 *
-	 * The lockfile needs FD_CLOEXEC (close file descriptor on exec*())
-	 * to avoid the flock() issues noted under Caveats in lmdb.h.
-	 * Also set it for other filehandles which the user cannot get at
-	 * and close himself, which he may need after fork().  I.e. all but
-	 * me_fd, which programs do use via mdb_env_get_fd().
-	 */
+	// The directory must already exist.  Usually the file need not.
+	// MDB_O_META requires the file because we already created it using
+	// MDB_O_RDWR.  MDB_O_COPY must not overwrite an existing file.
+	//
+	// With MDB_O_COPY we do not want the OS to cache the writes, since
+	// the source data is already in the OS cache.
+	//
+	// The lockfile needs FD_CLOEXEC (close file descriptor on exec*())
+	// to avoid the flock() issues noted under Caveats in lmdb.h.
+	// Also set it for other filehandles which the user cannot get at
+	// and close himself, which he may need after fork().  I.e. all but
+	// me_fd, which programs do use via mdb_env_get_fd().
 
 #ifdef _WIN32
 	acc = GENERIC_READ|GENERIC_WRITE;
@@ -322,27 +319,27 @@ static int ESECT mdb_fopen(const MDB_env *env, MDB_name *fname,
 	disp = OPEN_ALWAYS;
 	attrs = FILE_ATTRIBUTE_NORMAL;
 	switch (which) {
-	case MDB_O_OVERLAPPED: 	/* for unbuffered asynchronous writes (write-through mode)*/
+	case MDB_O_OVERLAPPED: 	// for unbuffered asynchronous writes (write-through mode)
 		acc = GENERIC_WRITE;
 		disp = OPEN_EXISTING;
 		attrs = FILE_FLAG_OVERLAPPED|FILE_FLAG_WRITE_THROUGH;
 		break;
-	case MDB_O_RDONLY:			/* read-only datafile */
+	case MDB_O_RDONLY:			// read-only datafile
 		acc = GENERIC_READ;
 		disp = OPEN_EXISTING;
 		break;
-	case MDB_O_META:			/* for writing metapages */
+	case MDB_O_META:			// for writing metapages
 		acc = GENERIC_WRITE;
 		disp = OPEN_EXISTING;
 		attrs = FILE_ATTRIBUTE_NORMAL|FILE_FLAG_WRITE_THROUGH;
 		break;
-	case MDB_O_COPY:			/* mdb_env_copy() & co */
+	case MDB_O_COPY:			// mdb_env_copy() & co
 		acc = GENERIC_WRITE;
 		share = 0;
 		disp = CREATE_NEW;
 		attrs = FILE_FLAG_NO_BUFFERING|FILE_FLAG_WRITE_THROUGH;
 		break;
-	default: break;	/* silence gcc -Wswitch (not all enum values handled) */
+	default: break;	// silence gcc -Wswitch (not all enum values handled)
 	}
 	fd = CreateFileW(fname->mn_val, acc, share, NULL, disp, attrs, NULL);
 #else
@@ -354,7 +351,7 @@ static int ESECT mdb_fopen(const MDB_env *env, MDB_name *fname,
 #ifndef _WIN32
 	else {
 		if (which != MDB_O_RDONLY && which != MDB_O_RDWR) {
-			/* Set CLOEXEC if we could not pass it to open() */
+			// Set CLOEXEC if we could not pass it to open()
 			if (!MDB_CLOEXEC && (flags = fcntl(fd, F_GETFD)) != -1)
 				(void) fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
 		}
@@ -362,7 +359,7 @@ static int ESECT mdb_fopen(const MDB_env *env, MDB_name *fname,
 			/* This may require buffer alignment.  There is no portable
 			 * way to ask how much, so we require OS pagesize alignment.
 			 */
-# ifdef F_NOCACHE	/* __APPLE__ */
+# ifdef F_NOCACHE	// __APPLE__
 			(void) fcntl(fd, F_NOCACHE, 1);
 # elif defined O_DIRECT
 			/* open(...O_DIRECT...) would break on filesystems without
@@ -373,7 +370,7 @@ static int ESECT mdb_fopen(const MDB_env *env, MDB_name *fname,
 # endif
 		}
 	}
-#endif	/* !_WIN32 */
+#endif	// !_WIN32
 
 	*res = fd;
 	return rc;
@@ -386,7 +383,7 @@ mdb_env_sync0(MDB_env *env, int force, pgno_t numpgs)
 	if (env->me_flags & MDB_RDONLY)
 		return EACCES;
 	if (force
-#ifndef _WIN32	/* Sync is normally achieved in Windows by doing WRITE_THROUGH writes */
+#ifndef _WIN32	// Sync is normally achieved in Windows by doing WRITE_THROUGH writes
 		|| !(env->me_flags & MDB_NOSYNC)
 #endif
 		) {
@@ -441,9 +438,8 @@ mdb_env_read_header(MDB_env *env, int prev, MDB_meta *meta)
 	int			i, rc, off;
 	enum { Size = sizeof(pbuf) };
 
-	/* We don't know the page size yet, so use a minimum value.
-	 * Read both meta pages so we can use the latest one.
-	 */
+	// We don't know the page size yet, so use a minimum value.
+	// Read both meta pages so we can use the latest one.
 
 	for (i=off=0; i<NUM_METAS; i++, off += meta->mm_psize) {
 #ifdef _WIN32
@@ -500,7 +496,7 @@ mdb_env_init_meta0(MDB_env *env, MDB_meta *meta)
 	meta->mm_psize = env->me_psize;
 	meta->mm_last_pg = NUM_METAS-1;
 	meta->mm_flags = env->me_flags & 0xffff;
-	meta->mm_flags |= MDB_INTEGERKEY; /* this is mm_dbs[FREE_DBI].md_flags */
+	meta->mm_flags |= MDB_INTEGERKEY; // this is mm_dbs[FREE_DBI].md_flags
 	meta->mm_dbs[FREE_DBI].md_root = P_INVALID;
 	meta->mm_dbs[MAIN_DBI].md_root = P_INVALID;
 }
@@ -584,11 +580,11 @@ mdb_env_write_meta(MDB_txn *txn)
 	flags = txn->mt_flags | env->me_flags;
 	mp = env->me_metas[toggle];
 	mapsize = env->me_metas[toggle ^ 1]->mm_mapsize;
-	/* Persist any increases of mapsize config */
+	// Persist any increases of mapsize config
 	if (mapsize < env->me_mapsize)
 		mapsize = env->me_mapsize;
 
-#ifndef _WIN32 /* We don't want to ever use MSYNC/FlushViewOfFile in Windows */
+#ifndef _WIN32 // We don't want to ever use MSYNC/FlushViewOfFile in Windows
 	if (flags & MDB_WRITEMAP) {
 		mp->mm_mapsize = mapsize;
 		mp->mm_dbs[FREE_DBI] = txn->mt_dbs[FREE_DBI];
@@ -596,7 +592,7 @@ mdb_env_write_meta(MDB_txn *txn)
 		mp->mm_last_pg = txn->mt_next_pgno - 1;
 #if (__GNUC__ * 100 + __GNUC_MINOR__ >= 404) && /* TODO: portability */	\
 	!(defined(__i386__) || defined(__x86_64__))
-		/* LY: issue a memory barrier, if not x86. ITS#7969 */
+		// LY: issue a memory barrier, if not x86. ITS#7969
 		__sync_synchronize();
 #endif
 		mp->mm_txnid = txn->mt_txnid;
@@ -604,7 +600,7 @@ mdb_env_write_meta(MDB_txn *txn)
 			unsigned meta_size = env->me_psize;
 			rc = (env->me_flags & MDB_MAPASYNC) ? MS_ASYNC : MS_SYNC;
 			ptr = (char *)mp - PAGEHDRSZ;
-			/* POSIX msync() requires ptr = start of OS page */
+			// POSIX msync() requires ptr = start of OS page
 			r2 = (ptr - env->me_map) & (env->me_os_psize - 1);
 			ptr -= r2;
 			meta_size += r2;
@@ -630,10 +626,9 @@ mdb_env_write_meta(MDB_txn *txn)
 	len = sizeof(MDB_meta) - off;
 	off += (char *)mp - env->me_map;
 
-	/* Write to the SYNC fd unless MDB_NOSYNC/MDB_NOMETASYNC.
-	 * (me_mfd goes to the same file as me_fd, but writing to it
-	 * also syncs to disk.  Avoids a separate fdatasync() call.)
-	 */
+	// Write to the SYNC fd unless MDB_NOSYNC/MDB_NOMETASYNC.
+	// (me_mfd goes to the same file as me_fd, but writing to it
+	// also syncs to disk.  Avoids a separate fdatasync() call.)
 	mfd = (flags & (MDB_NOSYNC|MDB_NOMETASYNC)) ? env->me_fd : env->me_mfd;
 #ifdef _WIN32
 	{
@@ -653,10 +648,9 @@ retry_write:
 			goto retry_write;
 #endif
 		DPUTS("write failed, disk error?");
-		/* On a failure, the pagecache still contains the new data.
-		 * Write some old data back, to prevent it from being used.
-		 * Use the non-SYNC fd; we know it will fail anyway.
-		 */
+		// On a failure, the pagecache still contains the new data.
+		// Write some old data back, to prevent it from being used.
+		// Use the non-SYNC fd; we know it will fail anyway.
 		meta.mm_last_pg = metab.mm_last_pg;
 		meta.mm_txnid = metab.mm_txnid;
 #ifdef _WIN32
@@ -665,19 +659,18 @@ retry_write:
 		WriteFile(env->me_fd, ptr, len, NULL, &ov);
 #else
 		r2 = pwrite(env->me_fd, ptr, len, off);
-		(void)r2;	/* Silence warnings. We don't care about pwrite's return value */
+		(void)r2;	// Silence warnings. We don't care about pwrite's return value
 #endif
 fail:
 		env->me_flags |= MDB_FATAL_ERROR;
 		return rc;
 	}
 done:
-	/* Memory ordering issues are irrelevant; since the entire writer
-	 * is wrapped by wmutex, all of these changes will become visible
-	 * after the wmutex is unlocked. Since the DB is multi-version,
-	 * readers will get consistent data regardless of how fresh or
-	 * how stale their view of these values is.
-	 */
+	// Memory ordering issues are irrelevant; since the entire writer
+	// is wrapped by wmutex, all of these changes will become visible
+	// after the wmutex is unlocked. Since the DB is multi-version,
+	// readers will get consistent data regardless of how fresh or
+	// how stale their view of these values is.
 	if (env->me_txns)
 		env->me_txns->mti_txnid = txn->mt_txnid;
 
@@ -725,7 +718,7 @@ mdb_env_create(MDB_env **env)
 }
 
 #ifdef _WIN32
-// @brief Map a result from an NTAPI call to WIN32.
+// Map a result from an NTAPI call to WIN32.
 static DWORD mdb_nt2win32(NTSTATUS st)
 {
 	OVERLAPPED o = {0};
@@ -786,7 +779,7 @@ mdb_env_map(MDB_env *env, void *addr)
 #else
 	int mmap_flags = MAP_SHARED;
 	int prot = PROT_READ;
-#ifdef MAP_NOSYNC	/* Used on FreeBSD */
+#ifdef MAP_NOSYNC	// Used on FreeBSD
 	if (flags & MDB_NOSYNC)
 		mmap_flags |= MAP_NOSYNC;
 #endif
@@ -803,24 +796,23 @@ mdb_env_map(MDB_env *env, void *addr)
 	}
 
 	if (flags & MDB_NORDAHEAD) {
-		/* Turn off readahead. It's harmful when the DB is larger than RAM. */
+		// Turn off readahead. It's harmful when the DB is larger than RAM.
 #ifdef MADV_RANDOM
 		madvise(env->me_map, env->me_mapsize, MADV_RANDOM);
 #else
 #ifdef POSIX_MADV_RANDOM
 		posix_madvise(env->me_map, env->me_mapsize, POSIX_MADV_RANDOM);
-#endif /* POSIX_MADV_RANDOM */
-#endif /* MADV_RANDOM */
+#endif // POSIX_MADV_RANDOM
+#endif // MADV_RANDOM
 	}
-#endif /* _WIN32 */
+#endif // _WIN32
 
-	/* Can happen because the address argument to mmap() is just a
-	 * hint.  mmap() can pick another, e.g. if the range is in use.
-	 * The MAP_FIXED flag would prevent that, but then mmap could
-	 * instead unmap existing pages to make room for the new map.
-	 */
+	// Can happen because the address argument to mmap() is just a
+	// hint.  mmap() can pick another, e.g. if the range is in use.
+	// The MAP_FIXED flag would prevent that, but then mmap could
+	// instead unmap existing pages to make room for the new map.
 	if (addr && env->me_map != addr)
-		return EBUSY;	/* TODO: Make a new MDB_* error code? */
+		return EBUSY;	// TODO: Make a new MDB_* error code?
 
 	p = (MDB_page *)env->me_map;
 	env->me_metas[0] = (MDB_meta*)(METADATA(p));
@@ -832,9 +824,8 @@ mdb_env_map(MDB_env *env, void *addr)
 int ESECT
 mdb_env_set_mapsize(MDB_env *env, mdb_size_t size)
 {
-	/* If env is already open, caller is responsible for making
-	 * sure there are no active txns.
-	 */
+	// If env is already open, caller is responsible for making
+	// sure there are no active txns.
 	if (env->me_map) {
 		MDB_meta *meta;
 		void *old;
@@ -846,7 +837,7 @@ mdb_env_set_mapsize(MDB_env *env, mdb_size_t size)
 		if (!size)
 			size = meta->mm_mapsize;
 		{
-			/* Silently round up to minimum if the size is too small */
+			// Silently round up to minimum if the size is too small
 			mdb_size_t minsize = (meta->mm_last_pg + 1) * env->me_psize;
 			if (size < minsize)
 				size = minsize;
@@ -904,13 +895,13 @@ mdb_env_open2(MDB_env *env, int prev)
 	MDB_meta meta;
 
 #ifdef _WIN32
-	/* See if we should use QueryLimited */
+	// See if we should use QueryLimited
 	rc = GetVersion();
 	if ((rc & 0xff) > 5)
 		env->me_pidquery = MDB_PROCESS_QUERY_LIMITED_INFORMATION;
 	else
 		env->me_pidquery = PROCESS_QUERY_INFORMATION;
-	/* Grab functions we need from NTDLL */
+	// Grab functions we need from NTDLL
 	if (!NtCreateSection) {
 		HMODULE h = GetModuleHandleW(L"NTDLL.DLL");
 		if (!h)
@@ -926,7 +917,7 @@ mdb_env_open2(MDB_env *env, int prev)
 			return MDB_PROBLEM;
 	}
 	env->ovs = 0;
-#endif /* _WIN32 */
+#endif // _WIN32
 
 	if ((i = mdb_env_read_header(env, prev, &meta)) != 0) {
 		if (i != ENOENT)
@@ -943,14 +934,13 @@ mdb_env_open2(MDB_env *env, int prev)
 		env->me_psize = meta.mm_psize;
 	}
 
-	/* Was a mapsize configured? */
+	// Was a mapsize configured?
 	if (!env->me_mapsize) {
 		env->me_mapsize = meta.mm_mapsize;
 	}
 	{
-		/* Make sure mapsize >= committed data size.  Even when using
-		 * mm_mapsize, which could be broken in old files (ITS#7789).
-		 */
+		// Make sure mapsize >= committed data size.  Even when using
+		// mm_mapsize, which could be broken in old files (ITS#7789).
 		mdb_size_t minsize = (meta.mm_last_pg + 1) * meta.mm_psize;
 		if (env->me_mapsize < minsize)
 			env->me_mapsize = minsize;
@@ -958,20 +948,19 @@ mdb_env_open2(MDB_env *env, int prev)
 	meta.mm_mapsize = env->me_mapsize;
 
 	if (newenv && !(flags & MDB_FIXEDMAP)) {
-		/* mdb_env_map() may grow the datafile.  Write the metapages
-		 * first, so the file will be valid if initialization fails.
-		 * Except with FIXEDMAP, since we do not yet know mm_address.
-		 * We could fill in mm_address later, but then a different
-		 * program might end up doing that - one with a memory layout
-		 * and map address which does not suit the main program.
-		 */
+		// mdb_env_map() may grow the datafile.  Write the metapages
+		// first, so the file will be valid if initialization fails.
+		// Except with FIXEDMAP, since we do not yet know mm_address.
+		// We could fill in mm_address later, but then a different
+		// program might end up doing that - one with a memory layout
+		// and map address which does not suit the main program.
 		rc = mdb_env_init_meta(env, &meta);
 		if (rc)
 			return rc;
 		newenv = 0;
 	}
 #ifdef _WIN32
-	/* For FIXEDMAP, make sure the file is non-empty before we attempt to map it */
+	// For FIXEDMAP, make sure the file is non-empty before we attempt to map it
 	if (newenv) {
 		char dummy = 0;
 		DWORD len;
@@ -1036,9 +1025,9 @@ static void mdb_env_reader_dest(void *ptr)
 	MDB_reader *reader = (MDB_reader*) ptr;
 
 #ifndef _WIN32
-	if (reader->mr_pid == getpid()) /* catch pthread_exit() in child process */
+	if (reader->mr_pid == getpid()) // catch pthread_exit() in child process
 #endif
-		/* We omit the mutex, so do this atomically (i.e. skip mr_txnid) */
+		// We omit the mutex, so do this atomically (i.e. skip mr_txnid)
 		reader->mr_pid = 0;
 }
 
@@ -1054,9 +1043,8 @@ mdb_env_share_locks(MDB_env *env, int *excl)
 #ifdef _WIN32
 	{
 		OVERLAPPED ov;
-		/* First acquire a shared lock. The Unlock will
-		 * then release the existing exclusive lock.
-		 */
+		// First acquire a shared lock. The Unlock will
+		// then release the existing exclusive lock.
 		memset(&ov, 0, sizeof(ov));
 		if (!LockFileEx(env->me_lfd, 0, 0, 1, 0, &ov)) {
 			rc = ErrCode();
@@ -1068,7 +1056,7 @@ mdb_env_share_locks(MDB_env *env, int *excl)
 #else
 	{
 		struct flock lock_info;
-		/* The shared lock replaces the existing lock */
+		// The shared lock replaces the existing lock
 		memset((void *)&lock_info, 0, sizeof(lock_info));
 		lock_info.l_type = F_RDLCK;
 		lock_info.l_whence = SEEK_SET;
@@ -1076,7 +1064,7 @@ mdb_env_share_locks(MDB_env *env, int *excl)
 		lock_info.l_len = 1;
 		while ((rc = fcntl(env->me_lfd, F_SETLK, &lock_info)) &&
 				(rc = ErrCode()) == EINTR) ;
-		*excl = rc ? -1 : 0;	/* error may mean we lost the lock */
+		*excl = rc ? -1 : 0;	// error may mean we lost the lock
 	}
 #endif
 
@@ -1114,7 +1102,7 @@ mdb_env_excl_lock(MDB_env *env, int *excl)
 		*excl = 1;
 	} else
 # ifndef MDB_USE_POSIX_MUTEX
-	if (*excl < 0) /* always true when MDB_USE_POSIX_MUTEX */
+	if (*excl < 0) // always true when MDB_USE_POSIX_MUTEX
 # endif
 	{
 		lock_info.l_type = F_RDLCK;
@@ -1169,7 +1157,7 @@ mdb_env_setup_locks(MDB_env *env, MDB_name *fname, int mode, int *excl)
 
 	rc = mdb_fopen(env, fname, MDB_O_LOCKS, mode, &env->me_lfd);
 	if (rc) {
-		/* Omit lockfile if read-only env on read-only filesystem */
+		// Omit lockfile if read-only env on read-only filesystem
 		if (rc == MDB_ERRCODE_ROFS && (env->me_flags & MDB_RDONLY)) {
 			return MDB_SUCCESS;
 		}
@@ -1182,7 +1170,7 @@ mdb_env_setup_locks(MDB_env *env, MDB_name *fname, int mode, int *excl)
 			goto fail;
 		env->me_flags |= MDB_ENV_TXKEY;
 #ifdef _WIN32
-		/* Windows TLS callbacks need help finding their TLS info. */
+		// Windows TLS callbacks need help finding their TLS info.
 		if (mdb_tls_nkeys >= MAX_TLS_KEYS) {
 			rc = MDB_TLS_FULL;
 			goto fail;
@@ -1191,9 +1179,8 @@ mdb_env_setup_locks(MDB_env *env, MDB_name *fname, int mode, int *excl)
 #endif
 	}
 
-	/* Try to get exclusive lock. If we succeed, then
-	 * nobody is using the lock region and we should initialize it.
-	 */
+	// Try to get exclusive lock. If we succeed, then
+	// nobody is using the lock region and we should initialize it.
 	if ((rc = mdb_env_excl_lock(env, excl))) goto fail;
 
 #ifdef _WIN32
@@ -1268,7 +1255,7 @@ mdb_env_setup_locks(MDB_env *env, MDB_name *fname, int mode, int *excl)
 		} idbuf;
 
 #if defined(__NetBSD__)
-#define	MDB_SHORT_SEMNAMES	1	/* limited to 14 chars */
+#define	MDB_SHORT_SEMNAMES	1	// limited to 14 chars
 #endif
 		if (fstat(env->me_lfd, &stbuf)) goto fail_errno;
 		memset(&idbuf, 0, sizeof(idbuf));
@@ -1283,9 +1270,8 @@ mdb_env_setup_locks(MDB_env *env, MDB_name *fname, int mode, int *excl)
 #endif
 			;
 		mdb_env_mname_init(env);
-		/* Clean up after a previous run, if needed:  Try to
-		 * remove both semaphores before doing anything else.
-		 */
+		// Clean up after a previous run, if needed:  Try to
+		// remove both semaphores before doing anything else.
 		sem_unlink(MUTEXNAME(env, 'r'));
 		sem_unlink(MUTEXNAME(env, 'w'));
 		env->me_rmutex = sem_open(MUTEXNAME(env, 'r'), O_CREAT|O_EXCL, mode, 1);
@@ -1294,7 +1280,7 @@ mdb_env_setup_locks(MDB_env *env, MDB_name *fname, int mode, int *excl)
 		if (env->me_wmutex == SEM_FAILED) goto fail_errno;
 #elif defined(MDB_USE_SYSV_SEM)
 		unsigned short vals[2] = {1, 1};
-		key_t key = ftok(fname->mn_val, 'M'); /* fname is lockfile path now */
+		key_t key = ftok(fname->mn_val, 'M'); // fname is lockfile path now
 		if (key == -1)
 			goto fail_errno;
 		semid = semget(key, 2, (mode & 0777) | IPC_CREAT);
@@ -1306,13 +1292,12 @@ mdb_env_setup_locks(MDB_env *env, MDB_name *fname, int mode, int *excl)
 		env->me_txns->mti_semid = semid;
 		env->me_txns->mti_rlocked = 0;
 		env->me_txns->mti_wlocked = 0;
-#else	/* MDB_USE_POSIX_MUTEX: */
+#else	// MDB_USE_POSIX_MUTEX:
 		pthread_mutexattr_t mattr;
 
-		/* Solaris needs this before initing a robust mutex.  Otherwise
-		 * it may skip the init and return EBUSY "seems someone already
-		 * inited" or EINVAL "it was inited differently".
-		 */
+		// Solaris needs this before initing a robust mutex.  Otherwise
+		// it may skip the init and return EBUSY "seems someone already
+		// inited" or EINVAL "it was inited differently".
 		memset(env->me_txns->mti_rmutex, 0, sizeof(*env->me_txns->mti_rmutex));
 		memset(env->me_txns->mti_wmutex, 0, sizeof(*env->me_txns->mti_wmutex));
 
@@ -1325,7 +1310,7 @@ mdb_env_setup_locks(MDB_env *env, MDB_name *fname, int mode, int *excl)
 		pthread_mutexattr_destroy(&mattr);
 		if (rc)
 			goto fail;
-#endif	/* _WIN32 || ... */
+#endif	// _WIN32 || ...
 
 		env->me_txns->mti_magic = MDB_MAGIC;
 		env->me_txns->mti_format = MDB_LOCK_FORMAT;
@@ -1366,10 +1351,10 @@ mdb_env_setup_locks(MDB_env *env, MDB_name *fname, int mode, int *excl)
 #elif defined(MDB_USE_SYSV_SEM)
 		semid = env->me_txns->mti_semid;
 		semu.buf = &buf;
-		/* check for read access */
+		// check for read access
 		if (semctl(semid, 0, IPC_STAT, semu) < 0)
 			goto fail_errno;
-		/* check for write access */
+		// check for write access
 		if (semctl(semid, 0, IPC_SET, semu) < 0)
 			goto fail_errno;
 #endif
@@ -1417,10 +1402,10 @@ mdb_env_open(MDB_env *env, const char *path, unsigned int flags, mdb_mode_t mode
 	if (rc)
 		return rc;
 
-	flags |= MDB_ENV_ACTIVE;	/* tell mdb_env_close0() to clean up */
+	flags |= MDB_ENV_ACTIVE;	// tell mdb_env_close0() to clean up
 
 	if (flags & MDB_RDONLY) {
-		/* silently ignore WRITEMAP when we're only getting read access */
+		// silently ignore WRITEMAP when we're only getting read access
 		flags &= ~MDB_WRITEMAP;
 	} else {
 		if (!((env->me_free_pgs = mdb_midl_alloc(MDB_IDL_UM_MAX)) &&
@@ -1440,9 +1425,9 @@ mdb_env_open(MDB_env *env, const char *path, unsigned int flags, mdb_mode_t mode
 		rc = ENOMEM;
 		goto leave;
 	}
-	env->me_dbxs[FREE_DBI].md_cmp = mdb_cmp_long; /* aligned MDB_INTEGERKEY */
+	env->me_dbxs[FREE_DBI].md_cmp = mdb_cmp_long; // aligned MDB_INTEGERKEY
 
-	/* For RDONLY, get lockfile after we know datafile exists */
+	// For RDONLY, get lockfile after we know datafile exists
 	if (!(flags & (MDB_RDONLY|MDB_NOLOCK))) {
 		rc = mdb_env_setup_locks(env, &fname, mode, &excl);
 		if (rc)
@@ -1471,9 +1456,8 @@ mdb_env_open(MDB_env *env, const char *path, unsigned int flags, mdb_mode_t mode
 	}
 
 	if ((rc = mdb_env_open2(env, flags & MDB_PREVSNAPSHOT)) == MDB_SUCCESS) {
-		/* Synchronous fd for meta writes. Needed even with
-		 * MDB_NOSYNC/MDB_NOMETASYNC, in case these get reset.
-		 */
+		// Synchronous fd for meta writes. Needed even with
+		// MDB_NOSYNC/MDB_NOMETASYNC, in case these get reset.
 		if (!(flags & (MDB_RDONLY|MDB_WRITEMAP))) {
 			rc = mdb_fopen(env, &fname, MDB_O_META, mode, &env->me_mfd);
 			if (rc)
@@ -1524,7 +1508,7 @@ mdb_env_close0(MDB_env *env, int excl)
 	if (!(env->me_flags & MDB_ENV_ACTIVE))
 		return;
 
-	/* Doing this here since me_dbxs may not exist during mdb_env_close */
+	// Doing this here since me_dbxs may not exist during mdb_env_close
 	if (env->me_dbxs) {
 		for (i = env->me_maxdbs; --i >= CORE_DBS; )
 			free(env->me_dbxs[i].md_name.mv_data);
@@ -1542,7 +1526,7 @@ mdb_env_close0(MDB_env *env, int excl)
 	if (env->me_flags & MDB_ENV_TXKEY) {
 		pthread_key_delete(env->me_txkey);
 #ifdef _WIN32
-		/* Delete our key from the global list */
+		// Delete our key from the global list
 		for (i=0; i<mdb_tls_nkeys; i++)
 			if (mdb_tls_keys[i] == env->me_txkey) {
 				mdb_tls_keys[i] = mdb_tls_keys[mdb_tls_nkeys-1];
@@ -1571,13 +1555,12 @@ mdb_env_close0(MDB_env *env, int excl)
 		(void) close(env->me_fd);
 	if (env->me_txns) {
 		MDB_PID_T pid = getpid();
-		/* Clearing readers is done in this function because
-		 * me_txkey with its destructor must be disabled first.
-		 *
-		 * We skip the the reader mutex, so we touch only
-		 * data owned by this process (me_close_readers and
-		 * our readers), and clear each reader atomically.
-		 */
+		// Clearing readers is done in this function because
+		// me_txkey with its destructor must be disabled first.
+		//
+		// We skip the the reader mutex, so we touch only
+		// data owned by this process (me_close_readers and
+		// our readers), and clear each reader atomically.
 		for (i = env->me_close_readers; --i >= 0; )
 			if (env->me_txns->mti_readers[i].mr_pid == pid)
 				env->me_txns->mti_readers[i].mr_pid = 0;
@@ -1586,17 +1569,15 @@ mdb_env_close0(MDB_env *env, int excl)
 			CloseHandle(env->me_rmutex);
 			if (env->me_wmutex) CloseHandle(env->me_wmutex);
 		}
-		/* Windows automatically destroys the mutexes when
-		 * the last handle closes.
-		 */
+		// Windows automatically destroys the mutexes when
+		// the last handle closes.
 #elif defined(MDB_USE_POSIX_SEM)
 		if (env->me_rmutex != SEM_FAILED) {
 			sem_close(env->me_rmutex);
 			if (env->me_wmutex != SEM_FAILED)
 				sem_close(env->me_wmutex);
-			/* If we have the filelock:  If we are the
-			 * only remaining user, clean up semaphores.
-			 */
+			// If we have the filelock:  If we are the
+			// only remaining user, clean up semaphores.
 			if (excl == 0)
 				mdb_env_excl_lock(env, &excl);
 			if (excl > 0) {
@@ -1606,9 +1587,8 @@ mdb_env_close0(MDB_env *env, int excl)
 		}
 #elif defined(MDB_USE_SYSV_SEM)
 		if (env->me_rmutex->semid != -1) {
-			/* If we have the filelock:  If we are the
-			 * only remaining user, clean up semaphores.
-			 */
+			// If we have the filelock:  If we are the
+			// only remaining user, clean up semaphores.
 			if (excl == 0)
 				mdb_env_excl_lock(env, &excl);
 			if (excl > 0)
@@ -1620,9 +1600,8 @@ mdb_env_close0(MDB_env *env, int excl)
 	if (env->me_lfd != INVALID_HANDLE_VALUE) {
 #ifdef _WIN32
 		if (excl >= 0) {
-			/* Unlock the lockfile.  Windows would have unlocked it
-			 * after closing anyway, but not necessarily at once.
-			 */
+			// Unlock the lockfile.  Windows would have unlocked it
+			// after closing anyway, but not necessarily at once.
 			UnlockFile(env->me_lfd, 0, 0, 1, 0);
 		}
 #endif
@@ -1702,7 +1681,7 @@ mdb_env_copythr(void *arg)
 	for(;;) {
 		while (!my->mc_new)
 			pthread_cond_wait(&my->mc_cond, &my->mc_mutex);
-		if (my->mc_new == 0 + MDB_EOF) /* 0 buffers, just EOF */
+		if (my->mc_new == 0 + MDB_EOF) // 0 buffers, just EOF
 			break;
 		wsize = my->mc_wlen[toggle];
 		ptr = my->mc_wbuf[toggle];
@@ -1714,9 +1693,8 @@ again:
 				rc = ErrCode();
 #if defined(SIGPIPE) && !defined(_WIN32)
 				if (rc == EPIPE) {
-					/* Collect the pending SIGPIPE, otherwise at least OS X
-					 * gives it to the process on thread-exit (ITS#8504).
-					 */
+					// Collect the pending SIGPIPE, otherwise at least OS X
+					// gives it to the process on thread-exit (ITS#8504).
 					int tmp;
 					sigwait(&set, &tmp);
 				}
@@ -1735,7 +1713,7 @@ again:
 		if (rc) {
 			my->mc_error = rc;
 		}
-		/* If there's an overflow page tail, write it too */
+		// If there's an overflow page tail, write it too
 		if (my->mc_olen[toggle]) {
 			wsize = my->mc_olen[toggle];
 			ptr = my->mc_over[toggle];
@@ -1744,7 +1722,7 @@ again:
 		}
 		my->mc_wlen[toggle] = 0;
 		toggle ^= 1;
-		/* Return the empty buffer to provider */
+		// Return the empty buffer to provider
 		my->mc_new--;
 		pthread_cond_signal(&my->mc_cond);
 	}
@@ -1763,12 +1741,12 @@ mdb_env_cthr_toggle(mdb_copy *my, int adjust)
 	pthread_mutex_lock(&my->mc_mutex);
 	my->mc_new += adjust;
 	pthread_cond_signal(&my->mc_cond);
-	while (my->mc_new & 2)		/* both buffers in use */
+	while (my->mc_new & 2)		// both buffers in use
 		pthread_cond_wait(&my->mc_cond, &my->mc_mutex);
 	pthread_mutex_unlock(&my->mc_mutex);
 
 	my->mc_toggle ^= (adjust & 1);
-	/* Both threads reset mc_wlen, to be safe from threading errors */
+	// Both threads reset mc_wlen, to be safe from threading errors
 	my->mc_wlen[my->mc_toggle] = 0;
 	return my->mc_error;
 }
@@ -1787,7 +1765,7 @@ mdb_env_cwalk(mdb_copy *my, pgno_t *pg, int flags)
 	int rc, toggle;
 	unsigned int i;
 
-	/* Empty DB, nothing to do */
+	// Empty DB, nothing to do
 	if (*pg == P_INVALID)
 		return MDB_SUCCESS;
 
@@ -1802,7 +1780,7 @@ mdb_env_cwalk(mdb_copy *my, pgno_t *pg, int flags)
 	if (rc)
 		return rc;
 
-	/* Make cursor pages writable */
+	// Make cursor pages writable
 	buf = ptr = (char*)malloc(my->mc_env->me_psize * mc.mc_snum);
 	if (buf == NULL)
 		return ENOMEM;
@@ -1813,7 +1791,7 @@ mdb_env_cwalk(mdb_copy *my, pgno_t *pg, int flags)
 		ptr += my->mc_env->me_psize;
 	}
 
-	/* This is writable space for a leaf page. Usually not needed. */
+	// This is writable space for a leaf page. Usually not needed.
 	leaf = (MDB_page *)ptr;
 
 	toggle = my->mc_toggle;
@@ -1830,7 +1808,7 @@ mdb_env_cwalk(mdb_copy *my, pgno_t *pg, int flags)
 						MDB_page *omp;
 						pgno_t pg;
 
-						/* Need writable leaf */
+						// Need writable leaf
 						if (mp != leaf) {
 							mc.mc_pg[mc.mc_top] = leaf;
 							mdb_page_copy(leaf, mp, my->mc_env->me_psize);
@@ -1865,7 +1843,7 @@ mdb_env_cwalk(mdb_copy *my, pgno_t *pg, int flags)
 					} else if (ni->mn_flags & F_SUBDATA) {
 						MDB_db db;
 
-						/* Need writable leaf */
+						// Need writable leaf
 						if (mp != leaf) {
 							mc.mc_pg[mc.mc_top] = leaf;
 							mdb_page_copy(leaf, mp, my->mc_env->me_psize);
@@ -1897,9 +1875,8 @@ again:
 				mc.mc_snum++;
 				mc.mc_ki[mc.mc_top] = 0;
 				if (IS_BRANCH(mp)) {
-					/* Whenever we advance to a sibling branch page,
-					 * we must proceed all the way down to its first leaf.
-					 */
+					// Whenever we advance to a sibling branch page,
+					// we must proceed all the way down to its first leaf.
 					mdb_page_copy(mc.mc_pg[mc.mc_top], mp, my->mc_env->me_psize);
 					goto again;
 				} else
@@ -1918,12 +1895,12 @@ again:
 		mo->mp_pgno = my->mc_next_pgno++;
 		my->mc_wlen[toggle] += my->mc_env->me_psize;
 		if (mc.mc_top) {
-			/* Update parent if there is one */
+			// Update parent if there is one
 			ni = NODEPTR(mc.mc_pg[mc.mc_top-1], mc.mc_ki[mc.mc_top-1]);
 			SETPGNO(ni, mo->mp_pgno);
 			mdb_cursor_pop(&mc);
 		} else {
-			/* Otherwise we're done */
+			// Otherwise we're done
 			*pg = mo->mp_pgno;
 			break;
 		}
@@ -1953,7 +1930,7 @@ mdb_env_copyfd1(MDB_env *env, HANDLE fd)
 	}
 	my.mc_wbuf[0] = (char*) _aligned_malloc(MDB_WBUF*2, env->me_os_psize);
 	if (my.mc_wbuf[0] == NULL) {
-		/* _aligned_malloc() sets errno, but we use Windows error codes */
+		// _aligned_malloc() sets errno, but we use Windows error codes
 		rc = ERROR_NOT_ENOUGH_MEMORY;
 		goto done;
 	}
@@ -2004,12 +1981,11 @@ mdb_env_copyfd1(MDB_env *env, HANDLE fd)
 	*(MDB_meta *)METADATA(mp) = *mm;
 	mm = (MDB_meta *)METADATA(mp);
 
-	/* Set metapage 1 with current main DB */
+	// Set metapage 1 with current main DB
 	root = new_root = txn->mt_dbs[MAIN_DBI].md_root;
 	if (root != P_INVALID) {
-		/* Count free pages + freeDB pages.  Subtract from last_pg
-		 * to find the new last_pg, which also becomes the new root.
-		 */
+		// Count free pages + freeDB pages.  Subtract from last_pg
+		// to find the new last_pg, which also becomes the new root.
 		MDB_ID freecount = 0;
 		MDB_cursor mc;
 		MDB_val key, data;
@@ -2027,20 +2003,19 @@ mdb_env_copyfd1(MDB_env *env, HANDLE fd)
 		mm->mm_dbs[MAIN_DBI] = txn->mt_dbs[MAIN_DBI];
 		mm->mm_dbs[MAIN_DBI].md_root = new_root;
 	} else {
-		/* When the DB is empty, handle it specially to
-		 * fix any breakage like page leaks from ITS#8174.
-		 */
+		// When the DB is empty, handle it specially to
+		// fix any breakage like page leaks from ITS#8174.
 		mm->mm_dbs[MAIN_DBI].md_flags = txn->mt_dbs[MAIN_DBI].md_flags;
 	}
 	if (root != P_INVALID || mm->mm_dbs[MAIN_DBI].md_flags) {
-		mm->mm_txnid = 1;		/* use metapage 1 */
+		mm->mm_txnid = 1;		// use metapage 1
 	}
 
 	my.mc_wlen[0] = env->me_psize * NUM_METAS;
 	my.mc_txn = txn;
 	rc = mdb_env_cwalk(&my, &root, 0);
 	if (rc == MDB_SUCCESS && root != new_root) {
-		rc = MDB_INCOMPATIBLE;	/* page leak or corrupt DB */
+		rc = MDB_INCOMPATIBLE;	// page leak or corrupt DB
 	}
 
 finish:
@@ -2102,18 +2077,17 @@ mdb_env_copyfd0(MDB_env *env, HANDLE fd)
 #define DO_WRITE(rc, fd, ptr, w2, len)	len = write(fd, ptr, w2); rc = (len >= 0)
 #endif
 
-	/* Do the lock/unlock of the reader mutex before starting the
-	 * write txn.  Otherwise other read txns could block writers.
-	 */
+	// Do the lock/unlock of the reader mutex before starting the
+	// write txn.  Otherwise other read txns could block writers.
 	rc = mdb_txn_begin(env, NULL, MDB_RDONLY, &txn);
 	if (rc)
 		return rc;
 
 	if (env->me_txns) {
-		/* We must start the actual read txn after blocking writers */
+		// We must start the actual read txn after blocking writers
 		mdb_txn_end(txn, MDB_END_RESET_TMP);
 
-		/* Temporarily block writers until we snapshot the meta pages */
+		// Temporarily block writers until we snapshot the meta pages
 		wmutex = env->me_wmutex;
 		if (LOCK_MUTEX(rc, env, wmutex))
 			goto leave;
@@ -2139,7 +2113,7 @@ mdb_env_copyfd0(MDB_env *env, HANDLE fd)
 			w2 -= len;
 			continue;
 		} else {
-			/* Non-blocking or async handles are not supported */
+			// Non-blocking or async handles are not supported
 			rc = EIO;
 			break;
 		}
@@ -2321,7 +2295,7 @@ int ESECT mdb_stat(MDB_txn *txn, MDB_dbi dbi, MDB_stat *arg)
 	if (txn->mt_dbflags[dbi] & DB_STALE) {
 		MDB_cursor mc;
 		MDB_xcursor mx;
-		/* Stale, must read the DB's root. cursor_init does it for us. */
+		// Stale, must read the DB's root. cursor_init does it for us.
 		mdb_cursor_init(&mc, txn, dbi, &mx);
 	}
 	return mdb_stat0(txn->mt_env, &txn->mt_dbs[dbi], arg);
