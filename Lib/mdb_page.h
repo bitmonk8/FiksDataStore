@@ -4,12 +4,6 @@
 #include "mdb_util.h"
 #include "midl.h"
 
-// Forward declarations
-struct MDB_env;
-struct MDB_txn;
-struct MDB_cursor;
-struct MDB_node;
-
 /** Common header for all page types. The page type depends on #mp_flags.
  */
 struct MDB_page {

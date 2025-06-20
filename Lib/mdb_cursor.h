@@ -3,10 +3,6 @@
 #include "mdb_internal.h"
 #include "mdb_db.h"
 
-struct MDB_xcursor;
-struct MDB_page;
-struct MDB_node;
-
 	/** Cursors are used for all DB operations.
 	 *	A cursor holds a path of (page pointer, key index) from the DB
 	 *	root to a position in the DB, plus other state. #MDB_DUPSORT

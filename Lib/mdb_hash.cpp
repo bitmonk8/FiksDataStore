@@ -38,13 +38,12 @@ mdb_hash(const void *val, size_t len)
 {
 	const unsigned char *s = (const unsigned char *) val, *end = s + len;
 	mdb_hash_t hval = 0xcbf29ce484222325ULL;
-	/*
-	 * FNV-1a hash each octet of the buffer
-	 */
-	while (s < end) {
+	// FNV-1a hash each octet of the buffer
+	while (s < end)
+	{
 		hval = (hval ^ *s++) * 0x100000001b3ULL;
 	}
-	/* return our new hash value */
+	// return our new hash value
 	return hval;
 }
 
@@ -62,7 +61,8 @@ mdb_pack85(unsigned long long l, char *out)
 {
 	int i;
 
-	for (i=0; i<10 && l; i++) {
+	for (i=0; i<10 && l; i++)
+	{
 		*out++ = mdb_a85[l % 85];
 		l /= 85;
 	}

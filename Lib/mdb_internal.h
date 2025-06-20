@@ -3,6 +3,24 @@
 #include "lmdb.h"
 #include "midl.h"
 
+// Forward declarations of types defined in Lib/*.h files
+struct MDB_cursor;
+struct MDB_db;
+struct MDB_dbx;
+struct MDB_env;
+struct MDB_meta;
+struct MDB_node;
+struct MDB_page;
+struct MDB_page2;
+struct MDB_pgstate;
+struct MDB_reader;
+struct MDB_rxbody;
+struct MDB_txbody;
+struct MDB_txn;
+struct MDB_txninfo;
+struct MDB_xcursor;
+enum Pidlock_op;
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE 1
 #endif

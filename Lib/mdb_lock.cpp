@@ -25,18 +25,20 @@ mdb_reader_pid(MDB_env *env, enum Pidlock_op op, MDB_PID_T pid)
 #if !(MDB_PIDLOCK)		/* Currently the same as defined(_WIN32) */
 	int ret = 0;
 	HANDLE h;
-	if (op == Pidcheck) {
+	if (op == Pidcheck)
+	{
 		h = OpenProcess(env->me_pidquery, FALSE, pid);
-		/* No documented "no such process" code, but other program use this: */
+		// No documented "no such process" code, but other program use this:
 		if (!h)
 			return ErrCode() != ERROR_INVALID_PARAMETER;
-		/* A process exists until all handles to it close. Has it exited? */
+		// A process exists until all handles to it close. Has it exited?
 		ret = WaitForSingleObject(h, 0) != 0;
 		CloseHandle(h);
 	}
 	return ret;
 #else
-	for (;;) {
+	for (;;)
+	{
 		int rc;
 		struct flock lock_info;
 		memset(&lock_info, 0, sizeof(lock_info));
@@ -44,10 +46,12 @@ mdb_reader_pid(MDB_env *env, enum Pidlock_op op, MDB_PID_T pid)
 		lock_info.l_whence = SEEK_SET;
 		lock_info.l_start = pid;
 		lock_info.l_len = 1;
-		if ((rc = fcntl(env->me_lfd, op, &lock_info)) == 0) {
+		if ((rc = fcntl(env->me_lfd, op, &lock_info)) == 0)
+		{
 			if (op == F_GETLK && lock_info.l_type != F_UNLCK)
 				rc = -1;
-		} else if ((rc = ErrCode()) == EINTR) {
+		} else if ((rc = ErrCode()) == EINTR)
+		{
 			continue;
 		}
 		return rc;
@@ -65,18 +69,22 @@ mdb_reader_list(MDB_env *env, MDB_msg_func *func, void *ctx)
 
 	if (!env || !func)
 		return -1;
-	if (!env->me_txns) {
+	if (!env->me_txns)
+	{
 		return func("(no reader locks)\n", ctx);
 	}
 	rdrs = env->me_txns->mti_numreaders;
 	mr = env->me_txns->mti_readers;
-	for (i=0; i<rdrs; i++) {
-		if (mr[i].mr_pid) {
+	for (i=0; i<rdrs; i++)
+	{
+		if (mr[i].mr_pid)
+		{
 			txnid_t	txnid = mr[i].mr_txnid;
 			snprintf(buf, sizeof(buf), txnid == (txnid_t)-1 ?
 				"%10d %" Z "x -\n" : "%10d %" Z "x %" Yu "\n",
 				(int)mr[i].mr_pid, (size_t)mr[i].mr_tid, txnid);
-			if (first) {
+			if (first)
+			{
 				first = 0;
 				rc = func("    pid     thread     txnid\n", ctx);
 				if (rc < 0)
@@ -87,7 +95,8 @@ mdb_reader_list(MDB_env *env, MDB_msg_func *func, void *ctx)
 				break;
 		}
 	}
-	if (first) {
+	if (first)
+	{
 		rc = func("(no active readers)\n", ctx);
 	}
 	return rc;
@@ -98,31 +107,36 @@ mdb_reader_list(MDB_env *env, MDB_msg_func *func, void *ctx)
  */
 static int ESECT mdb_pid_insert(MDB_PID_T *ids, MDB_PID_T pid)
 {
-	/* binary search of pid in list */
+	// binary search of pid in list
 	unsigned base = 0;
 	unsigned cursor = 1;
 	int val = 0;
 	unsigned n = ids[0];
 
-	while( 0 < n ) {
+	while( 0 < n )
+	{
 		unsigned pivot = n >> 1;
 		cursor = base + pivot + 1;
 		val = pid - ids[cursor];
 
-		if( val < 0 ) {
+		if( val < 0 )
+		{
 			n = pivot;
 
-		} else if ( val > 0 ) {
+		} else if ( val > 0 )
+		{
 			base = cursor;
 			n -= pivot + 1;
 
-		} else {
-			/* found, so it's a duplicate */
+		} else
+		{
+			// found, so it's a duplicate
 			return -1;
 		}
 	}
 
-	if( val > 0 ) {
+	if( val > 0 )
+	{
 		++cursor;
 	}
 	ids[0]++;
@@ -155,18 +169,20 @@ mdb_mutex_failed(MDB_env *env, mdb_mutexref_t mutex, int rc)
 	int rlocked, rc2;
 	MDB_meta *meta;
 
-	if (rc == MDB_OWNERDEAD) {
-		/* We own the mutex. Clean up after dead previous owner. */
+	if (rc == MDB_OWNERDEAD)
+	{
+		// We own the mutex. Clean up after dead previous owner.
 		rc = MDB_SUCCESS;
 		rlocked = (mutex == env->me_rmutex);
-		if (!rlocked) {
-			/* Keep mti_txnid updated, otherwise next writer can
-			 * overwrite data which latest meta page refers to.
-			 */
+		if (!rlocked)
+		{
+			// Keep mti_txnid updated, otherwise next writer can
+			// overwrite data which latest meta page refers to.
 			meta = mdb_env_pick_meta(env);
 			env->me_txns->mti_txnid = meta->mm_txnid;
-			/* env is hosed if the dead thread was ours */
-			if (env->me_txn) {
+			// env is hosed if the dead thread was ours
+			if (env->me_txn)
+			{
 				env->me_flags |= MDB_FATAL_ERROR;
 				env->me_txn = NULL;
 				rc = MDB_PANIC;
@@ -177,11 +193,13 @@ mdb_mutex_failed(MDB_env *env, mdb_mutexref_t mutex, int rc)
 		rc2 = mdb_reader_check0(env, rlocked, NULL);
 		if (rc2 == 0)
 			rc2 = mdb_mutex_consistent(mutex);
-		if (rc || (rc = rc2)) {
+		if (rc || (rc = rc2))
+		{
 			DPRINTF(("LOCK_MUTEX recovery failed, %s", mdb_strerror(rc)));
 			UNLOCK_MUTEX(mutex);
 		}
-	} else {
+	} else
+	{
 #ifdef _WIN32
 		rc = ErrCode();
 #endif
@@ -207,26 +225,34 @@ mdb_reader_check0(MDB_env *env, int rlocked, int *dead)
 		return ENOMEM;
 	pids[0] = 0;
 	mr = env->me_txns->mti_readers;
-	for (i=0; i<rdrs; i++) {
+	for (i=0; i<rdrs; i++)
+	{
 		pid = mr[i].mr_pid;
-		if (pid && pid != env->me_pid) {
-			if (mdb_pid_insert(pids, pid) == 0) {
-				if (!mdb_reader_pid(env, Pidcheck, pid)) {
-					/* Stale reader found */
+		if (pid && pid != env->me_pid)
+		{
+			if (mdb_pid_insert(pids, pid) == 0)
+			{
+				if (!mdb_reader_pid(env, Pidcheck, pid))
+				{
+					// Stale reader found
 					j = i;
-					if (rmutex) {
-						if ((rc = LOCK_MUTEX0(rmutex)) != 0) {
+					if (rmutex)
+					{
+						if ((rc = LOCK_MUTEX0(rmutex)) != 0)
+						{
 							if ((rc = mdb_mutex_failed(env, rmutex, rc)))
 								break;
-							rdrs = 0; /* the above checked all readers */
-						} else {
-							/* Recheck, a new process may have reused pid */
+							rdrs = 0; // the above checked all readers
+						} else
+						{
+							// Recheck, a new process may have reused pid
 							if (mdb_reader_pid(env, Pidcheck, pid))
 								j = rdrs;
 						}
 					}
 					for (; j<rdrs; j++)
-							if (mr[j].mr_pid == pid) {
+							if (mr[j].mr_pid == pid)
+							{
 								DPRINTF(("clear stale reader pid %u txn %" Yd,
 									(unsigned) pid, mr[j].mr_txnid));
 								mr[j].mr_pid = 0;
@@ -264,8 +290,10 @@ mdb_sem_wait(mdb_mutexref_t sem)
 	int rc, *locked = sem->locked;
 	struct sembuf sb = { 0, -1, SEM_UNDO };
 	sb.sem_num = sem->semnum;
-	do {
-		if (!semop(sem->semid, &sb, 1)) {
+	do
+	{
+		if (!semop(sem->semid, &sb, 1))
+		{
 			rc = *locked ? MDB_OWNERDEAD : MDB_SUCCESS;
 			*locked = 1;
 			break;

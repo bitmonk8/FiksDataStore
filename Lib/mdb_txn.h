@@ -2,11 +2,6 @@
 
 #include "mdb_internal.h"
 
-struct MDB_reader;
-struct MDB_db;
-struct MDB_page;
-struct MDB_dbx;
-
 	/** A database transaction.
 	 *	Every operation requires a transaction handle.
 	 */

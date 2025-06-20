@@ -58,6 +58,7 @@ customModes:
       
       ### C/C++ Standards (LMDB Project)
       - **MANDATORY**: Follow all constraints defined in DESIGN_CONSTRAINTS.md
+      - **MANDATORY**: Follow all conventions defined in CODING_CONVENTIONS.md
       - Follow existing code style and naming conventions in the project
       - Maintain compatibility with the LMDB codebase structure
       - Preserve existing API contracts and interfaces

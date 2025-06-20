@@ -24,6 +24,18 @@ All `Lib/*.cpp` files MUST `#include` their corresponding `.h` file as their fir
 
 **Rationale**: Ensures header files are self-contained and can be compiled independently, catching missing dependencies early.
 
+### 4. Forward Declaration Management
+All forward declarable types defined in `Lib/*.h` files MUST have their forward declarations added to `mdb_internal.h`.
+
+**Definition**: A forward declarable type is any C++ type which can be forward declared in traditional way or by using a 'C++ using' declaration.
+
+**Rules**:
+- Forward declarable types MUST NOT be defined in `mdb_internal.h`
+- Forward declarable types should be defined in separate header files
+- ONLY `mdb_internal.h` should contain forward declarations of types defined in `Lib/*.h`
+
+**Rationale**: Centralizes forward declarations to reduce compilation dependencies and provides a single source of truth for type declarations.
+
 ## Enforcement
 
 These constraints are enforced by the custom Refactor mode in RooCode and should be verified during code reviews.

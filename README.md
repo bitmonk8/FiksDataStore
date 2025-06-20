@@ -212,7 +212,8 @@ Contributions are welcome! This project is in active development and we're looki
 - Maintain backward compatibility during transition
 - Comprehensive testing for all changes
 - Clear documentation for new APIs
-- **Adhere to [Design Constraints](DESIGN_CONSTRAINTS.md)** - Mandatory coding standards for the project
+- **Adhere to [Design Constraints](DESIGN_CONSTRAINTS.md)** - Mandatory design standards for the project
+- **Follow [Coding Conventions](CODING_CONVENTIONS.md)** - Mandatory coding style and formatting standards
 
 ## License
 

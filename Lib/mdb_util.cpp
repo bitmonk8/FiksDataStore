@@ -45,10 +45,9 @@ static const char *const mdb_errstr[] = {
 const char* mdb_strerror(int err)
 {
 #ifdef _WIN32
-	/** HACK: pad 4KB on stack over the buf. Return system msgs in buf.
-	 *	This works as long as no function between the call to mdb_strerror
-	 *	and the actual use of the message uses more than 4K of stack.
-	 */
+	// HACK: pad 4KB on stack over the buf. Return system msgs in buf.
+	// This works as long as no function between the call to mdb_strerror
+	// and the actual use of the message uses more than 4K of stack.
 #define MSGSIZE	1024
 #define PADSIZE	4096
 	static char buf[MSGSIZE+PADSIZE], *ptr = buf;
@@ -57,18 +56,19 @@ const char* mdb_strerror(int err)
 	if (!err)
 		return ("Successful return: 0");
 
-	if (err >= MDB_KEYEXIST && err <= MDB_LAST_ERRCODE) {
+	if (err >= MDB_KEYEXIST && err <= MDB_LAST_ERRCODE)
+	{
 		i = err - MDB_KEYEXIST;
 		return mdb_errstr[i];
 	}
 
 #ifdef _WIN32
-	/* These are the C-runtime error codes we use. The comment indicates
-	 * their numeric value, and the Win32 error they would correspond to
-	 * if the error actually came from a Win32 API. A major mess, we should
-	 * have used LMDB-specific error codes for everything.
-	 */
-	switch(err) {
+	// These are the C-runtime error codes we use. The comment indicates
+	// their numeric value, and the Win32 error they would correspond to
+	// if the error actually came from a Win32 API. A major mess, we should
+	// have used LMDB-specific error codes for everything.
+	switch(err)
+	{
 	case ENOENT:	/* 2, FILE_NOT_FOUND */
 	case EIO:		/* 5, ACCESS_DENIED */
 	case ENOMEM:	/* 12, INVALID_ACCESS */

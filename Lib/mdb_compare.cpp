@@ -35,7 +35,8 @@ mdb_cmp_cint(const MDB_val *a, const MDB_val *b)
 
 	u = (unsigned short *) ((char *) a->mv_data + a->mv_size);
 	c = (unsigned short *) ((char *) b->mv_data + a->mv_size);
-	do {
+	do
+	{
 		x = *--u - *--c;
 	} while(!x && u > (unsigned short *)a->mv_data);
 	return x;
@@ -46,7 +47,8 @@ mdb_cmp_cint(const MDB_val *a, const MDB_val *b)
 	end = (unsigned short *) ((char *) a->mv_data + a->mv_size);
 	u = (unsigned short *)a->mv_data;
 	c = (unsigned short *)b->mv_data;
-	do {
+	do
+	{
 		x = *u++ - *c++;
 	} while(!x && u < end);
 	return x;
@@ -63,7 +65,8 @@ mdb_cmp_memn(const MDB_val *a, const MDB_val *b)
 
 	len = a->mv_size;
 	len_diff = (ssize_t) a->mv_size - (ssize_t) b->mv_size;
-	if (len_diff > 0) {
+	if (len_diff > 0)
+	{
 		len = b->mv_size;
 		len_diff = 1;
 	}
@@ -85,12 +88,14 @@ mdb_cmp_memnr(const MDB_val *a, const MDB_val *b)
 	p2 = (const unsigned char *)b->mv_data + b->mv_size;
 
 	len_diff = (ssize_t) a->mv_size - (ssize_t) b->mv_size;
-	if (len_diff > 0) {
+	if (len_diff > 0)
+	{
 		p1_lim += len_diff;
 		len_diff = 1;
 	}
 
-	while (p1 > p1_lim) {
+	while (p1 > p1_lim)
+	{
 		diff = *--p1 - *--p2;
 		if (diff)
 			return diff;

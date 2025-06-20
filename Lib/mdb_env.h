@@ -5,8 +5,6 @@
 #include "mdb_lock.h"
 #include "mdb_db.h"
 
-struct MDB_page;
-
 /** Initial part of #MDB_env.me_mutexname[].
  *	Changes to this code must be reflected in #MDB_LOCK_FORMAT.
  */
