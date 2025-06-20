@@ -37,25 +37,35 @@ parse_cmdline(int argc, char **argv,
                int *envflags, int *do_delete, char **subname)
 {
     int i = 1;                       // skip argv[0]
-    for (; i < argc; ++i) {
+    for (; i < argc; ++i)
+    {
         char *arg = argv[i];
 
         // stop when the first non-option is seen
         if (arg[0] != '-')
             break;
 
-        if (strcmp(arg, "-d") == 0) {
+        if (strcmp(arg, "-d") == 0)
+        {
             *do_delete = 1;
-        } else if (strcmp(arg, "-n") == 0) {
+        }
+        else if (strcmp(arg, "-n") == 0)
+        {
             *envflags |= MDB_NOSUBDIR;
-        } else if (strcmp(arg, "-V") == 0) {
+        }
+        else if (strcmp(arg, "-V") == 0)
+        {
             printf("%s\n", MDB_VERSION_STRING);
             exit(EXIT_SUCCESS);
-        } else if (strcmp(arg, "-s") == 0) {
+        }
+        else if (strcmp(arg, "-s") == 0)
+        {
             if (++i == argc)        // need a value after -s
                 usage(argv[0]);
             *subname = argv[i];
-        } else {
+        }
+        else
+        {
             usage(argv[0]);         // unknown option
         }
     }
@@ -74,7 +84,8 @@ int main(int argc, char *argv[])
 	int envflags = 0, _delete = 0;
 	int arg_index = 0;
 
-	if (argc < 2) {
+	if (argc < 2)
+	{
 		usage(prog);
 	}
 
@@ -94,7 +105,8 @@ int main(int argc, char *argv[])
 
 	envname = argv[arg_index];
 	rc = mdb_env_create(&env);
-	if (rc) {
+	if (rc)
+	{
 		fprintf(stderr, "mdb_env_create failed, error %d %s\n", rc, mdb_strerror(rc));
 		return EXIT_FAILURE;
 	}
@@ -102,30 +114,35 @@ int main(int argc, char *argv[])
 	mdb_env_set_maxdbs(env, 2);
 
 	rc = mdb_env_open(env, envname, envflags, 0664);
-	if (rc) {
+	if (rc)
+	{
 		fprintf(stderr, "mdb_env_open failed, error %d %s\n", rc, mdb_strerror(rc));
 		goto env_close;
 	}
 
 	rc = mdb_txn_begin(env, NULL, 0, &txn);
-	if (rc) {
+	if (rc)
+	{
 		fprintf(stderr, "mdb_txn_begin failed, error %d %s\n", rc, mdb_strerror(rc));
 		goto env_close;
 	}
 
 	rc = mdb_open(txn, subname, 0, &dbi);
-	if (rc) {
+	if (rc)
+	{
 		fprintf(stderr, "mdb_open failed, error %d %s\n", rc, mdb_strerror(rc));
 		goto txn_abort;
 	}
 
 	rc = mdb_drop(txn, dbi, _delete);
-	if (rc) {
+	if (rc)
+	{
 		fprintf(stderr, "mdb_drop failed, error %d %s\n", rc, mdb_strerror(rc));
 		goto txn_abort;
 	}
 	rc = mdb_txn_commit(txn);
-	if (rc) {
+	if (rc)
+	{
 		fprintf(stderr, "mdb_txn_commit failed, error %d %s\n", rc, mdb_strerror(rc));
 		goto txn_abort;
 	}

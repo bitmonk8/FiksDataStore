@@ -35,21 +35,25 @@ int main(int argc,char * argv[])
 	unsigned flags = MDB_RDONLY;
 	unsigned cpflags = 0;
 
-	for (; argc > 1 && argv[1][0] == '-'; argc--, argv++) {
+	for (; argc > 1 && argv[1][0] == '-'; argc--, argv++)
+	{
 		if (argv[1][1] == 'n' && argv[1][2] == '\0')
 			flags |= MDB_NOSUBDIR;
 		else if (argv[1][1] == 'v' && argv[1][2] == '\0')
 			flags |= MDB_PREVSNAPSHOT;
 		else if (argv[1][1] == 'c' && argv[1][2] == '\0')
 			cpflags |= MDB_CP_COMPACT;
-		else if (argv[1][1] == 'V' && argv[1][2] == '\0') {
+		else if (argv[1][1] == 'V' && argv[1][2] == '\0')
+		{
 			printf("%s\n", MDB_VERSION_STRING);
 			exit(0);
-		} else
+		}
+		else
 			argc = 0;
 	}
 
-	if (argc<2 || argc>3) {
+	if (argc<2 || argc>3)
+	{
 		fprintf(stderr, "usage: %s [-V] [-c] [-n] [-v] srcpath [dstpath]\n", progname);
 		exit(EXIT_FAILURE);
 	}
@@ -65,10 +69,12 @@ int main(int argc,char * argv[])
 
 	act = "opening environment";
 	rc = mdb_env_create(&env);
-	if (rc == MDB_SUCCESS) {
+	if (rc == MDB_SUCCESS)
+	{
 		rc = mdb_env_open(env, argv[1], flags, 0600);
 	}
-	if (rc == MDB_SUCCESS) {
+	if (rc == MDB_SUCCESS)
+	{
 		act = "copying";
 		if (argc == 2)
 			rc = mdb_env_copyfd2(env, MDB_STDOUT, cpflags);

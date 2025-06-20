@@ -49,7 +49,8 @@ mdb_reader_pid(MDB_env *env, enum Pidlock_op op, MDB_PID_T pid)
 		{
 			if (op == F_GETLK && lock_info.l_type != F_UNLCK)
 				rc = -1;
-		} else if ((rc = ErrCode()) == EINTR)
+		}
+		else if ((rc = ErrCode()) == EINTR)
 		{
 			continue;
 		}
@@ -121,12 +122,14 @@ static int ESECT mdb_pid_insert(MDB_PID_T *ids, MDB_PID_T pid)
 		{
 			n = pivot;
 
-		} else if ( val > 0 )
+		}
+		else if ( val > 0 )
 		{
 			base = cursor;
 			n -= pivot + 1;
 
-		} else
+		}
+		else
 		{
 			// found, so it's a duplicate
 			return -1;
@@ -195,7 +198,8 @@ mdb_mutex_failed(MDB_env *env, mdb_mutexref_t mutex, int rc)
 			DPRINTF(("LOCK_MUTEX recovery failed, %s", mdb_strerror(rc)));
 			UNLOCK_MUTEX(mutex);
 		}
-	} else
+	}
+	else
 	{
 #ifdef _WIN32
 		rc = ErrCode();
@@ -240,7 +244,8 @@ mdb_reader_check0(MDB_env *env, int rlocked, int *dead)
 							if ((rc = mdb_mutex_failed(env, rmutex, rc)))
 								break;
 							rdrs = 0; // the above checked all readers
-						} else
+						}
+						else
 						{
 							// Recheck, a new process may have reused pid
 							if (mdb_reader_pid(env, Pidcheck, pid))

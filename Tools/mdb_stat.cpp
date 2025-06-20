@@ -67,7 +67,8 @@ int main(int argc, char *argv[])
 // ------------- option parser (replaces getopt) -------------
     int optind = 1;          /* first argv index to examine       */
 
-    while (optind < argc && argv[optind][0] == '-') {
+    while (optind < argc && argv[optind][0] == '-')
+    {
         const char *arg = argv[optind++];
 
 // lone “--” terminates option scanning
@@ -75,10 +76,12 @@ int main(int argc, char *argv[])
             break;
 
 // walk through the cluster, skipping the leading “-”
-        for (size_t pos = 1; arg[pos]; ++pos) {
+        for (size_t pos = 1; arg[pos]; ++pos)
+        {
             char opt = arg[pos];
 
-            switch (opt) {
+            switch (opt)
+            {
             case 'V':
                 printf("%s\n", MDB_VERSION_STRING);
                 return 0;
@@ -111,10 +114,13 @@ int main(int argc, char *argv[])
 
             case 's':    /* needs an argument */
 // if characters remain in the same token, use them
-                if (arg[pos + 1]) {
+                if (arg[pos + 1])
+                {
                     subname = &arg[pos + 1];
                     pos = strlen(arg) - 1;   /* exit inner loop */
-                } else {
+                }
+                else
+                {
 // otherwise take the next argv element
                     if (optind >= argc)
                         usage(prog);
@@ -138,22 +144,26 @@ int main(int argc, char *argv[])
         usage(prog);
     envname = argv[optind];
 	rc = mdb_env_create(&env);
-	if (rc) {
+	if (rc)
+	{
 		fprintf(stderr, "mdb_env_create failed, error %d %s\n", rc, mdb_strerror(rc));
 		return EXIT_FAILURE;
 	}
 
-	if (alldbs || subname) {
+	if (alldbs || subname)
+	{
 		mdb_env_set_maxdbs(env, 4);
 	}
 
 	rc = mdb_env_open(env, envname, envflags | MDB_RDONLY, 0664);
-	if (rc) {
+	if (rc)
+	{
 		fprintf(stderr, "mdb_env_open failed, error %d %s\n", rc, mdb_strerror(rc));
 		goto env_close;
 	}
 
-	if (envinfo) {
+	if (envinfo)
+	{
 		(void)mdb_env_stat(env, &mst);
 		(void)mdb_env_info(env, &mei);
 		printf("Environment Info\n");
@@ -167,10 +177,12 @@ int main(int argc, char *argv[])
 		printf("  Number of readers used: %u\n", mei.me_numreaders);
 	}
 
-	if (rdrinfo) {
+	if (rdrinfo)
+	{
 		printf("Reader Table Status\n");
 		rc = mdb_reader_list(env, (MDB_msg_func *)fputs, stdout);
-		if (rdrinfo > 1) {
+		if (rdrinfo > 1)
+		{
 			int dead;
 			mdb_reader_check(env, &dead);
 			printf("  %d stale readers cleared.\n", dead);
@@ -181,12 +193,14 @@ int main(int argc, char *argv[])
 	}
 
 	rc = mdb_txn_begin(env, NULL, MDB_RDONLY, &txn);
-	if (rc) {
+	if (rc)
+	{
 		fprintf(stderr, "mdb_txn_begin failed, error %d %s\n", rc, mdb_strerror(rc));
 		goto env_close;
 	}
 
-	if (freinfo) {
+	if (freinfo)
+	{
 		MDB_cursor *cursor;
 		MDB_val key, data;
 		mdb_size_t pages = 0, *iptr;
@@ -194,36 +208,43 @@ int main(int argc, char *argv[])
 		printf("Freelist Status\n");
 		dbi = 0;
 		rc = mdb_cursor_open(txn, dbi, &cursor);
-		if (rc) {
+		if (rc)
+		{
 			fprintf(stderr, "mdb_cursor_open failed, error %d %s\n", rc, mdb_strerror(rc));
 			goto txn_abort;
 		}
 		rc = mdb_stat(txn, dbi, &mst);
-		if (rc) {
+		if (rc)
+		{
 			fprintf(stderr, "mdb_stat failed, error %d %s\n", rc, mdb_strerror(rc));
 			goto txn_abort;
 		}
 		prstat(&mst);
-		while ((rc = mdb_cursor_get(cursor, &key, &data, MDB_NEXT)) == 0) {
+		while ((rc = mdb_cursor_get(cursor, &key, &data, MDB_NEXT)) == 0)
+		{
 			iptr = (mdb_size_t*)data.mv_data;
 			pages += *iptr;
-			if (freinfo > 1) {
+			if (freinfo > 1)
+			{
 				const char *bad = "";
 				mdb_size_t pg, prev;
 				ssize_t i, j, span = 0;
 				j = *iptr++;
-				for (i = j, prev = 1; --i >= 0; ) {
+				for (i = j, prev = 1; --i >= 0; )
+				{
 					pg = iptr[i];
 					if (pg <= prev)
 						bad = " [bad sequence]";
 					prev = pg;
 					pg += span;
-					for (; i >= span && iptr[i-span] == pg; span++, pg++) ;
+					for (; i >= span && iptr[i-span] == pg+span; span++, pg++) ;
 				}
 				printf("    Transaction %" Yu ", %" Z "d pages, maxspan %" Z "d%s\n",
 					*(mdb_size_t *)key.mv_data, j, span, bad);
-				if (freinfo > 2) {
-					for (--j; j >= 0; ) {
+				if (freinfo > 2)
+				{
+					for (--j; j >= 0; )
+					{
 						pg = iptr[j];
 						for (span=1; --j >= 0 && iptr[j] == pg+span; span++) ;
 						printf(span>1 ? "     %9" Yu "[%" Z "d]\n" : "     %9" Yu "\n",
@@ -237,29 +258,34 @@ int main(int argc, char *argv[])
 	}
 
 	rc = mdb_open(txn, subname, 0, &dbi);
-	if (rc) {
+	if (rc)
+	{
 		fprintf(stderr, "mdb_open failed, error %d %s\n", rc, mdb_strerror(rc));
 		goto txn_abort;
 	}
 
 	rc = mdb_stat(txn, dbi, &mst);
-	if (rc) {
+	if (rc)
+	{
 		fprintf(stderr, "mdb_stat failed, error %d %s\n", rc, mdb_strerror(rc));
 		goto txn_abort;
 	}
 	printf("Status of %s\n", subname ? subname : "Main DB");
 	prstat(&mst);
 
-	if (alldbs) {
+	if (alldbs)
+	{
 		MDB_cursor *cursor;
 		MDB_val key;
 
 		rc = mdb_cursor_open(txn, dbi, &cursor);
-		if (rc) {
+		if (rc)
+		{
 			fprintf(stderr, "mdb_cursor_open failed, error %d %s\n", rc, mdb_strerror(rc));
 			goto txn_abort;
 		}
-		while ((rc = mdb_cursor_get(cursor, &key, NULL, MDB_NEXT_NODUP)) == 0) {
+		while ((rc = mdb_cursor_get(cursor, &key, NULL, MDB_NEXT_NODUP)) == 0)
+		{
 			char *str;
 			MDB_dbi db2;
 			if (memchr(key.mv_data, '\0', key.mv_size))
@@ -273,7 +299,8 @@ int main(int argc, char *argv[])
 			free(str);
 			if (rc) continue;
 			rc = mdb_stat(txn, db2, &mst);
-			if (rc) {
+			if (rc)
+			{
 				fprintf(stderr, "mdb_stat failed, error %d %s\n", rc, mdb_strerror(rc));
 				goto txn_abort;
 			}

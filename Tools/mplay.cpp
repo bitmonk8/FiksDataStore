@@ -101,7 +101,8 @@ static int unhex(unsigned char *c2)
 int inhex(char *in, char *out)
 {
 	char *c2 = out;
-	while (isxdigit(*in)) {
+	while (isxdigit(*in))
+	{
 		*c2++ = unhex((unsigned char *)in);
 		in += 2;
 	}
@@ -121,7 +122,8 @@ static void addenv(void *tenv, MDB_env *renv)
 static envpair *findenv(void *tenv)
 {
 	int i;
-	if (!lastenv || lastenv->tenv != tenv) {
+	if (!lastenv || lastenv->tenv != tenv)
+	{
 		for (i=0; i<nenvs; i++)
 			if (envs[i].tenv == tenv)
 				break;
@@ -160,18 +162,24 @@ static txnpair *findtxn(void *ttxn)
 	int i, j;
 	if (lasttxn && lasttxn->ttxn == ttxn)
 		return lasttxn;
-	if (lastenv) {
-		for (i=0; i<lastenv->ntxns; i++) {
-			if (lastenv->txns[i].ttxn == ttxn) {
+	if (lastenv)
+	{
+		for (i=0; i<lastenv->ntxns; i++)
+		{
+			if (lastenv->txns[i].ttxn == ttxn)
+			{
 				lasttxn = lastenv->txns+i;
 				return lasttxn;
 			}
 		}
 	}
-	for (i=0; i<nenvs; i++) {
+	for (i=0; i<nenvs; i++)
+	{
 		if (envs+i == lastenv) continue;
-		for (j=0; j<envs[i].ntxns; j++) {
-			if (envs[i].txns[j].ttxn == ttxn) {
+		for (j=0; j<envs[i].ntxns; j++)
+		{
+			if (envs[i].txns[j].ttxn == ttxn)
+			{
 				lastenv = envs+i;
 				lasttxn = envs[i].txns+j;
 				return lasttxn;
@@ -209,33 +217,45 @@ static crspair *findcrs(void *tcrs)
 	crspair *cp;
 	if (lastcrs && lastcrs->tcrs == tcrs)
 		return lastcrs;
-	if (lasttxn) {
-		for (k=0, cp=lasttxn->cursors; k<lasttxn->ncursors; k++, cp++) {
-			if (cp->tcrs == tcrs) {
+	if (lasttxn)
+	{
+		for (k=0, cp=lasttxn->cursors; k<lasttxn->ncursors; k++, cp++)
+		{
+			if (cp->tcrs == tcrs)
+			{
 				lastcrs = cp;
 				return lastcrs;
 			}
 		}
 	}
-	if (lastenv) {
-		for (j=0, tp=lastenv->txns; j<lastenv->ntxns; j++, tp++){
+	if (lastenv)
+	{
+		for (j=0, tp=lastenv->txns; j<lastenv->ntxns; j++, tp++)
+		{
 			if (tp == lasttxn)
 				continue;
-			for (k=0, cp = tp->cursors; k<tp->ncursors; k++, cp++) {
-				if (cp->tcrs == tcrs) {
+			for (k=0, cp = tp->cursors; k<tp->ncursors; k++, cp++)
+			{
+				if (cp->tcrs == tcrs)
+				{
 					lastcrs = cp;
 					lasttxn = tp;
+					lastenv = ep;
 					return lastcrs;
 				}
 			}
 		}
 	}
-	for (i=0, ep=envs; i<nenvs; i++, ep++) {
-		for (j=0, tp=ep->txns; j<ep->ntxns; j++, tp++) {
+	for (i=0, ep=envs; i<nenvs; i++, ep++)
+	{
+		for (j=0, tp=ep->txns; j<ep->ntxns; j++, tp++)
+		{
 			if (tp == lasttxn)
 				continue;
-			for (k=0, cp = tp->cursors; k<tp->ncursors; k++, cp++) {
-				if (cp->tcrs == tcrs) {
+			for (k=0, cp = tp->cursors; k<tp->ncursors; k++, cp++)
+			{
+				if (cp->tcrs == tcrs)
+				{
 					lastcrs = cp;
 					lasttxn = tp;
 					lastenv = ep;
@@ -264,32 +284,40 @@ void child()
 	MDB_val key, data;
 	char *ptr;
 
-	while (fgets(inbuf, sizeof(inbuf), stdin)) {
+	while (fgets(inbuf, sizeof(inbuf), stdin))
+	{
 		ptr = inbuf;
 		if (!strncmp(ptr, SCMP("exit")))
 			break;
 
-		if (!strncmp(ptr, SCMP("mdb_env_create"))) {
+		if (!strncmp(ptr, SCMP("mdb_env_create")))
+		{
 			void *tenv;
 			MDB_env *renv;
 			sscanf(ptr+SOFF("mdb_env_create"), "%p", &tenv);
 			E(mdb_env_create(&renv));
 			addenv(tenv, renv);
-		} else if (!strncmp(ptr, SCMP("mdb_env_set_maxdbs"))) {
+		}
+		else if (!strncmp(ptr, SCMP("mdb_env_set_maxdbs")))
+		{
 			void *tenv;
 			envpair *ep;
 			unsigned int maxdbs;
 			sscanf(ptr+SOFF("mdb_env_set_maxdbs"), "%p, %u", &tenv, &maxdbs);
 			ep = findenv(tenv);
 			E(mdb_env_set_maxdbs(ep->renv, maxdbs));
-		} else if (!strncmp(ptr, SCMP("mdb_env_set_mapsize"))) {
+		}
+		else if (!strncmp(ptr, SCMP("mdb_env_set_mapsize")))
+		{
 			void *tenv;
 			envpair *ep;
 			mdb_size_t mapsize;
 			sscanf(ptr+SOFF("mdb_env_set_mapsize"), "%p, %"MDB_SCNy(u), &tenv, &mapsize);
 			ep = findenv(tenv);
 			E(mdb_env_set_mapsize(ep->renv, mapsize));
-		} else if (!strncmp(ptr, SCMP("mdb_env_open"))) {
+		}
+		else if (!strncmp(ptr, SCMP("mdb_env_open")))
+		{
 			void *tenv;
 			envpair *ep;
 			char *path;
@@ -302,13 +330,16 @@ void child()
 			sscanf(ptr, "%u, %o", &flags, &mode);
 			ep = findenv(tenv);
 			E(mdb_env_open(ep->renv, path, flags, mode));
-			if (!maxkey) {
+			if (!maxkey)
+			{
 				maxkey = mdb_env_get_maxkeysize(ep->renv);
 				kbuf = malloc(maxkey+2);
 				dbuf = malloc(maxkey+2);
 				dbufsize = maxkey;
 			}
-		} else if (!strncmp(ptr, SCMP("mdb_env_close"))) {
+		}
+		else if (!strncmp(ptr, SCMP("mdb_env_close")))
+		{
 			void *tenv;
 			envpair *ep;
 			sscanf(ptr+SOFF("mdb_env_close"), "%p", &tenv);
@@ -317,7 +348,9 @@ void child()
 			delenv(ep);
 			if (!nenvs)	// if no other envs left, this process is done
 				break;
-		} else if (!strncmp(ptr, SCMP("mdb_txn_begin"))) {
+		}
+		else if (!strncmp(ptr, SCMP("mdb_txn_begin")))
+		{
 			unsigned int flags;
 			void *tenv, *ttxn;
 			envpair *ep;
@@ -326,21 +359,27 @@ void child()
 			ep = findenv(tenv);
 			E(mdb_txn_begin(ep->renv, NULL, flags, &rtxn));
 			addtxn(tenv, ttxn, rtxn);
-		} else if (!strncmp(ptr, SCMP("mdb_txn_commit"))) {
+		}
+		else if (!strncmp(ptr, SCMP("mdb_txn_commit")))
+		{
 			void *ttxn;
 			txnpair *tp;
 			sscanf(ptr+SOFF("mdb_txn_commit"), "%p", &ttxn);
 			tp = findtxn(ttxn);
 			E(mdb_txn_commit(tp->rtxn));
 			deltxn(tp);
-		} else if (!strncmp(ptr, SCMP("mdb_txn_abort"))) {
+		}
+		else if (!strncmp(ptr, SCMP("mdb_txn_abort")))
+		{
 			void *ttxn;
 			txnpair *tp;
 			sscanf(ptr+SOFF("mdb_txn_abort"), "%p", &ttxn);
 			tp = findtxn(ttxn);
 			mdb_txn_abort(tp->rtxn);
 			deltxn(tp);
-		} else if (!strncmp(ptr, SCMP("mdb_dbi_open"))) {
+		}
+		else if (!strncmp(ptr, SCMP("mdb_dbi_open")))
+		{
 			void *ttxn;
 			txnpair *tp;
 			char *dbname;
@@ -357,14 +396,18 @@ void child()
 			sscanf(ptr, "%u = %u", &flags, &tdbi);
 			tp = findtxn(ttxn);
 			E(mdb_dbi_open(tp->rtxn, dbname, flags, &dbi));
-		} else if (!strncmp(ptr, SCMP("mdb_dbi_close"))) {
+		}
+		else if (!strncmp(ptr, SCMP("mdb_dbi_close")))
+		{
 			void *tenv;
 			envpair *ep;
 			unsigned int tdbi;
 			sscanf(ptr+SOFF("mdb_dbi_close"), "%p, %u", &tenv, &tdbi);
 			ep = findenv(tenv);
 			mdb_dbi_close(ep->renv, tdbi);
-		} else if (!strncmp(ptr, SCMP("mdb_cursor_open"))) {
+		}
+		else if (!strncmp(ptr, SCMP("mdb_cursor_open")))
+		{
 			void *ttxn, *tcrs;
 			txnpair *tp;
 			MDB_cursor *rcrs;
@@ -373,11 +416,15 @@ void child()
 			tp = findtxn(ttxn);
 			E(mdb_cursor_open(tp->rtxn, tdbi, &rcrs));
 			addcrs(tp, tcrs, rcrs);
-		} else if (!strncmp(ptr, SCMP("mdb_cursor_close"))) {
+		}
+		else if (!strncmp(ptr, SCMP("mdb_cursor_close")))
+		{
 			void *tcrs;
 			sscanf(ptr+SOFF("mdb_cursor_close"), "%p", &tcrs);
 			delcrs(tcrs);
-		} else if (!strncmp(ptr, SCMP("mdb_cursor_put"))) {
+		}
+		else if (!strncmp(ptr, SCMP("mdb_cursor_put")))
+		{
 			void *tcrs;
 			crspair *cp;
 			unsigned int flags;
@@ -386,7 +433,8 @@ void child()
 			cp = findcrs(tcrs);
 			ptr = strchr(ptr+SOFF("mdb_cursor_put"), ',');
 			sscanf(ptr+1, "%"MDB_SCNy(u)",", &key.mv_size);
-			if (key.mv_size) {
+			if (key.mv_size)
+			{
 				ptr = strchr(ptr, '[');
 				inhex(ptr+1, kbuf);
 				key.mv_data = kbuf;
@@ -394,29 +442,37 @@ void child()
 			}
 			ptr = strchr(ptr+1, ',');
 			sscanf(ptr+1, "%"MDB_SCNy(u)"%n", &data.mv_size, &len);
-			if (data.mv_size > dbufsize) {
+			if (data.mv_size > dbufsize)
+			{
 				dbuf = realloc(dbuf, data.mv_size+2);
 				assert(dbuf != NULL);
 				dbufsize = data.mv_size;
 			}
 			ptr += len+1;
-			if (*ptr == '[') {
+			if (*ptr == '[')
+			{
 				inhex(ptr+1, dbuf);
 				data.mv_data = dbuf;
 				ptr += data.mv_size * 2 + 2;
-			} else {
+			}
+			else
+			{
 				snprintf(dbuf, dbufsize, "%09ld", (long)mdb_txn_id(lasttxn->rtxn));
 			}
 			sscanf(ptr+1, "%u", &flags);
 			E(mdb_cursor_put(cp->rcrs, &key, &data, flags));
-		} else if (!strncmp(ptr, SCMP("mdb_cursor_del"))) {
+		}
+		else if (!strncmp(ptr, SCMP("mdb_cursor_del")))
+		{
 			void *tcrs;
 			crspair *cp;
 			unsigned int flags;
 			sscanf(ptr+SOFF("mdb_cursor_del"), "%p, %u", &tcrs, &flags);
 			cp = findcrs(tcrs);
 			E(mdb_cursor_del(cp->rcrs, flags));
-		} else if (!strncmp(ptr, SCMP("mdb_put"))) {
+		}
+		else if (!strncmp(ptr, SCMP("mdb_put")))
+		{
 			void *ttxn;
 			txnpair *tp;
 			unsigned int tdbi, flags;
@@ -428,21 +484,27 @@ void child()
 			key.mv_data = kbuf;
 			ptr += key.mv_size * 2 + 2;
 			sscanf(ptr+1, "%"MDB_SCNy(u)"%n", &data.mv_size, &len);
-			if (data.mv_size > dbufsize) {
+			if (data.mv_size > dbufsize)
+			{
 				dbuf = realloc(dbuf, data.mv_size+2);
 				assert(dbuf != NULL);
 				dbufsize = data.mv_size;
 			}
 			ptr += len+1;
-			if (*ptr == '[') {
+			if (*ptr == '[')
+			{
 				inhex(ptr+1, dbuf);
 				ptr += data.mv_size * 2 + 2;
-			} else {
+			}
+			else
+			{
 				snprintf(dbuf, dbufsize, "%09ld", (long)mdb_txn_id(tp->rtxn));
 			}
 			data.mv_data = dbuf;
 			RES(MDB_KEYEXIST,mdb_put(tp->rtxn, tdbi, &key, &data, flags));
-		} else if (!strncmp(ptr, SCMP("mdb_del"))) {
+		}
+		else if (!strncmp(ptr, SCMP("mdb_del")))
+		{
 			void *ttxn;
 			txnpair *tp;
 			unsigned int tdbi;
@@ -454,15 +516,19 @@ void child()
 			key.mv_data = kbuf;
 			ptr += key.mv_size * 2 + 2;
 			sscanf(ptr+1, "%"MDB_SCNy(u)"%n", &data.mv_size, &len);
-			if (data.mv_size > dbufsize) {
+			if (data.mv_size > dbufsize)
+			{
 				dbuf = realloc(dbuf, data.mv_size+2);
 				assert(dbuf != NULL);
 				dbufsize = data.mv_size;
 			}
 			ptr += len+1;
-			if (*ptr == '[') {
+			if (*ptr == '[')
+			{
 				inhex(ptr+1, dbuf);
-			} else {
+			}
+			else
+			{
 				snprintf(dbuf, dbufsize, "%09ld", (long)mdb_txn_id(tp->rtxn));
 			}
 			data.mv_data = dbuf;
@@ -481,7 +547,8 @@ static pidpair *addpid(int tpid)
 	pids[npids].tpid = tpid;
 	pipe(fdout);
 	pipe(fdin);
-	if ((pid = fork()) == 0) {
+	if ((pid = fork()) == 0)
+	{
 		// child
 		fclose(stdin);
 		fclose(stdout);
@@ -491,7 +558,9 @@ static pidpair *addpid(int tpid)
 		stdout = fdopen(1, "w");
 		child();
 		return 0;	// NOTREACHED
-	} else {
+	}
+	else
+	{
 		pids[npids].rpid = pid;
 		pids[npids].fdout = fdout[1];
 		pids[npids].fdin = fdin[0];
@@ -504,7 +573,8 @@ static pidpair *addpid(int tpid)
 static pidpair *findpid(int tpid)
 {
 	int i;
-	if (!lastpid || lastpid->tpid != tpid) {
+	if (!lastpid || lastpid->tpid != tpid)
+	{
 		for (i=0; i<npids; i++)
 			if (pids[i].tpid == tpid)
 				break;
@@ -520,7 +590,8 @@ volatile pid_t killpid;
 static void delpid(int tpid)
 {
 	pidpair *pp = findpid(tpid);
-	if (pp) {
+	if (pp)
+	{
 		pid_t kpid = pp->rpid;
 		killpid = kpid;
 		write(pp->fdout, "exit\n", sizeof("exit"));
@@ -533,7 +604,8 @@ static void reaper(int sig)
 {
 	int status, i;
 	pid_t pid = waitpid(-1, &status, 0);
-	if (pid > 0) {
+	if (pid > 0)
+	{
 		fprintf(stderr, "# %s %d\n", WIFEXITED(status) ? "exited" : "killed", pid);
 		for (i=0; i<npids; i++)
 			if (pids[i].rpid == pid)
@@ -552,13 +624,15 @@ int main(int argc,char * argv[])
 {
 	signal(SIGCHLD, reaper);
 
-	while (fgets(inbuf, sizeof(inbuf), stdin)) {
+	while (fgets(inbuf, sizeof(inbuf), stdin))
+	{
 		pidpair *pp;
 		int tpid, len;
 		char c, *ptr;
 		lcount++;
 
-		if (inbuf[0] == '#' && !strncmp(inbuf+1, SCMP(" killed"))) {
+		if (inbuf[0] == '#' && !strncmp(inbuf+1, SCMP(" killed")))
+		{
 			sscanf(inbuf+SOFF("killed"),"%d", &tpid);
 			delpid(tpid);
 			continue;

@@ -26,25 +26,33 @@ mdb_page_malloc(MDB_txn *txn, unsigned num)
 	 * For multi-page, we init the final page; if the caller needed that
 	 * many pages they will be filling in at least up to the last page.
 	 */
-	if (num == 1) {
-		if (ret) {
+	if (num == 1)
+	{
+		if (ret)
+		{
 			VGMEMP_ALLOC(env, ret, sz);
 			VGMEMP_DEFINED(ret, sizeof(ret->mp_next));
 			env->me_dpages = ret->mp_next;
 			return ret;
 		}
 		psize -= off = PAGEHDRSZ;
-	} else {
+	}
+	else
+	{
 		sz *= num;
 		off = sz - psize;
 	}
-	if ((ret = (MDB_page*) malloc(sz)) != NULL) {
+	if ((ret = (MDB_page*) malloc(sz)) != NULL)
+	{
 		VGMEMP_ALLOC(env, ret, sz);
-		if (!(env->me_flags & MDB_NOMEMINIT)) {
+		if (!(env->me_flags & MDB_NOMEMINIT))
+		{
 			memset((char *)ret + off, 0, psize);
 			ret->mp_pad = 0;
 		}
-	} else {
+	}
+	else
+	{
 		txn->mt_flags |= MDB_TXN_ERROR;
 	}
 	return ret;
@@ -66,9 +74,12 @@ mdb_page_free(MDB_env *env, MDB_page *mp)
 void
 mdb_dpage_free(MDB_env *env, MDB_page *dp)
 {
-	if (!IS_OVERFLOW(dp) || dp->mp_pages == 1) {
+	if (!IS_OVERFLOW(dp) || dp->mp_pages == 1)
+	{
 		mdb_page_free(env, dp);
-	} else {
+	}
+	else
+	{
 		/* large pages just get freed directly */
 		VGMEMP_FREE(env, dp);
 		free(dp);
@@ -92,16 +103,21 @@ mdb_page_loose(MDB_cursor *mc, MDB_page *mp)
 	pgno_t pgno = mp->mp_pgno;
 	MDB_txn *txn = mc->mc_txn;
 
-	if ((mp->mp_flags & P_DIRTY) && mc->mc_dbi != FREE_DBI) {
-		if (txn->mt_parent) {
+	if ((mp->mp_flags & P_DIRTY) && mc->mc_dbi != FREE_DBI)
+	{
+		if (txn->mt_parent)
+		{
 			MDB_ID2 *dl = txn->mt_u.dirty_list;
 			/* If txn has a parent, make sure the page is in our
 			 * dirty list.
 			 */
-			if (dl[0].mid) {
+			if (dl[0].mid)
+			{
 				unsigned x = mdb_mid2l_search(dl, pgno);
-				if (x <= dl[0].mid && dl[x].mid == pgno) {
-					if (mp != dl[x].mptr) { /* bad cursor? */
+				if (x <= dl[0].mid && dl[x].mid == pgno)
+				{
+					if (mp != dl[x].mptr)
+					{ /* bad cursor? */
 						mc->mc_flags &= ~(C_INITIALIZED|C_EOF);
 						txn->mt_flags |= MDB_TXN_ERROR;
 						return MDB_PROBLEM;
@@ -110,18 +126,23 @@ mdb_page_loose(MDB_cursor *mc, MDB_page *mp)
 					loose = 1;
 				}
 			}
-		} else {
+		}
+		else
+		{
 			/* no parent txn, so it's just ours */
 			loose = 1;
 		}
 	}
-	if (loose) {
+	if (loose)
+	{
 		DPRINTF(("loosen db %d page %" Yu, DDBI(mc), mp->mp_pgno));
 		NEXT_LOOSE_PAGE(mp) = txn->mt_loose_pgs;
 		txn->mt_loose_pgs = mp;
 		txn->mt_loose_count++;
 		mp->mp_flags |= P_LOOSE;
-	} else {
+	}
+	else
+	{
 		int rc = mdb_midl_append(&txn->mt_free_pgs, pgno);
 		if (rc)
 			return rc;
@@ -150,11 +171,15 @@ mdb_pages_xkeep(MDB_cursor *mc, unsigned pflags, int all)
 	int rc = MDB_SUCCESS, level;
 
 	/* Mark pages seen by cursors: First m0, then tracked cursors */
-	for (i = txn->mt_numdbs;; ) {
-		if (mc->mc_flags & C_INITIALIZED) {
-			for (m3 = mc;; m3 = &mx->mx_cursor) {
+	for (i = txn->mt_numdbs;; )
+	{
+		if (mc->mc_flags & C_INITIALIZED)
+		{
+			for (m3 = mc;; m3 = &mx->mx_cursor)
+			{
 				mp = NULL;
-				for (j=0; j<m3->mc_snum; j++) {
+				for (j=0; j<m3->mc_snum; j++)
+				{
 					mp = m3->mc_pg[j];
 					if ((mp->mp_flags & Mask) == pflags)
 						mp->mp_flags ^= P_KEEP;
@@ -177,10 +202,13 @@ mdb_pages_xkeep(MDB_cursor *mc, unsigned pflags, int all)
 	}
 
 mark_done:
-	if (all) {
+	if (all)
+	{
 		/* Mark dirty root pages */
-		for (i=0; i<txn->mt_numdbs; i++) {
-			if (txn->mt_dbflags[i] & DB_DIRTY) {
+		for (i=0; i<txn->mt_numdbs; i++)
+		{
+			if (txn->mt_dbflags[i] & DB_DIRTY)
+			{
 				pgno_t pgno = txn->mt_dbs[i].md_root;
 				if (pgno == P_INVALID)
 					continue;
@@ -231,12 +259,15 @@ mdb_page_flush(MDB_txn *txn, int keep)
 		 * as this is faster than FlushViewOfFile/FlushFileBuffers */
 		&& (env->me_flags & MDB_NOSYNC)
 #endif
-		) {
+		)
+	{
 		/* Clear dirty flags */
-		while (++i <= pagecount) {
+		while (++i <= pagecount)
+		{
 			dp = (MDB_page*) dl[i].mptr;
 			/* Don't flush this page yet */
-			if (dp->mp_flags & (P_LOOSE|P_KEEP)) {
+			if (dp->mp_flags & (P_LOOSE|P_KEEP))
+			{
 				dp->mp_flags &= ~P_KEEP;
 				dl[++j] = dl[i];
 				continue;
@@ -247,7 +278,8 @@ mdb_page_flush(MDB_txn *txn, int keep)
 	}
 
 #ifdef _WIN32
-	if (pagecount - keep >= env->ovs) {
+	if (pagecount - keep >= env->ovs)
+	{
 		/* ran out of room in ov array, and re-malloc, copy handles and free previous */
 		int ovs = (pagecount - keep) * 1.5; /* provide extra padding to reduce number of re-allocations */
 		int new_size = ovs * sizeof(OVERLAPPED);
@@ -258,7 +290,8 @@ mdb_page_flush(MDB_txn *txn, int keep)
 		memcpy(ov, env->ov, previous_size); /* Copy previous OVERLAPPED data to retain event handles */
 		/* And clear rest of memory */
 		memset(&ov[env->ovs], 0, new_size - previous_size);
-		if (env->ovs > 0) {
+		if (env->ovs > 0)
+		{
 			free(env->ov); /* release previous allocation */
 		}
 
@@ -268,11 +301,14 @@ mdb_page_flush(MDB_txn *txn, int keep)
 #endif
 
 	/* Write the pages */
-	for (;;) {
-		if (++i <= pagecount) {
+	for (;;)
+	{
+		if (++i <= pagecount)
+		{
 			dp = (MDB_page*) dl[i].mptr;
 			/* Don't flush this page yet */
-			if (dp->mp_flags & (P_LOOSE|P_KEEP)) {
+			if (dp->mp_flags & (P_LOOSE|P_KEEP))
+			{
 				dp->mp_flags &= ~P_KEEP;
 				dl[i].mid = 0;
 				continue;
@@ -299,8 +335,10 @@ mdb_page_flush(MDB_txn *txn, int keep)
 			 */
 			|| !(env->me_flags & MDB_WRITEMAP)
 #endif
-			) {
-			if (n) {
+			)
+		{
+			if (n)
+			{
 retry_write:
 				/* Write previous page(s) */
 				DPRINTF(("committing page %" Z "u", pgno));
@@ -310,18 +348,22 @@ retry_write:
 				this_ov->Internal = 0;
 				this_ov->Offset = wpos & 0xffffffff;
 				this_ov->OffsetHigh = wpos >> 16 >> 16;
-				if (!F_ISSET(env->me_flags, MDB_NOSYNC) && !this_ov->hEvent) {
+				if (!F_ISSET(env->me_flags, MDB_NOSYNC) && !this_ov->hEvent)
+				{
 					HANDLE event = CreateEvent(NULL, FALSE, FALSE, NULL);
-					if (!event) {
+					if (!event)
+					{
 						rc = ErrCode();
 						DPRINTF(("CreateEvent: %s", strerror(rc)));
 						return rc;
 					}
 					this_ov->hEvent = event;
 				}
-				if (!WriteFile(fd, wdp, wsize, NULL, this_ov)) {
+				if (!WriteFile(fd, wdp, wsize, NULL, this_ov))
+				{
 					rc = ErrCode();
-					if (rc != ERROR_IO_PENDING) {
+					if (rc != ERROR_IO_PENDING)
+					{
 						DPRINTF(("WriteFile: %d", rc));
 						return rc;
 					}
@@ -331,11 +373,15 @@ retry_write:
 #ifdef MDB_USE_PWRITEV
 				wres = pwritev(fd, iov, n, wpos);
 #else
-				if (n == 1) {
+				if (n == 1)
+				{
 					wres = pwrite(fd, iov[0].iov_base, wsize, wpos);
-				} else {
+				}
+				else
+				{
 retry_seek:
-					if (lseek(fd, wpos, SEEK_SET) == -1) {
+					if (lseek(fd, wpos, SEEK_SET) == -1)
+					{
 						rc = ErrCode();
 						if (rc == EINTR)
 							goto retry_seek;
@@ -345,13 +391,17 @@ retry_seek:
 					wres = writev(fd, iov, n);
 				}
 #endif
-				if (wres != wsize) {
-					if (wres < 0) {
+				if (wres != wsize)
+				{
+					if (wres < 0)
+					{
 						rc = ErrCode();
 						if (rc == EINTR)
 							goto retry_write;
 						DPRINTF(("Write error: %s", strerror(rc)));
-					} else {
+					}
+					else
+					{
 						rc = EIO; /* TODO: Use which error code? */
 						DPUTS("short write, filesystem full?");
 					}
@@ -379,32 +429,40 @@ retry_seek:
 	}
 
 #ifdef _WIN32
-	if (!F_ISSET(env->me_flags, MDB_NOSYNC)) {
+	if (!F_ISSET(env->me_flags, MDB_NOSYNC))
+	{
 		/* Now wait for all the asynchronous/overlapped sync/write-through writes to complete.
 		* We start with the last one so that all the others should already be complete and
 		* we reduce thread suspend/resuming (in practice, typically about 99.5% of writes are
 		* done after the last write is done) */
 		rc = 0;
-		while (--async_i >= 0) {
-			if (ov[async_i].hEvent) {
+		while (--async_i >= 0)
+		{
+			if (ov[async_i].hEvent)
+			{
 				DWORD temp_wres;
-				if (!GetOverlappedResult(fd, &ov[async_i], &temp_wres, TRUE)) {
+				if (!GetOverlappedResult(fd, &ov[async_i], &temp_wres, TRUE))
+				{
 					rc = ErrCode(); /* Continue on so that all the event signals are reset */
 				}
 				wres = temp_wres;
 			}
 		}
-		if (rc) { /* any error on GetOverlappedResult, exit now */
+		if (rc)
+		{ /* any error on GetOverlappedResult, exit now */
 			return rc;
 		}
 	}
 #endif	/* _WIN32 */
 
-	if (!(env->me_flags & MDB_WRITEMAP)) {
-		for (i = keep; ++i <= pagecount; ) {
+	if (!(env->me_flags & MDB_WRITEMAP))
+	{
+		for (i = keep; ++i <= pagecount; )
+		{
 			dp = (MDB_page*) dl[i].mptr;
 			/* This is a page we skipped above */
-			if (!dl[i].mid) {
+			if (!dl[i].mid)
+			{
 				dl[++j] = dl[i];
 				dl[j].mid = dp->mp_pgno;
 				continue;
@@ -479,16 +537,20 @@ mdb_page_spill(MDB_cursor *m0, MDB_val *key, MDB_val *data)
 	if (txn->mt_dirty_room > i)
 		return MDB_SUCCESS;
 
-	if (!txn->mt_spill_pgs) {
+	if (!txn->mt_spill_pgs)
+	{
 		txn->mt_spill_pgs = mdb_midl_alloc(MDB_IDL_UM_MAX);
 		if (!txn->mt_spill_pgs)
 			return ENOMEM;
-	} else {
+	}
+	else
+	{
 		/* purge deleted slots */
 		MDB_IDL sl = txn->mt_spill_pgs;
 		unsigned int num = sl[0];
 		j=0;
-		for (i=1; i<=num; i++) {
+		for (i=1; i<=num; i++)
+		{
 			if (!(sl[i] & 1))
 				sl[++j] = sl[i];
 		}
@@ -511,7 +573,8 @@ mdb_page_spill(MDB_cursor *m0, MDB_val *key, MDB_val *data)
 
 	/* Save the page IDs of all the pages we're flushing */
 	/* flush from the tail forward, this saves a lot of shifting later on. */
-	for (i=dl[0].mid; i && need; i--) {
+	for (i=dl[0].mid; i && need; i--)
+	{
 		MDB_ID pn = dl[i].mid << 1;
 		dp = (MDB_page*) dl[i].mptr;
 		if (dp->mp_flags & (P_LOOSE|P_KEEP))
@@ -519,12 +582,16 @@ mdb_page_spill(MDB_cursor *m0, MDB_val *key, MDB_val *data)
 		/* Can't spill twice, make sure it's not already in a parent's
 		 * spill list.
 		 */
-		if (txn->mt_parent) {
+		if (txn->mt_parent)
+		{
 			MDB_txn *tx2;
-			for (tx2 = txn->mt_parent; tx2; tx2 = tx2->mt_parent) {
-				if (tx2->mt_spill_pgs) {
+			for (tx2 = txn->mt_parent; tx2; tx2 = tx2->mt_parent)
+			{
+				if (tx2->mt_spill_pgs)
+				{
 					j = mdb_midl_search(tx2->mt_spill_pgs, pn);
-					if (j <= tx2->mt_spill_pgs[0] && tx2->mt_spill_pgs[j] == pn) {
+					if (j <= tx2->mt_spill_pgs[0] && tx2->mt_spill_pgs[j] == pn)
+					{
 						dp->mp_flags |= P_KEEP;
 						break;
 					}
@@ -557,10 +624,13 @@ mdb_find_oldest(MDB_txn *txn)
 {
 	int i;
 	txnid_t mr, oldest = txn->mt_txnid - 1;
-	if (txn->mt_env->me_txns) {
+	if (txn->mt_env->me_txns)
+	{
 		MDB_reader *r = txn->mt_env->me_txns->mti_readers;
-		for (i = txn->mt_env->me_txns->mti_numreaders; --i >= 0; ) {
-			if (r[i].mr_pid) {
+		for (i = txn->mt_env->me_txns->mti_numreaders; --i >= 0; )
+		{
+			if (r[i].mr_pid)
+			{
 				mr = r[i].mr_txnid;
 				if (oldest > mr)
 					oldest = mr;
@@ -632,7 +702,8 @@ int mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp)
 	int found_old = 0;
 
 	/* If there are any loose pages, just use them */
-	if (num == 1 && txn->mt_loose_pgs) {
+	if (num == 1 && txn->mt_loose_pgs)
+	{
 		np = txn->mt_loose_pgs;
 		txn->mt_loose_pgs = NEXT_LOOSE_PAGE(np);
 		txn->mt_loose_count--;
@@ -644,12 +715,14 @@ int mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp)
 	*mp = NULL;
 
 	/* If our dirty list is already full, we can't do anything */
-	if (txn->mt_dirty_room == 0) {
+	if (txn->mt_dirty_room == 0)
+	{
 		rc = MDB_TXN_FULL;
 		goto fail;
 	}
 
-	for (op = MDB_FIRST;; op = MDB_NEXT) {
+	for (op = MDB_FIRST;; op = MDB_NEXT)
+	{
 		MDB_val key, data;
 		MDB_node *leaf;
 		pgno_t *idl;
@@ -657,9 +730,11 @@ int mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp)
 		/* Seek a big enough contiguous page range. Prefer
 		 * pages at the tail, just truncating the list.
 		 */
-		if (mop_len > n2) {
+		if (mop_len > n2)
+		{
 			i = mop_len;
-			do {
+			do
+			{
 				pgno = mop[i];
 				if (mop[i-n2] == pgno+n2)
 					goto search_done;
@@ -668,12 +743,14 @@ int mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp)
 				break;
 		}
 
-		if (op == MDB_FIRST) {	/* 1st iteration */
+		if (op == MDB_FIRST)
+		{	/* 1st iteration */
 			/* Prepare to fetch more and coalesce */
 			last = env->me_pglast;
 			oldest = env->me_pgoldest;
 			mdb_cursor_init(&m2, txn, FREE_DBI, NULL);
-			if (last) {
+			if (last)
+			{
 				op = MDB_SET_RANGE;
 				key.mv_data = &last; /* will look up last+1 */
 				key.mv_size = sizeof(last);
@@ -686,8 +763,10 @@ int mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp)
 
 		last++;
 		/* Do not fetch more if the record will be too recent */
-		if (oldest <= last) {
-			if (!found_old) {
+		if (oldest <= last)
+		{
+			if (!found_old)
+			{
 				oldest = mdb_find_oldest(txn);
 				env->me_pgoldest = oldest;
 				found_old = 1;
@@ -696,14 +775,17 @@ int mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp)
 				break;
 		}
 		rc = mdb_cursor_get(&m2, &key, NULL, op);
-		if (rc) {
+		if (rc)
+		{
 			if (rc == MDB_NOTFOUND)
 				break;
 			goto fail;
 		}
 		last = *(txnid_t*)key.mv_data;
-		if (oldest <= last) {
-			if (!found_old) {
+		if (oldest <= last)
+		{
+			if (!found_old)
+			{
 				oldest = mdb_find_oldest(txn);
 				env->me_pgoldest = oldest;
 				found_old = 1;
@@ -718,12 +800,16 @@ int mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp)
 
 		idl = (MDB_ID *) data.mv_data;
 		i = idl[0];
-		if (!mop) {
-			if (!(env->me_pghead = mop = mdb_midl_alloc(i))) {
+		if (!mop)
+		{
+			if (!(env->me_pghead = mop = mdb_midl_alloc(i)))
+			{
 				rc = ENOMEM;
 				goto fail;
 			}
-		} else {
+		}
+		else
+		{
 			if ((rc = mdb_midl_need(&env->me_pghead, i)) != 0)
 				goto fail;
 			mop = env->me_pghead;
@@ -743,19 +829,22 @@ int mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp)
 	/* Use new pages from the map when nothing suitable in the freeDB */
 	i = 0;
 	pgno = txn->mt_next_pgno;
-	if (pgno + num >= env->me_maxpg) {
+	if (pgno + num >= env->me_maxpg)
+	{
 			DPUTS("DB size maxed out");
 			rc = MDB_MAP_FULL;
 			goto fail;
 	}
 #if defined(_WIN32)
-	if (!(env->me_flags & MDB_RDONLY)) {
+	if (!(env->me_flags & MDB_RDONLY))
+	{
 		void *p;
 		p = (MDB_page *)(env->me_map + env->me_psize * pgno);
 		p = VirtualAlloc(p, env->me_psize * num, MEM_COMMIT,
 			(env->me_flags & MDB_WRITEMAP) ? PAGE_READWRITE:
 			PAGE_READONLY);
-		if (!p) {
+		if (!p)
+		{
 			DPUTS("VirtualAlloc failed");
 			rc = ErrCode();
 			goto fail;
@@ -764,20 +853,27 @@ int mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp)
 #endif
 
 search_done:
-	if (env->me_flags & MDB_WRITEMAP) {
+	if (env->me_flags & MDB_WRITEMAP)
+	{
 		np = (MDB_page *)(env->me_map + env->me_psize * pgno);
-	} else {
-		if (!(np = mdb_page_malloc(txn, num))) {
+	}
+	else
+	{
+		if (!(np = mdb_page_malloc(txn, num)))
+		{
 			rc = ENOMEM;
 			goto fail;
 		}
 	}
-	if (i) {
+	if (i)
+	{
 		mop[0] = mop_len -= num;
 		/* Move any stragglers down */
 		for (j = i-num; j < mop_len; )
 			mop[++j] = mop[++i];
-	} else {
+	}
+	else
+	{
 		txn->mt_next_pgno = pgno + num;
 	}
 	np->mp_pgno = pgno;
@@ -805,12 +901,15 @@ mdb_page_copy(MDB_page *dst, MDB_page *src, unsigned int psize)
 	/* If page isn't full, just copy the used portion. Adjust
 	 * alignment so memcpy may copy words instead of bytes.
 	 */
-	if ((unused &= -Align) && !IS_LEAF2(src)) {
+	if ((unused &= -Align) && !IS_LEAF2(src))
+	{
 		upper = (upper + PAGEBASE) & -Align;
 		memcpy(dst, src, (lower + PAGEBASE + (Align-1)) & -Align);
 		memcpy((pgno_t *)((char *)dst+upper), (pgno_t *)((char *)src+upper),
 			psize - upper);
-	} else {
+	}
+	else
+	{
 		memcpy(dst, src, psize - unused);
 	}
 }
@@ -831,11 +930,13 @@ mdb_page_unspill(MDB_txn *txn, MDB_page *mp, MDB_page **ret)
 	unsigned x;
 	pgno_t pgno = mp->mp_pgno, pn = pgno << 1;
 
-	for (tx2 = txn; tx2; tx2=tx2->mt_parent) {
+	for (tx2 = txn; tx2; tx2=tx2->mt_parent)
+	{
 		if (!tx2->mt_spill_pgs)
 			continue;
 		x = mdb_midl_search(tx2->mt_spill_pgs, pn);
-		if (x <= tx2->mt_spill_pgs[0] && tx2->mt_spill_pgs[x] == pn) {
+		if (x <= tx2->mt_spill_pgs[0] && tx2->mt_spill_pgs[x] == pn)
+		{
 			MDB_page *np;
 			int num;
 			if (txn->mt_dirty_room == 0)
@@ -844,9 +945,12 @@ mdb_page_unspill(MDB_txn *txn, MDB_page *mp, MDB_page **ret)
 				num = mp->mp_pages;
 			else
 				num = 1;
-			if (env->me_flags & MDB_WRITEMAP) {
+			if (env->me_flags & MDB_WRITEMAP)
+			{
 				np = mp;
-			} else {
+			}
+			else
+			{
 				np = mdb_page_malloc(txn, num);
 				if (!np)
 					return ENOMEM;
@@ -855,7 +959,8 @@ mdb_page_unspill(MDB_txn *txn, MDB_page *mp, MDB_page **ret)
 				else
 					mdb_page_copy(np, mp, env->me_psize);
 			}
-			if (tx2 == txn) {
+			if (tx2 == txn)
+			{
 				/* If in current txn, this page is no longer spilled.
 				 * If it happens to be the last page, truncate the spill list.
 				 * Otherwise mark it as deleted by setting the LSB.
@@ -891,8 +996,10 @@ mdb_page_touch(MDB_cursor *mc)
 	pgno_t	pgno;
 	int rc;
 
-	if (!F_ISSET(MP_FLAGS(mp), P_DIRTY)) {
-		if (txn->mt_flags & MDB_TXN_SPILLS) {
+	if (!F_ISSET(MP_FLAGS(mp), P_DIRTY))
+	{
+		if (txn->mt_flags & MDB_TXN_SPILLS)
+		{
 			np = NULL;
 			rc = mdb_page_unspill(txn, mp, &np);
 			if (rc)
@@ -909,23 +1016,31 @@ mdb_page_touch(MDB_cursor *mc)
 		mdb_cassert(mc, mp->mp_pgno != pgno);
 		mdb_midl_xappend(txn->mt_free_pgs, mp->mp_pgno);
 		/* Update the parent page, if any, to point to the new page */
-		if (mc->mc_top) {
+		if (mc->mc_top)
+		{
 			MDB_page *parent = mc->mc_pg[mc->mc_top-1];
 			MDB_node *node = NODEPTR(parent, mc->mc_ki[mc->mc_top-1]);
 			SETPGNO(node, pgno);
-		} else {
+		}
+		else
+		{
 			mc->mc_db->md_root = pgno;
 		}
-	} else if (txn->mt_parent && !IS_SUBP(mp)) {
+	}
+	else if (txn->mt_parent && !IS_SUBP(mp))
+	{
 		MDB_ID2 mid, *dl = txn->mt_u.dirty_list;
 		pgno = mp->mp_pgno;
 		/* If txn has a parent, make sure the page is in our
 		 * dirty list.
 		 */
-		if (dl[0].mid) {
+		if (dl[0].mid)
+		{
 			unsigned x = mdb_mid2l_search(dl, pgno);
-			if (x <= dl[0].mid && dl[x].mid == pgno) {
-				if (mp != dl[x].mptr) { /* bad cursor? */
+			if (x <= dl[0].mid && dl[x].mid == pgno)
+			{
+				if (mp != dl[x].mptr)
+				{ /* bad cursor? */
 					mc->mc_flags &= ~(C_INITIALIZED|C_EOF);
 					txn->mt_flags |= MDB_TXN_ERROR;
 					return MDB_PROBLEM;
@@ -942,7 +1057,9 @@ mdb_page_touch(MDB_cursor *mc)
 		mid.mptr = np;
 		rc = mdb_mid2l_insert(dl, &mid);
 		mdb_cassert(mc, rc == 0);
-	} else {
+	}
+	else
+	{
 		return 0;
 	}
 
@@ -954,18 +1071,24 @@ done:
 	/* Adjust cursors pointing to mp */
 	mc->mc_pg[mc->mc_top] = np;
 	m2 = txn->mt_cursors[mc->mc_dbi];
-	if (mc->mc_flags & C_SUB) {
-		for (; m2; m2=m2->mc_next) {
+	if (mc->mc_flags & C_SUB)
+	{
+		for (; m2; m2=m2->mc_next)
+		{
 			m3 = &m2->mc_xcursor->mx_cursor;
 			if (m3->mc_snum < mc->mc_snum) continue;
 			if (m3->mc_pg[mc->mc_top] == mp)
 				m3->mc_pg[mc->mc_top] = np;
 		}
-	} else {
-		for (; m2; m2=m2->mc_next) {
+	}
+	else
+	{
+		for (; m2; m2=m2->mc_next)
+		{
 			if (m2->mc_snum < mc->mc_snum) continue;
 			if (m2 == mc) continue;
-			if (m2->mc_pg[mc->mc_top] == mp) {
+			if (m2->mc_pg[mc->mc_top] == mp)
+			{
 				m2->mc_pg[mc->mc_top] = np;
 				if (IS_LEAF(np))
 					XCURSOR_REFRESH(m2, mc->mc_top, np);
@@ -994,10 +1117,12 @@ mdb_page_get(MDB_cursor *mc, pgno_t pgno, MDB_page **ret, int *lvl)
 	MDB_page *p = NULL;
 	int level;
 
-	if (! (mc->mc_flags & (C_ORIG_RDONLY|C_WRITEMAP))) {
+	if (! (mc->mc_flags & (C_ORIG_RDONLY|C_WRITEMAP)))
+	{
 		MDB_txn *tx2 = txn;
 		level = 1;
-		do {
+		do
+		{
 			MDB_ID2L dl = tx2->mt_u.dirty_list;
 			unsigned x;
 			/* Spilled pages were dirtied in this txn and flushed
@@ -1005,16 +1130,20 @@ mdb_page_get(MDB_cursor *mc, pgno_t pgno, MDB_page **ret, int *lvl)
 			 * back in from the map (but don't unspill it here,
 			 * leave that unless page_touch happens again).
 			 */
-			if (tx2->mt_spill_pgs) {
+			if (tx2->mt_spill_pgs)
+			{
 				MDB_ID pn = pgno << 1;
 				x = mdb_midl_search(tx2->mt_spill_pgs, pn);
-				if (x <= tx2->mt_spill_pgs[0] && tx2->mt_spill_pgs[x] == pn) {
+				if (x <= tx2->mt_spill_pgs[0] && tx2->mt_spill_pgs[x] == pn)
+				{
 					goto mapped;
 				}
 			}
-			if (dl[0].mid) {
+			if (dl[0].mid)
+			{
 				unsigned x = mdb_mid2l_search(dl, pgno);
-				if (x <= dl[0].mid && dl[x].mid == pgno) {
+				if (x <= dl[0].mid && dl[x].mid == pgno)
+				{
 					p = (MDB_page*) dl[x].mptr;
 					goto done;
 				}
@@ -1023,7 +1152,8 @@ mdb_page_get(MDB_cursor *mc, pgno_t pgno, MDB_page **ret, int *lvl)
 		} while ((tx2 = tx2->mt_parent) != NULL);
 	}
 
-	if (pgno >= txn->mt_next_pgno) {
+	if (pgno >= txn->mt_next_pgno)
+	{
 		DPRINTF(("page %" Yu " not found", pgno));
 		txn->mt_flags |= MDB_TXN_ERROR;
 		return MDB_PAGE_NOTFOUND;
@@ -1054,7 +1184,8 @@ mdb_page_search_root(MDB_cursor *mc, MDB_val *key, int flags)
 	int rc;
 	DKBUF;
 
-	while (IS_BRANCH(mp)) {
+	while (IS_BRANCH(mp))
+	{
 		MDB_node	*node;
 		indx_t		i;
 
@@ -1066,27 +1197,35 @@ mdb_page_search_root(MDB_cursor *mc, MDB_val *key, int flags)
 		mdb_cassert(mc, !mc->mc_dbi || NUMKEYS(mp) > 1);
 		DPRINTF(("found index 0 to page %" Yu, NODEPGNO(NODEPTR(mp, 0))));
 
-		if (flags & (MDB_PS_FIRST|MDB_PS_LAST)) {
+		if (flags & (MDB_PS_FIRST|MDB_PS_LAST))
+		{
 			i = 0;
-			if (flags & MDB_PS_LAST) {
+			if (flags & MDB_PS_LAST)
+			{
 				i = NUMKEYS(mp) - 1;
 				/* if already init'd, see if we're already in right place */
-				if (mc->mc_flags & C_INITIALIZED) {
-					if (mc->mc_ki[mc->mc_top] == i) {
+				if (mc->mc_flags & C_INITIALIZED)
+				{
+					if (mc->mc_ki[mc->mc_top] == i)
+					{
 						mc->mc_top = mc->mc_snum++;
 						mp = mc->mc_pg[mc->mc_top];
 						goto ready;
 					}
 				}
 			}
-		} else {
+		}
+		else
+		{
 			int	 exact;
 			node = mdb_node_search(mc, key, &exact);
 			if (node == NULL)
 				i = NUMKEYS(mp) - 1;
-			else {
+			else
+			{
 				i = mc->mc_ki[mc->mc_top];
-				if (!exact) {
+				if (!exact)
+				{
 					mdb_cassert(mc, i > 0);
 					i--;
 				}
@@ -1105,14 +1244,16 @@ mdb_page_search_root(MDB_cursor *mc, MDB_val *key, int flags)
 			return rc;
 
 ready:
-		if (flags & MDB_PS_MODIFY) {
+		if (flags & MDB_PS_MODIFY)
+		{
 			if ((rc = mdb_page_touch(mc)) != 0)
 				return rc;
 			mp = mc->mc_pg[mc->mc_top];
 		}
 	}
 
-	if (!IS_LEAF(mp)) {
+	if (!IS_LEAF(mp))
+	{
 		DPRINTF(("internal error, index points to a %02X page!?",
 		    mp->mp_flags));
 		mc->mc_txn->mt_flags |= MDB_TXN_ERROR;
@@ -1164,12 +1305,16 @@ mdb_page_search(MDB_cursor *mc, MDB_val *key, int flags)
 	/* Make sure the txn is still viable, then find the root from
 	 * the txn's db table and set it as the root of the cursor's stack.
 	 */
-	if (mc->mc_txn->mt_flags & MDB_TXN_BLOCKED) {
+	if (mc->mc_txn->mt_flags & MDB_TXN_BLOCKED)
+	{
 		DPUTS("transaction may not be used now");
 		return MDB_BAD_TXN;
-	} else {
+	}
+	else
+	{
 		/* Make sure we're using an up-to-date root */
-		if (*mc->mc_dbflag & DB_STALE) {
+		if (*mc->mc_dbflag & DB_STALE)
+		{
 				MDB_cursor mc2;
 				if (TXN_DBI_CHANGED(mc->mc_txn, mc->mc_dbi))
 					return MDB_BAD_DBI;
@@ -1203,14 +1348,16 @@ mdb_page_search(MDB_cursor *mc, MDB_val *key, int flags)
 		}
 		root = mc->mc_db->md_root;
 
-		if (root == P_INVALID) {		/* Tree is empty. */
+		if (root == P_INVALID)
+		{		/* Tree is empty. */
 			DPUTS("tree is empty");
 			return MDB_NOTFOUND;
 		}
 	}
 
 	mdb_cassert(mc, root > 1);
-	if (!mc->mc_pg[0] || mc->mc_pg[0]->mp_pgno != root) {
+	if (!mc->mc_pg[0] || mc->mc_pg[0]->mp_pgno != root)
+	{
 		if ((rc = mdb_page_get(mc, root, &mc->mc_pg[0], NULL)) != 0)
 			return rc;
 	}
@@ -1221,7 +1368,8 @@ mdb_page_search(MDB_cursor *mc, MDB_val *key, int flags)
 	DPRINTF(("db %d root page %" Yu " has flags 0x%X",
 		DDBI(mc), root, mc->mc_pg[0]->mp_flags));
 
-	if (flags & MDB_PS_MODIFY) {
+	if (flags & MDB_PS_MODIFY)
+	{
 		if ((rc = mdb_page_touch(mc)))
 			return rc;
 	}
@@ -1263,7 +1411,8 @@ mdb_ovpage_free(MDB_cursor *mc, MDB_page *mp)
 		rc = mdb_midl_need(&env->me_pghead, ovpages);
 		if (rc)
 			return rc;
-		if (!(mp->mp_flags & P_DIRTY)) {
+		if (!(mp->mp_flags & P_DIRTY))
+		{
 			/* This page is no longer spilled */
 			if (x == sl[0])
 				sl[0]--;
@@ -1274,12 +1423,16 @@ mdb_ovpage_free(MDB_cursor *mc, MDB_page *mp)
 		/* Remove from dirty list */
 		dl = txn->mt_u.dirty_list;
 		x = dl[0].mid--;
-		for (ix = dl[x]; ix.mptr != mp; ix = iy) {
-			if (x > 1) {
+		for (ix = dl[x]; ix.mptr != mp; ix = iy)
+		{
+			if (x > 1)
+			{
 				x--;
 				iy = dl[x];
 				dl[x] = ix;
-			} else {
+			}
+			else
+			{
 				mdb_cassert(mc, x > 1);
 				j = ++(dl[0].mid);
 				dl[j] = ix;		/* Unsorted. OK when MDB_TXN_ERROR. */
@@ -1299,7 +1452,9 @@ release:
 		while (j>i)
 			mop[j--] = pg++;
 		mop[0] += ovpages;
-	} else {
+	}
+	else
+	{
 		rc = mdb_midl_append_range(&txn->mt_free_pgs, pg, ovpages);
 		if (rc)
 			return rc;
@@ -1335,7 +1490,8 @@ mdb_page_new(MDB_cursor *mc, uint32_t flags, int num, MDB_page **mp)
 		mc->mc_db->md_branch_pages++;
 	else if (IS_LEAF(np))
 		mc->mc_db->md_leaf_pages++;
-	else if (IS_OVERFLOW(np)) {
+	else if (IS_OVERFLOW(np))
+	{
 		mc->mc_db->md_overflow_pages += num;
 		np->mp_pages = num;
 	}
@@ -1361,7 +1517,8 @@ mdb_leaf_size(MDB_env *env, MDB_val *key, MDB_val *data)
 	size_t		 sz;
 
 	sz = LEAFSIZE(key, data);
-	if (sz > env->me_nodemax) {
+	if (sz > env->me_nodemax)
+	{
 		/* put on overflow page */
 		sz -= data->mv_size - sizeof(pgno_t);
 	}
@@ -1385,7 +1542,8 @@ mdb_branch_size(MDB_env *env, MDB_val *key)
 	size_t		 sz;
 
 	sz = INDXSIZE(key);
-	if (sz > env->me_nodemax) {
+	if (sz > env->me_nodemax)
+	{
 		/* put on overflow page */
 		/* not implemented */
 		/* sz -= key->size - sizeof(pgno_t); */
@@ -1432,7 +1590,8 @@ mdb_node_add(MDB_cursor *mc, indx_t indx,
 		mdb_dbg_pgno(mp), indx, data ? data->mv_size : 0,
 		key ? key->mv_size : 0, key ? DKEY(key) : "null"));
 
-	if (IS_LEAF2(mp)) {
+	if (IS_LEAF2(mp))
+	{
 		/* Move higher keys up one slot. */
 		int ksize = mc->mc_db->md_pad, dif;
 		char *ptr = LEAF2KEY(mp, indx, ksize);
@@ -1451,12 +1610,16 @@ mdb_node_add(MDB_cursor *mc, indx_t indx,
 	room = (ssize_t)SIZELEFT(mp) - (ssize_t)sizeof(indx_t);
 	if (key != NULL)
 		node_size += key->mv_size;
-	if (IS_LEAF(mp)) {
+	if (IS_LEAF(mp))
+	{
 		mdb_cassert(mc, key && data);
-		if (F_ISSET(flags, F_BIGDATA)) {
+		if (F_ISSET(flags, F_BIGDATA))
+		{
 			/* Data already on overflow page. */
 			node_size += sizeof(pgno_t);
-		} else if (node_size + data->mv_size > mc->mc_txn->mt_env->me_nodemax) {
+		}
+		else if (node_size + data->mv_size > mc->mc_txn->mt_env->me_nodemax)
+		{
 			int ovpages = OVPAGES(data->mv_size, mc->mc_txn->mt_env->me_psize);
 			int rc;
 			/* Put data on overflow page. */
@@ -1470,7 +1633,9 @@ mdb_node_add(MDB_cursor *mc, indx_t indx,
 			DPRINTF(("allocated overflow page %" Yu, ofp->mp_pgno));
 			flags |= F_BIGDATA;
 			goto update;
-		} else {
+		}
+		else
+		{
 			node_size += data->mv_size;
 		}
 	}
@@ -1502,16 +1667,20 @@ update:
 	if (key)
 		memcpy(NODEKEY(node), key->mv_data, key->mv_size);
 
-	if (IS_LEAF(mp)) {
+	if (IS_LEAF(mp))
+	{
 		ndata = NODEDATA(node);
-		if (ofp == NULL) {
+		if (ofp == NULL)
+		{
 			if (F_ISSET(flags, F_BIGDATA))
 				memcpy(ndata, data->mv_data, sizeof(pgno_t));
 			else if (F_ISSET(flags, MDB_RESERVE))
 				data->mv_data = ndata;
 			else
 				memcpy(ndata, data->mv_data, data->mv_size);
-		} else {
+		}
+		else
+		{
 			memcpy(ndata, &ofp->mp_pgno, sizeof(pgno_t));
 			ndata = METADATA(ofp);
 			if (F_ISSET(flags, MDB_RESERVE))
@@ -1552,7 +1721,8 @@ mdb_node_del(MDB_cursor *mc, int ksize)
 	numkeys = NUMKEYS(mp);
 	mdb_cassert(mc, indx < numkeys);
 
-	if (IS_LEAF2(mp)) {
+	if (IS_LEAF2(mp))
+	{
 		int x = numkeys - 1 - indx;
 		base = LEAF2KEY(mp, indx, ksize);
 		if (x)
@@ -1564,7 +1734,8 @@ mdb_node_del(MDB_cursor *mc, int ksize)
 
 	node = NODEPTR(mp, indx);
 	sz = NODESIZE + node->mn_ksize;
-	if (IS_LEAF(mp)) {
+	if (IS_LEAF(mp))
+	{
 		if (F_ISSET(node->mn_flags, F_BIGDATA))
 			sz += sizeof(pgno_t);
 		else
@@ -1573,8 +1744,10 @@ mdb_node_del(MDB_cursor *mc, int ksize)
 	sz = EVEN(sz);
 
 	ptr = MP_PTRS(mp)[indx];
-	for (i = j = 0; i < numkeys; i++) {
-		if (i != indx) {
+	for (i = j = 0; i < numkeys; i++)
+	{
+		if (i != indx)
+		{
 			MP_PTRS(mp)[j] = MP_PTRS(mp)[i];
 			if (MP_PTRS(mp)[i] < ptr)
 				MP_PTRS(mp)[j] += sz;
@@ -1609,11 +1782,14 @@ mdb_node_shrink(MDB_page *mp, indx_t indx)
 	nsize = NODEDSZ(node) - delta;
 
 	/* Prepare to shift upward, set len = length(subpage part to shift) */
-	if (IS_LEAF2(sp)) {
+	if (IS_LEAF2(sp))
+	{
 		len = nsize;
 		if (nsize & 1)
 			return;		/* do not make the node uneven-sized */
-	} else {
+	}
+	else
+	{
 		xp = (MDB_page *)((char *)sp + delta); /* destination subpage */
 		for (i = NUMKEYS(sp); --i >= 0; )
 			MP_PTRS(xp)[i] = MP_PTRS(sp)[i] - delta;
@@ -1628,7 +1804,8 @@ mdb_node_shrink(MDB_page *mp, indx_t indx)
 	memmove(base + delta, base, (char *)sp + len - base);
 
 	ptr = mp->mp_ptrs[indx];
-	for (i = NUMKEYS(mp); --i >= 0; ) {
+	for (i = NUMKEYS(mp); --i >= 0; )
+	{
 		if (mp->mp_ptrs[i] <= ptr)
 			mp->mp_ptrs[i] += delta;
 	}
@@ -1654,36 +1831,49 @@ mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft)
 	    (rc = mdb_page_touch(cdst)))
 		return rc;
 
-	if (IS_LEAF2(csrc->mc_pg[csrc->mc_top])) {
+	if (IS_LEAF2(csrc->mc_pg[csrc->mc_top]))
+	{
 		key.mv_size = csrc->mc_db->md_pad;
 		key.mv_data = LEAF2KEY(csrc->mc_pg[csrc->mc_top], csrc->mc_ki[csrc->mc_top], key.mv_size);
 		data.mv_size = 0;
 		data.mv_data = NULL;
 		srcpg = 0;
 		flags = 0;
-	} else {
+	}
+	else
+	{
 		srcnode = NODEPTR(csrc->mc_pg[csrc->mc_top], csrc->mc_ki[csrc->mc_top]);
 		mdb_cassert(csrc, !((size_t)srcnode & 1));
 		srcpg = NODEPGNO(srcnode);
 		flags = srcnode->mn_flags;
-		if (csrc->mc_ki[csrc->mc_top] == 0 && IS_BRANCH(csrc->mc_pg[csrc->mc_top])) {
+		if (csrc->mc_ki[csrc->mc_top] == 0 && IS_BRANCH(csrc->mc_pg[csrc->mc_top]))
+		{
 			unsigned int snum = csrc->mc_snum;
 			MDB_node *s2;
 			/* must find the lowest key below src */
 			rc = mdb_page_search_lowest(csrc);
 			if (rc)
 				return rc;
-			if (IS_LEAF2(csrc->mc_pg[csrc->mc_top])) {
+			if (IS_LEAF2(csrc->mc_pg[csrc->mc_top]))
+			{
 				key.mv_size = csrc->mc_db->md_pad;
 				key.mv_data = LEAF2KEY(csrc->mc_pg[csrc->mc_top], 0, key.mv_size);
-			} else {
+			}
+			else
+			{
 				s2 = NODEPTR(csrc->mc_pg[csrc->mc_top], 0);
 				key.mv_size = NODEKSZ(s2);
 				key.mv_data = NODEKEY(s2);
 			}
 			csrc->mc_snum = snum--;
 			csrc->mc_top = snum;
-		} else {
+			csrc->mc_ki[snum] = 0;
+			rc = mdb_update_key(csrc, &key);
+			if (rc)
+				return rc;
+		}
+		else
+		{
 			key.mv_size = NODEKSZ(srcnode);
 			key.mv_data = NODEKEY(srcnode);
 		}
@@ -1691,7 +1881,8 @@ mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft)
 		data.mv_data = NODEDATA(srcnode);
 	}
 	mn.mc_xcursor = NULL;
-	if (IS_BRANCH(cdst->mc_pg[cdst->mc_top]) && cdst->mc_ki[cdst->mc_top] == 0) {
+	if (IS_BRANCH(cdst->mc_pg[cdst->mc_top]) && cdst->mc_ki[cdst->mc_top] == 0)
+	{
 		unsigned int snum = cdst->mc_snum;
 		MDB_node *s2;
 		MDB_val bkey;
@@ -1700,10 +1891,13 @@ mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft)
 		rc = mdb_page_search_lowest(&mn);
 		if (rc)
 			return rc;
-		if (IS_LEAF2(mn.mc_pg[mn.mc_top])) {
+		if (IS_LEAF2(mn.mc_pg[mn.mc_top]))
+		{
 			bkey.mv_size = mn.mc_db->md_pad;
 			bkey.mv_data = LEAF2KEY(mn.mc_pg[mn.mc_top], 0, bkey.mv_size);
-		} else {
+		}
+		else
+		{
 			s2 = NODEPTR(mn.mc_pg[mn.mc_top], 0);
 			bkey.mv_size = NODEKSZ(s2);
 			bkey.mv_data = NODEKEY(s2);
@@ -1741,9 +1935,11 @@ mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft)
 
 		mps = csrc->mc_pg[csrc->mc_top];
 		/* If we're adding on the left, bump others up */
-		if (fromleft) {
+		if (fromleft)
+		{
 			mpd = cdst->mc_pg[csrc->mc_top];
-			for (m2 = csrc->mc_txn->mt_cursors[dbi]; m2; m2=m2->mc_next) {
+			for (m2 = csrc->mc_txn->mt_cursors[dbi]; m2; m2=m2->mc_next)
+			{
 				if (csrc->mc_flags & C_SUB)
 					m3 = &m2->mc_xcursor->mx_cursor;
 				else
@@ -1752,12 +1948,14 @@ mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft)
 					continue;
 				if (m3 != cdst &&
 					m3->mc_pg[csrc->mc_top] == mpd &&
-					m3->mc_ki[csrc->mc_top] >= cdst->mc_ki[csrc->mc_top]) {
+					m3->mc_ki[csrc->mc_top] >= cdst->mc_ki[csrc->mc_top])
+				{
 					m3->mc_ki[csrc->mc_top]++;
 				}
 				if (m3 !=csrc &&
 					m3->mc_pg[csrc->mc_top] == mps &&
-					m3->mc_ki[csrc->mc_top] == csrc->mc_ki[csrc->mc_top]) {
+					m3->mc_ki[csrc->mc_top] == csrc->mc_ki[csrc->mc_top])
+				{
 					m3->mc_pg[csrc->mc_top] = cdst->mc_pg[cdst->mc_top];
 					m3->mc_ki[csrc->mc_top] = cdst->mc_ki[cdst->mc_top];
 					m3->mc_ki[csrc->mc_top-1]++;
@@ -1765,10 +1963,12 @@ mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft)
 				if (IS_LEAF(mps))
 					XCURSOR_REFRESH(m3, csrc->mc_top, m3->mc_pg[csrc->mc_top]);
 			}
-		} else
+		}
+		else
 		/* Adding on the right, bump others down */
 		{
-			for (m2 = csrc->mc_txn->mt_cursors[dbi]; m2; m2=m2->mc_next) {
+			for (m2 = csrc->mc_txn->mt_cursors[dbi]; m2; m2=m2->mc_next)
+			{
 				if (csrc->mc_flags & C_SUB)
 					m3 = &m2->mc_xcursor->mx_cursor;
 				else
@@ -1776,12 +1976,16 @@ mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft)
 				if (m3 == csrc) continue;
 				if (!(m3->mc_flags & C_INITIALIZED) || m3->mc_top < csrc->mc_top)
 					continue;
-				if (m3->mc_pg[csrc->mc_top] == mps) {
-					if (!m3->mc_ki[csrc->mc_top]) {
+				if (m3->mc_pg[csrc->mc_top] == mps)
+				{
+					if (!m3->mc_ki[csrc->mc_top])
+					{
 						m3->mc_pg[csrc->mc_top] = cdst->mc_pg[cdst->mc_top];
 						m3->mc_ki[csrc->mc_top] = cdst->mc_ki[cdst->mc_top];
 						m3->mc_ki[csrc->mc_top-1]--;
-					} else {
+					}
+					else
+					{
 						m3->mc_ki[csrc->mc_top]--;
 					}
 					if (IS_LEAF(mps))
@@ -1793,11 +1997,16 @@ mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft)
 
 	/* Update the parent separators.
 	 */
-	if (csrc->mc_ki[csrc->mc_top] == 0) {
-		if (csrc->mc_ki[csrc->mc_top-1] != 0) {
-			if (IS_LEAF2(csrc->mc_pg[csrc->mc_top])) {
+	if (csrc->mc_ki[csrc->mc_top] == 0)
+	{
+		if (csrc->mc_ki[csrc->mc_top-1] != 0)
+		{
+			if (IS_LEAF2(csrc->mc_pg[csrc->mc_top]))
+			{
 				key.mv_data = LEAF2KEY(csrc->mc_pg[csrc->mc_top], 0, key.mv_size);
-			} else {
+			}
+			else
+			{
 				srcnode = NODEPTR(csrc->mc_pg[csrc->mc_top], 0);
 				key.mv_size = NODEKSZ(srcnode);
 				key.mv_data = NODEKEY(srcnode);
@@ -1813,7 +2022,8 @@ mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft)
 			if (rc)
 				return rc;
 		}
-		if (IS_BRANCH(csrc->mc_pg[csrc->mc_top])) {
+		if (IS_BRANCH(csrc->mc_pg[csrc->mc_top]))
+		{
 			MDB_val	 nullkey;
 			indx_t	ix = csrc->mc_ki[csrc->mc_top];
 			nullkey.mv_size = 0;
@@ -1824,11 +2034,16 @@ mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft)
 		}
 	}
 
-	if (cdst->mc_ki[cdst->mc_top] == 0) {
-		if (cdst->mc_ki[cdst->mc_top-1] != 0) {
-			if (IS_LEAF2(csrc->mc_pg[csrc->mc_top])) {
+	if (cdst->mc_ki[cdst->mc_top] == 0)
+	{
+		if (cdst->mc_ki[cdst->mc_top-1] != 0)
+		{
+			if (IS_LEAF2(csrc->mc_pg[csrc->mc_top]))
+			{
 				key.mv_data = LEAF2KEY(cdst->mc_pg[cdst->mc_top], 0, key.mv_size);
-			} else {
+			}
+			else
+			{
 				srcnode = NODEPTR(cdst->mc_pg[cdst->mc_top], 0);
 				key.mv_size = NODEKSZ(srcnode);
 				key.mv_data = NODEKEY(srcnode);
@@ -1844,7 +2059,8 @@ mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft)
 			if (rc)
 				return rc;
 		}
-		if (IS_BRANCH(cdst->mc_pg[cdst->mc_top])) {
+		if (IS_BRANCH(cdst->mc_pg[cdst->mc_top]))
+		{
 			MDB_val	 nullkey;
 			indx_t	ix = cdst->mc_ki[cdst->mc_top];
 			nullkey.mv_size = 0;
@@ -1894,19 +2110,25 @@ mdb_page_merge(MDB_cursor *csrc, MDB_cursor *cdst)
 	/* Move all nodes from src to dst.
 	 */
 	j = nkeys = NUMKEYS(pdst);
-	if (IS_LEAF2(psrc)) {
+	if (IS_LEAF2(psrc))
+	{
 		key.mv_size = csrc->mc_db->md_pad;
 		key.mv_data = METADATA(psrc);
-		for (i = 0; i < NUMKEYS(psrc); i++, j++) {
+		for (i = 0; i < NUMKEYS(psrc); i++, j++)
+		{
 			rc = mdb_node_add(cdst, j, &key, NULL, 0, 0);
 			if (rc != MDB_SUCCESS)
 				return rc;
 			key.mv_data = (char *)key.mv_data + key.mv_size;
 		}
-	} else {
-		for (i = 0; i < NUMKEYS(psrc); i++, j++) {
+	}
+	else
+	{
+		for (i = 0; i < NUMKEYS(psrc); i++, j++)
+		{
 			srcnode = NODEPTR(psrc, i);
-			if (i == 0 && IS_BRANCH(psrc)) {
+			if (i == 0 && IS_BRANCH(psrc))
+			{
 				MDB_cursor mn;
 				MDB_node *s2;
 				mdb_cursor_copy(csrc, &mn);
@@ -1915,15 +2137,20 @@ mdb_page_merge(MDB_cursor *csrc, MDB_cursor *cdst)
 				rc = mdb_page_search_lowest(&mn);
 				if (rc)
 					return rc;
-				if (IS_LEAF2(mn.mc_pg[mn.mc_top])) {
+				if (IS_LEAF2(mn.mc_pg[mn.mc_top]))
+				{
 					key.mv_size = mn.mc_db->md_pad;
 					key.mv_data = LEAF2KEY(mn.mc_pg[mn.mc_top], 0, key.mv_size);
-				} else {
+				}
+				else
+				{
 					s2 = NODEPTR(mn.mc_pg[mn.mc_top], 0);
 					key.mv_size = NODEKSZ(s2);
 					key.mv_data = NODEKEY(s2);
 				}
-			} else {
+			}
+			else
+			{
 				key.mv_size = srcnode->mn_ksize;
 				key.mv_data = NODEKEY(srcnode);
 			}
@@ -1944,10 +2171,12 @@ mdb_page_merge(MDB_cursor *csrc, MDB_cursor *cdst)
 	 */
 	csrc->mc_top--;
 	mdb_node_del(csrc, 0);
-	if (csrc->mc_ki[csrc->mc_top] == 0) {
+	if (csrc->mc_ki[csrc->mc_top] == 0)
+	{
 		key.mv_size = 0;
 		rc = mdb_update_key(csrc, &key);
-		if (rc) {
+		if (rc)
+		{
 			csrc->mc_top++;
 			return rc;
 		}
@@ -1971,19 +2200,23 @@ mdb_page_merge(MDB_cursor *csrc, MDB_cursor *cdst)
 		MDB_dbi dbi = csrc->mc_dbi;
 		unsigned int top = csrc->mc_top;
 
-		for (m2 = csrc->mc_txn->mt_cursors[dbi]; m2; m2=m2->mc_next) {
+		for (m2 = csrc->mc_txn->mt_cursors[dbi]; m2; m2=m2->mc_next)
+		{
 			if (csrc->mc_flags & C_SUB)
 				m3 = &m2->mc_xcursor->mx_cursor;
 			else
 				m3 = m2;
 			if (m3 == csrc) continue;
 			if (m3->mc_snum < csrc->mc_snum) continue;
-			if (m3->mc_pg[top] == psrc) {
+			if (m3->mc_pg[top] == psrc)
+			{
 				m3->mc_pg[top] = pdst;
 				m3->mc_ki[top] += nkeys;
 				m3->mc_ki[top-1] = cdst->mc_ki[top-1];
-			} else if (m3->mc_pg[top-1] == csrc->mc_pg[top-1] &&
-				m3->mc_ki[top-1] > csrc->mc_ki[top-1]) {
+			}
+			else if (m3->mc_pg[top-1] == csrc->mc_pg[top-1] &&
+				m3->mc_ki[top-1] > csrc->mc_ki[top-1])
+			{
 				m3->mc_ki[top-1]--;
 			}
 			if (IS_LEAF(psrc))
@@ -2018,10 +2251,13 @@ mdb_rebalance(MDB_cursor *mc)
 	MDB_cursor	mn;
 	indx_t oldki;
 
-	if (IS_BRANCH(mc->mc_pg[mc->mc_top])) {
+	if (IS_BRANCH(mc->mc_pg[mc->mc_top]))
+	{
 		minkeys = 2;
 		thresh = 1;
-	} else {
+	}
+	else
+	{
 		minkeys = 1;
 		thresh = FILL_THRESHOLD;
 	}
@@ -2031,19 +2267,23 @@ mdb_rebalance(MDB_cursor *mc)
 		(float)PAGEFILL(mc->mc_txn->mt_env, mc->mc_pg[mc->mc_top]) / 10));
 
 	if (PAGEFILL(mc->mc_txn->mt_env, mc->mc_pg[mc->mc_top]) >= thresh &&
-		NUMKEYS(mc->mc_pg[mc->mc_top]) >= minkeys) {
+		NUMKEYS(mc->mc_pg[mc->mc_top]) >= minkeys)
+	{
 		DPRINTF(("no need to rebalance page %" Yu ", above fill threshold",
 		    mdb_dbg_pgno(mc->mc_pg[mc->mc_top])));
 		return MDB_SUCCESS;
 	}
 
-	if (mc->mc_snum < 2) {
+	if (mc->mc_snum < 2)
+	{
 		MDB_page *mp = mc->mc_pg[0];
-		if (IS_SUBP(mp)) {
+		if (IS_SUBP(mp))
+		{
 			DPUTS("Can't rebalance a subpage, ignoring");
 			return MDB_SUCCESS;
 		}
-		if (NUMKEYS(mp) == 0) {
+		if (NUMKEYS(mp) == 0)
+		{
 			DPUTS("tree is completely empty");
 			mc->mc_db->md_root = P_INVALID;
 			mc->mc_db->md_depth = 0;
@@ -2059,21 +2299,25 @@ mdb_rebalance(MDB_cursor *mc)
 				MDB_cursor *m2, *m3;
 				MDB_dbi dbi = mc->mc_dbi;
 
-				for (m2 = mc->mc_txn->mt_cursors[dbi]; m2; m2=m2->mc_next) {
+				for (m2 = mc->mc_txn->mt_cursors[dbi]; m2; m2=m2->mc_next)
+				{
 					if (mc->mc_flags & C_SUB)
 						m3 = &m2->mc_xcursor->mx_cursor;
 					else
 						m3 = m2;
 					if (!(m3->mc_flags & C_INITIALIZED) || (m3->mc_snum < mc->mc_snum))
 						continue;
-					if (m3->mc_pg[0] == mp) {
+					if (m3->mc_pg[0] == mp)
+					{
 						m3->mc_snum = 0;
 						m3->mc_top = 0;
 						m3->mc_flags &= ~C_INITIALIZED;
 					}
 				}
 			}
-		} else if (IS_BRANCH(mp) && NUMKEYS(mp) == 1) {
+		}
+		else if (IS_BRANCH(mp) && NUMKEYS(mp) == 1)
+		{
 			int i;
 			DPUTS("collapsing root page!");
 			rc = mdb_midl_append(&mc->mc_txn->mt_free_pgs, mp->mp_pgno);
@@ -2086,7 +2330,8 @@ mdb_rebalance(MDB_cursor *mc)
 			mc->mc_db->md_depth--;
 			mc->mc_db->md_branch_pages--;
 			mc->mc_ki[0] = mc->mc_ki[1];
-			for (i = 1; i<mc->mc_db->md_depth; i++) {
+			for (i = 1; i<mc->mc_db->md_depth; i++)
+			{
 				mc->mc_pg[i] = mc->mc_pg[i+1];
 				mc->mc_ki[i] = mc->mc_ki[i+1];
 			}
@@ -2095,7 +2340,8 @@ mdb_rebalance(MDB_cursor *mc)
 				MDB_cursor *m2, *m3;
 				MDB_dbi dbi = mc->mc_dbi;
 
-				for (m2 = mc->mc_txn->mt_cursors[dbi]; m2; m2=m2->mc_next) {
+				for (m2 = mc->mc_txn->mt_cursors[dbi]; m2; m2=m2->mc_next)
+				{
 					if (mc->mc_flags & C_SUB)
 						m3 = &m2->mc_xcursor->mx_cursor;
 					else
@@ -2103,8 +2349,10 @@ mdb_rebalance(MDB_cursor *mc)
 					if (m3 == mc) continue;
 					if (!(m3->mc_flags & C_INITIALIZED))
 						continue;
-					if (m3->mc_pg[0] == mp) {
-						for (i=0; i<mc->mc_db->md_depth; i++) {
+					if (m3->mc_pg[0] == mp)
+					{
+						for (i=0; i<mc->mc_db->md_depth; i++)
+						{
 							m3->mc_pg[i] = m3->mc_pg[i+1];
 							m3->mc_ki[i] = m3->mc_ki[i+1];
 						}
@@ -2113,7 +2361,8 @@ mdb_rebalance(MDB_cursor *mc)
 					}
 				}
 			}
-		} else
+		}
+		else
 			DPUTS("root page doesn't need rebalancing");
 		return MDB_SUCCESS;
 	}
@@ -2135,7 +2384,8 @@ mdb_rebalance(MDB_cursor *mc)
 	mn.mc_xcursor = NULL;
 
 	oldki = mc->mc_ki[mc->mc_top];
-	if (mc->mc_ki[ptop] == 0) {
+	if (mc->mc_ki[ptop] == 0)
+	{
 		/* We're the leftmost leaf in our parent.
 		 */
 		DPUTS("reading right neighbor");
@@ -2147,7 +2397,9 @@ mdb_rebalance(MDB_cursor *mc)
 		mn.mc_ki[mn.mc_top] = 0;
 		mc->mc_ki[mc->mc_top] = NUMKEYS(mc->mc_pg[mc->mc_top]);
 		fromleft = 0;
-	} else {
+	}
+	else
+	{
 		/* There is at least one neighbor to the left.
 		 */
 		DPUTS("reading left neighbor");
@@ -2169,16 +2421,23 @@ mdb_rebalance(MDB_cursor *mc)
 	 * move one key from it. Otherwise we should try to merge them.
 	 * (A branch page must never have less than 2 keys.)
 	 */
-	if (PAGEFILL(mc->mc_txn->mt_env, mn.mc_pg[mn.mc_top]) >= thresh && NUMKEYS(mn.mc_pg[mn.mc_top]) > minkeys) {
+	if (PAGEFILL(mc->mc_txn->mt_env, mn.mc_pg[mn.mc_top]) >= thresh && NUMKEYS(mn.mc_pg[mn.mc_top]) > minkeys)
+	{
 		rc = mdb_node_move(&mn, mc, fromleft);
-		if (fromleft) {
+		if (fromleft)
+		{
 			/* if we inserted on left, bump position up */
 			oldki++;
 		}
-	} else {
-		if (!fromleft) {
+	}
+	else
+	{
+		if (!fromleft)
+		{
 			rc = mdb_page_merge(&mn, mc);
-		} else {
+		}
+		else
+		{
 			oldki += NUMKEYS(mn.mc_pg[mn.mc_top]);
 			mn.mc_ki[mn.mc_top] += mc->mc_ki[mn.mc_top] + 1;
 			/* We want mdb_rebalance to find mn when doing fixups */
@@ -2240,11 +2499,13 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 	 * the cursor height may be greater because it walks
 	 * up the stack while finding the branch slot to update.
 	 */
-	if (mc->mc_top < 1) {
+	if (mc->mc_top < 1)
+	{
 		if ((rc = mdb_page_new(mc, P_BRANCH, 1, &pp)))
 			goto done;
 		/* shift current top to make room for new parent */
-		for (i=mc->mc_snum; i>0; i--) {
+		for (i=mc->mc_snum; i>0; i--)
+		{
 			mc->mc_pg[i] = mc->mc_pg[i-1];
 			mc->mc_ki[i] = mc->mc_ki[i-1];
 		}
@@ -2255,7 +2516,8 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 		new_root = mc->mc_db->md_depth++;
 
 		/* Add left (implicit) pointer. */
-		if ((rc = mdb_node_add(mc, 0, NULL, NULL, mp->mp_pgno, 0)) != MDB_SUCCESS) {
+		if ((rc = mdb_node_add(mc, 0, NULL, NULL, mp->mp_pgno, 0)) != MDB_SUCCESS)
+		{
 			/* undo the pre-push */
 			mc->mc_pg[0] = mc->mc_pg[1];
 			mc->mc_ki[0] = mc->mc_ki[1];
@@ -2266,7 +2528,9 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 		mc->mc_snum++;
 		mc->mc_top++;
 		ptop = 0;
-	} else {
+	}
+	else
+	{
 		ptop = mc->mc_top-1;
 		DPRINTF(("parent branch page is %" Yu, mc->mc_pg[ptop]->mp_pgno));
 	}
@@ -2276,16 +2540,20 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 	mn.mc_pg[mn.mc_top] = rp;
 	mn.mc_ki[ptop] = mc->mc_ki[ptop]+1;
 
-	if (nflags & MDB_APPEND) {
+	if (nflags & MDB_APPEND)
+	{
 		mn.mc_ki[mn.mc_top] = 0;
 		sepkey = *newkey;
 		split_indx = newindx;
 		nkeys = 0;
-	} else {
+	}
+	else
+	{
 
 		split_indx = (nkeys+1) / 2;
 
-		if (IS_LEAF2(rp)) {
+		if (IS_LEAF2(rp))
+		{
 			char *split, *ins;
 			int x;
 			unsigned int lsize, rsize, ksize;
@@ -2300,12 +2568,16 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 			mp->mp_upper += rsize - lsize;
 			rp->mp_upper -= rsize - lsize;
 			sepkey.mv_size = ksize;
-			if (newindx == split_indx) {
+			if (newindx == split_indx)
+			{
 				sepkey.mv_data = newkey->mv_data;
-			} else {
+			}
+			else
+			{
 				sepkey.mv_data = split;
 			}
-			if (x<0) {
+			if (x<0)
+			{
 				ins = LEAF2KEY(mp, mc->mc_ki[mc->mc_top], ksize);
 				memcpy(rp->mp_ptrs, split, rsize);
 				sepkey.mv_data = rp->mp_ptrs;
@@ -2313,7 +2585,9 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 				memcpy(ins, newkey->mv_data, ksize);
 				mp->mp_lower += sizeof(indx_t);
 				mp->mp_upper -= ksize - sizeof(indx_t);
-			} else {
+			}
+			else
+			{
 				if (x)
 					memcpy(rp->mp_ptrs, split, x * ksize);
 				ins = LEAF2KEY(rp, x, ksize);
@@ -2323,7 +2597,9 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 				rp->mp_upper -= ksize - sizeof(indx_t);
 				mc->mc_ki[mc->mc_top] = x;
 			}
-		} else {
+		}
+		else
+		{
 			int psize, nsize, k, keythresh;
 
 			/* Maximum free space in an empty page */
@@ -2339,7 +2615,8 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 
 			/* grab a page to hold a temporary copy */
 			copy = mdb_page_malloc(mc->mc_txn, 1);
-			if (copy == NULL) {
+			if (copy == NULL)
+			{
 				rc = ENOMEM;
 				goto done;
 			}
@@ -2349,8 +2626,10 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 			copy->mp_upper = env->me_psize - PAGEBASE;
 
 			/* prepare to insert */
-			for (i=0, j=0; i<nkeys; i++) {
-				if (i == newindx) {
+			for (i=0, j=0; i<nkeys; i++)
+			{
+				if (i == newindx)
+				{
 					copy->mp_ptrs[j++] = 0;
 				}
 				copy->mp_ptrs[j++] = mp->mp_ptrs[i];
@@ -2371,24 +2650,33 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 			 * the split so the new page is emptier than the old page.
 			 * This yields better packing during sequential inserts.
 			 */
-			if (nkeys < keythresh || nsize > pmax/16 || newindx >= nkeys) {
+			if (nkeys < keythresh || nsize > pmax/16 || newindx >= nkeys)
+			{
 				/* Find split point */
 				psize = 0;
-				if (newindx <= split_indx || newindx >= nkeys) {
+				if (newindx <= split_indx || newindx >= nkeys)
+				{
 					i = 0; j = 1;
 					k = newindx >= nkeys ? nkeys : split_indx+1+IS_LEAF(mp);
-				} else {
+				}
+				else
+				{
 					i = nkeys; j = -1;
 					k = split_indx-1;
 				}
-				for (; i!=k; i+=j) {
-					if (i == newindx) {
+				for (; i!=k; i+=j)
+				{
+					if (i == newindx)
+					{
 						psize += nsize;
 						node = NULL;
-					} else {
+					}
+					else
+					{
 						node = (MDB_node *)((char *)mp + copy->mp_ptrs[i] + PAGEBASE);
 						psize += NODESIZE + NODEKSZ(node) + sizeof(indx_t);
-						if (IS_LEAF(mp)) {
+						if (IS_LEAF(mp))
+						{
 							if (F_ISSET(node->mn_flags, F_BIGDATA))
 								psize += sizeof(pgno_t);
 							else
@@ -2396,16 +2684,20 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 						}
 						psize = EVEN(psize);
 					}
-					if (psize > pmax || i == k-j) {
+					if (psize > pmax || i == k-j)
+					{
 						split_indx = i + (j<0);
 						break;
 					}
 				}
 			}
-			if (split_indx == newindx) {
+			if (split_indx == newindx)
+			{
 				sepkey.mv_size = newkey->mv_size;
 				sepkey.mv_data = newkey->mv_data;
-			} else {
+			}
+			else
+			{
 				node = (MDB_node *)((char *)mp + copy->mp_ptrs[split_indx] + PAGEBASE);
 				sepkey.mv_size = node->mn_ksize;
 				sepkey.mv_data = NODEKEY(node);
@@ -2417,7 +2709,8 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 
 	/* Copy separator key to the parent.
 	 */
-	if (SIZELEFT(mn.mc_pg[ptop]) < mdb_branch_size(env, &sepkey)) {
+	if (SIZELEFT(mn.mc_pg[ptop]) < mdb_branch_size(env, &sepkey))
+	{
 		int snum = mc->mc_snum;
 		mn.mc_snum--;
 		mn.mc_top--;
@@ -2429,38 +2722,48 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 			goto done;
 
 		/* root split? */
-		if (mc->mc_snum > snum) {
+		if (mc->mc_snum > snum)
+		{
 			ptop++;
 		}
 		/* Right page might now have changed parent.
 		 * Check if left page also changed parent.
 		 */
 		if (mn.mc_pg[ptop] != mc->mc_pg[ptop] &&
-		    mc->mc_ki[ptop] >= NUMKEYS(mc->mc_pg[ptop])) {
-			for (i=0; i<ptop; i++) {
+		    mc->mc_ki[ptop] >= NUMKEYS(mc->mc_pg[ptop]))
+		{
+			for (i=0; i<ptop; i++)
+			{
 				mc->mc_pg[i] = mn.mc_pg[i];
 				mc->mc_ki[i] = mn.mc_ki[i];
 			}
 			mc->mc_pg[ptop] = mn.mc_pg[ptop];
-			if (mn.mc_ki[ptop]) {
+			if (mn.mc_ki[ptop])
+			{
 				mc->mc_ki[ptop] = mn.mc_ki[ptop] - 1;
-			} else {
+			}
+			else
+			{
 				/* find right page's left sibling */
 				mc->mc_ki[ptop] = mn.mc_ki[ptop];
 				rc = mdb_cursor_sibling(mc, 0);
 			}
 		}
-	} else {
+	}
+	else
+	{
 		mn.mc_top--;
 		rc = mdb_node_add(&mn, mn.mc_ki[ptop], &sepkey, NULL, rp->mp_pgno, 0);
 		mn.mc_top++;
 	}
-	if (rc != MDB_SUCCESS) {
+	if (rc != MDB_SUCCESS)
+	{
 		if (rc == MDB_NOTFOUND) /* improper mdb_cursor_sibling() result */
 			rc = MDB_PROBLEM;
 		goto done;
 	}
-	if (nflags & MDB_APPEND) {
+	if (nflags & MDB_APPEND)
+	{
 		mc->mc_pg[mc->mc_top] = rp;
 		mc->mc_ki[mc->mc_top] = 0;
 		rc = mdb_node_add(mc, 0, newkey, newdata, newpgno, nflags);
@@ -2468,36 +2771,47 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 			goto done;
 		for (i=0; i<mc->mc_top; i++)
 			mc->mc_ki[i] = mn.mc_ki[i];
-	} else if (!IS_LEAF2(mp)) {
+	}
+	else if (!IS_LEAF2(mp))
+	{
 		/* Move nodes */
 		mc->mc_pg[mc->mc_top] = rp;
 		i = split_indx;
 		j = 0;
-		do {
-			if (i == newindx) {
+		do
+		{
+			if (i == newindx)
+			{
 				rkey.mv_data = newkey->mv_data;
 				rkey.mv_size = newkey->mv_size;
-				if (IS_LEAF(mp)) {
+				if (IS_LEAF(mp))
+				{
 					rdata = newdata;
-				} else
+				}
+				else
 					pgno = newpgno;
 				flags = nflags;
 				/* Update index for the new key. */
 				mc->mc_ki[mc->mc_top] = j;
-			} else {
+			}
+			else
+			{
 				node = (MDB_node *)((char *)mp + copy->mp_ptrs[i] + PAGEBASE);
 				rkey.mv_data = NODEKEY(node);
 				rkey.mv_size = node->mn_ksize;
-				if (IS_LEAF(mp)) {
+				if (IS_LEAF(mp))
+				{
 					xdata.mv_data = NODEDATA(node);
 					xdata.mv_size = NODEDSZ(node);
 					rdata = &xdata;
-				} else
+				}
+				else
 					pgno = NODEPGNO(node);
 				flags = node->mn_flags;
 			}
 
-			if (!IS_LEAF(mp) && j == 0) {
+			if (!IS_LEAF(mp) && j == 0)
+			{
 				/* First branch index doesn't need key data. */
 				rkey.mv_size = 0;
 			}
@@ -2505,11 +2819,14 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 			rc = mdb_node_add(mc, j, &rkey, rdata, pgno, flags);
 			if (rc)
 				goto done;
-			if (i == nkeys) {
+			if (i == nkeys)
+			{
 				i = 0;
 				j = 0;
 				mc->mc_pg[mc->mc_top] = copy;
-			} else {
+			}
+			else
+			{
 				i++;
 				j++;
 			}
@@ -2524,35 +2841,46 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 			env->me_psize - copy->mp_upper - PAGEBASE);
 
 		/* reset back to original page */
-		if (newindx < split_indx) {
+		if (newindx < split_indx)
+		{
 			mc->mc_pg[mc->mc_top] = mp;
-		} else {
+		}
+		else
+		{
 			mc->mc_pg[mc->mc_top] = rp;
 			mc->mc_ki[ptop]++;
 			/* Make sure mc_ki is still valid.
 			 */
 			if (mn.mc_pg[ptop] != mc->mc_pg[ptop] &&
-				mc->mc_ki[ptop] >= NUMKEYS(mc->mc_pg[ptop])) {
-				for (i=0; i<=ptop; i++) {
+				mc->mc_ki[ptop] >= NUMKEYS(mc->mc_pg[ptop]))
+			{
+				for (i=0; i<=ptop; i++)
+				{
 					mc->mc_pg[i] = mn.mc_pg[i];
 					mc->mc_ki[i] = mn.mc_ki[i];
 				}
 			}
 		}
-		if (nflags & MDB_RESERVE) {
+		if (nflags & MDB_RESERVE)
+		{
 			node = NODEPTR(mc->mc_pg[mc->mc_top], mc->mc_ki[mc->mc_top]);
 			if (!(node->mn_flags & F_BIGDATA))
 				newdata->mv_data = NODEDATA(node);
 		}
-	} else {
-		if (newindx >= split_indx) {
+	}
+	else
+	{
+		if (newindx >= split_indx)
+		{
 			mc->mc_pg[mc->mc_top] = rp;
 			mc->mc_ki[ptop]++;
 			/* Make sure mc_ki is still valid.
 			 */
 			if (mn.mc_pg[ptop] != mc->mc_pg[ptop] &&
-				mc->mc_ki[ptop] >= NUMKEYS(mc->mc_pg[ptop])) {
-				for (i=0; i<=ptop; i++) {
+				mc->mc_ki[ptop] >= NUMKEYS(mc->mc_pg[ptop]))
+			{
+				for (i=0; i<=ptop; i++)
+				{
 					mc->mc_pg[i] = mn.mc_pg[i];
 					mc->mc_ki[i] = mn.mc_ki[i];
 				}
@@ -2566,7 +2894,8 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 		MDB_dbi dbi = mc->mc_dbi;
 		nkeys = NUMKEYS(mp);
 
-		for (m2 = mc->mc_txn->mt_cursors[dbi]; m2; m2=m2->mc_next) {
+		for (m2 = mc->mc_txn->mt_cursors[dbi]; m2; m2=m2->mc_next)
+		{
 			if (mc->mc_flags & C_SUB)
 				m3 = &m2->mc_xcursor->mx_cursor;
 			else
@@ -2575,38 +2904,48 @@ mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno
 				continue;
 			if (!(m2->mc_flags & m3->mc_flags & C_INITIALIZED))
 				continue;
-			if (new_root) {
+			if (new_root)
+			{
 				int k;
 				/* sub cursors may be on different DB */
 				if (m3->mc_pg[0] != mp)
 					continue;
 				/* root split */
-				for (k=new_root; k>=0; k--) {
+				for (k=new_root; k>=0; k--)
+				{
 					m3->mc_ki[k+1] = m3->mc_ki[k];
 					m3->mc_pg[k+1] = m3->mc_pg[k];
 				}
-				if (m3->mc_ki[0] >= nkeys) {
+				if (m3->mc_ki[0] >= nkeys)
+				{
 					m3->mc_ki[0] = 1;
-				} else {
+				}
+				else
+				{
 					m3->mc_ki[0] = 0;
 				}
 				m3->mc_pg[0] = mc->mc_pg[0];
 				m3->mc_snum++;
 				m3->mc_top++;
 			}
-			if (m3->mc_top >= mc->mc_top && m3->mc_pg[mc->mc_top] == mp) {
+			if (m3->mc_top >= mc->mc_top && m3->mc_pg[mc->mc_top] == mp)
+			{
 				if (m3->mc_ki[mc->mc_top] >= newindx && !(nflags & MDB_SPLIT_REPLACE))
 					m3->mc_ki[mc->mc_top]++;
-				if (m3->mc_ki[mc->mc_top] >= nkeys) {
+				if (m3->mc_ki[mc->mc_top] >= nkeys)
+				{
 					m3->mc_pg[mc->mc_top] = rp;
 					m3->mc_ki[mc->mc_top] -= nkeys;
-					for (i=0; i<mc->mc_top; i++) {
+					for (i=0; i<mc->mc_top; i++)
+					{
 						m3->mc_ki[i] = mn.mc_ki[i];
 						m3->mc_pg[i] = mn.mc_pg[i];
 					}
 				}
-			} else if (!did_split && m3->mc_top >= ptop && m3->mc_pg[ptop] == mc->mc_pg[ptop] &&
-				m3->mc_ki[ptop] >= mc->mc_ki[ptop]) {
+			}
+			else if (!did_split && m3->mc_top >= ptop && m3->mc_pg[ptop] == mc->mc_pg[ptop] &&
+				m3->mc_ki[ptop] >= mc->mc_ki[ptop])
+			{
 				m3->mc_ki[ptop]++;
 			}
 			if (IS_LEAF(mp))

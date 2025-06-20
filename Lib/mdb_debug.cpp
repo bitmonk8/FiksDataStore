@@ -84,7 +84,8 @@ mdb_dval(MDB_txn *txn, MDB_dbi dbi, MDB_val *data, char *buf)
 		mdb_dkey(data, buf+1);
 		*buf = '[';
 		strcpy(buf + data->mv_size * 2 + 1, "]");
-	} else
+	}
+	else
 		*buf = '\0';
 	return buf;
 }
@@ -150,7 +151,8 @@ mdb_page_list(MDB_page *mp)
 			fprintf(stderr, "key %d: page %" Yu ", %s\n", i, NODEPGNO(node),
 				DKEY(&key));
 			total += nsize;
-		} else
+		}
+		else
 		{
 			if (F_ISSET(node->mn_flags, F_BIGDATA))
 				nsize += sizeof(pgno_t);
