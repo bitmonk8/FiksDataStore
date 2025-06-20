@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mdb_internal.h"
 #include "midl.h"
 
 /** @defgroup util Utility Macros

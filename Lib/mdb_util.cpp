@@ -1,5 +1,6 @@
-#include "lmdb.h"
+#include "mdb_util.h"
 
+#include "lmdb.h"
 #include <string.h>
 
 #ifdef _WIN32

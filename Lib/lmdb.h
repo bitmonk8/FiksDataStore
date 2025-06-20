@@ -168,8 +168,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef _LMDB_H_
-#define _LMDB_H_
+#pragma once
 
 #include <sys/types.h>
 #include <inttypes.h>
@@ -1648,5 +1647,3 @@ char* mdb_dkey(MDB_val *key, char *buf);
 	\li \ref mdb_load_1
 	\li \ref mdb_stat_1
 */
-
-#endif /* _LMDB_H_ */
