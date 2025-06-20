@@ -2,24 +2,48 @@
 #define MDB_PAGE_H
 
 #include "mdb_util.h"
+#include "mdb_internal.h"
 #include "midl.h"
 
 // Forward declarations
 struct MDB_env;
 struct MDB_txn;
 struct MDB_cursor;
-struct MDB_page;
 struct MDB_node;
 
+/** Common header for all page types. The page type depends on #mp_flags.
+ */
+struct MDB_page {
+#define	mp_pgno	mp_p.p_pgno
+#define	mp_next	mp_p.p_next
+	union {
+		pgno_t		p_pgno;	/**< page number */
+		struct MDB_page *p_next; /**< for in-memory list of freed pages */
+	} mp_p;
+	uint16_t	mp_pad;			/**< key size if this is a LEAF2 page */
+	uint16_t	mp_flags;		/**< @ref mdb_page */
+#define mp_lower	mp_pb.pb.pb_lower
+#define mp_upper	mp_pb.pb.pb_upper
+#define mp_pages	mp_pb.pb_pages
+	union {
+		struct {
+			indx_t		pb_lower;		/**< lower bound of free space */
+			indx_t		pb_upper;		/**< upper bound of free space */
+		} pb;
+		uint32_t	pb_pages;	/**< number of overflow pages */
+	} mp_pb;
+	indx_t		mp_ptrs[0];		/**< dynamic size */
+};
+
 /** Alternate page header, for 2-byte aligned access */
-typedef struct MDB_page2 {
+struct MDB_page2 {
 	uint16_t	mp2_p[sizeof(pgno_t)/2];
 	uint16_t	mp2_pad;
 	uint16_t	mp2_flags;
 	indx_t		mp2_lower;
 	indx_t		mp2_upper;
 	indx_t		mp2_ptrs[0];
-} MDB_page2;
+};
 
 #define MP_PGNO(p)	(((MDB_page2 *)(void *)(p))->mp2_p)
 #define MP_PAD(p)	(((MDB_page2 *)(void *)(p))->mp2_pad)
@@ -132,7 +156,8 @@ typedef struct MDB_page2 {
 	 * #F_DUPDATA and #F_SUBDATA can be combined giving duplicate data in
 	 * a sub-page/sub-database, and named databases (just #F_SUBDATA).
 	 */
-typedef struct MDB_node {
+struct MDB_node
+{
 	/** part of data size or pgno
 	 *	@{ */
 #if BYTE_ORDER == LITTLE_ENDIAN
@@ -144,7 +169,7 @@ typedef struct MDB_node {
 	unsigned short	mn_flags;		/**< @ref mdb_node */
 	unsigned short	mn_ksize;		/**< key size */
 	char		mn_data[1];			/**< key and data are appended here */
-} MDB_node;
+};
 
 	/** Size of the node header, excluding dynamic data at the end */
 #define NODESIZE	 offsetof(MDB_node, mn_data)

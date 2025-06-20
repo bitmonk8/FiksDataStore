@@ -1,5 +1,7 @@
 #include "mdb_compare.h"
 
+#include "mdb_txn.h"
+
 /** Compare two items pointing at aligned #mdb_size_t's */
 int
 mdb_cmp_long(const MDB_val *a, const MDB_val *b)

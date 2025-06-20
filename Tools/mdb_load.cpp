@@ -53,11 +53,11 @@ static MDB_val k0buf;
 
 #define STRLENOF(s)	(sizeof(s)-1)
 
-typedef struct flagbit {
+struct flagbit {
 	int bit;
 	const char *name;
 	int len;
-} flagbit;
+};
 
 #define S(s)	s, STRLENOF(s)
 

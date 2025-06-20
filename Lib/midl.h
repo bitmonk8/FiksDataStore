@@ -142,10 +142,10 @@ void mdb_midl_sort( MDB_IDL ids );
 
 	/** An ID2 is an ID/pointer pair.
 	 */
-typedef struct MDB_ID2 {
+struct MDB_ID2 {
 	MDB_ID mid;		/**< The ID */
 	void *mptr;		/**< The pointer */
-} MDB_ID2;
+};
 
 	/** An ID2L is an ID2 List, a sorted array of ID2s.
 	 * The first element's \b mid member is a count of how many actual

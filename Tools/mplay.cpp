@@ -45,24 +45,24 @@ int maxkey;
 
 #define MAXPIDS	16
 
-typedef struct crspair {
+struct crspair {
 	void *tcrs;	/* scanned text pointer */
 	MDB_cursor *rcrs;
-} crspair;
+};
 
-typedef struct txnpair {
+struct txnpair {
 	void *ttxn;	/* scanned text pointer */
 	MDB_txn *rtxn;
 	crspair cursors[MAXCRSS];
 	int ncursors;
-} txnpair;
+};
 
-typedef struct envpair {
+struct envpair {
 	void *tenv;
 	MDB_env *renv;
 	txnpair txns[MAXTXNS];
 	int ntxns;
-} envpair;
+};
 
 envpair envs[MAXENVS];
 int nenvs;
@@ -71,11 +71,11 @@ envpair *lastenv;
 txnpair *lasttxn;
 crspair *lastcrs;
 
-typedef struct pidpair {
+struct pidpair {
 	int tpid;
 	pid_t rpid;
 	int fdout, fdin;
-} pidpair;
+};
 
 pidpair *lastpid;
 

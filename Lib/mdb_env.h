@@ -2,6 +2,11 @@
 
 #include "mdb_internal.h"
 
+#include "mdb_lock.h"
+#include "mdb_db.h"
+
+struct MDB_page;
+
 /** Initial part of #MDB_env.me_mutexname[].
  *	Changes to this code must be reflected in #MDB_LOCK_FORMAT.
  */
@@ -10,6 +15,111 @@
 #elif defined MDB_USE_POSIX_SEM
 #define MUTEXNAME_PREFIX		"/MDB"
 #endif
+
+	/** Meta page content.
+	 *	A meta page is the start point for accessing a database snapshot.
+	 *	Pages 0-1 are meta pages. Transaction N writes meta page #(N % 2).
+	 */
+struct MDB_meta {
+		/** Stamp identifying this as an LMDB file. It must be set
+		 *	to #MDB_MAGIC. */
+	uint32_t	mm_magic;
+		/** Version number of this file. Must be set to #MDB_DATA_VERSION. */
+	uint32_t	mm_version;
+	void		*mm_address;		/**< address for fixed mapping */
+	mdb_size_t	mm_mapsize;			/**< size of mmap region */
+	MDB_db		mm_dbs[CORE_DBS];	/**< first is free space, 2nd is main db */
+	/** The size of pages used in this DB */
+#define	mm_psize	mm_dbs[FREE_DBI].md_pad
+	/** Any persistent environment flags. @ref mdb_env */
+#define	mm_flags	mm_dbs[FREE_DBI].md_flags
+	/** Last used page in the datafile.
+	 *	Actually the file may be shorter if the freeDB lists the final pages.
+	 */
+	pgno_t		mm_last_pg;
+	volatile txnid_t	mm_txnid;	/**< txnid that committed this page */
+};
+
+	/** State of FreeDB old pages, stored in the MDB_env */
+struct MDB_pgstate {
+	pgno_t		*mf_pghead;	/**< Reclaimed freeDB pages, or NULL before use */
+	txnid_t		mf_pglast;	/**< ID of last used record, or 0 if !mf_pghead */
+};
+
+	/** The header for the reader table.
+	 *	The table resides in a memory-mapped file. (This is a different file
+	 *	than is used for the main database.)
+	 *
+	 *	For POSIX the actual mutexes reside in the shared memory of this
+	 *	mapped file. On Windows, mutexes are named objects allocated by the
+	 *	kernel; we store the mutex names in this mapped file so that other
+	 *	processes can grab them. This same approach is also used on
+	 *	MacOSX/Darwin (using named semaphores) since MacOSX doesn't support
+	 *	process-shared POSIX mutexes. For these cases where a named object
+	 *	is used, the object name is derived from a 64 bit FNV hash of the
+	 *	environment pathname. As such, naming collisions are extremely
+	 *	unlikely. If a collision occurs, the results are unpredictable.
+	 */
+struct MDB_txbody {
+		/** Stamp identifying this as an LMDB file. It must be set
+		 *	to #MDB_MAGIC. */
+	uint32_t	mtb_magic;
+		/** Format of this lock file. Must be set to #MDB_LOCK_FORMAT. */
+	uint32_t	mtb_format;
+		/**	The ID of the last transaction committed to the database.
+		 *	This is recorded here only for convenience; the value can always
+		 *	be determined by reading the main database meta pages.
+		 */
+	volatile txnid_t		mtb_txnid;
+		/** The number of slots that have been used in the reader table.
+		 *	This always records the maximum count, it is not decremented
+		 *	when readers release their slots.
+		 */
+	volatile unsigned	mtb_numreaders;
+#if defined(_WIN32) || defined(MDB_USE_POSIX_SEM)
+		/** Binary form of names of the reader/writer locks */
+	mdb_hash_t			mtb_mutexid;
+#elif defined(MDB_USE_SYSV_SEM)
+	int 	mtb_semid;
+	int		mtb_rlocked;
+#else
+		/** Mutex protecting access to this table.
+		 *	This is the reader table lock used with LOCK_MUTEX().
+		 */
+	mdb_mutex_t	mtb_rmutex;
+#endif
+};
+
+	/** The actual reader table definition. */
+struct MDB_txninfo {
+	union {
+		MDB_txbody mtb;
+#define mti_magic	mt1.mtb.mtb_magic
+#define mti_format	mt1.mtb.mtb_format
+#define mti_rmutex	mt1.mtb.mtb_rmutex
+#define mti_txnid	mt1.mtb.mtb_txnid
+#define mti_numreaders	mt1.mtb.mtb_numreaders
+#define mti_mutexid	mt1.mtb.mtb_mutexid
+#ifdef MDB_USE_SYSV_SEM
+#define	mti_semid	mt1.mtb.mtb_semid
+#define	mti_rlocked	mt1.mtb.mtb_rlocked
+#endif
+		char pad[(sizeof(MDB_txbody)+CACHELINE-1) & ~(CACHELINE-1)];
+	} mt1;
+#if !(defined(_WIN32) || defined(MDB_USE_POSIX_SEM))
+	union {
+#ifdef MDB_USE_SYSV_SEM
+		int mt2_wlocked;
+#define mti_wlocked	mt2.mt2_wlocked
+#else
+		mdb_mutex_t	mt2_wmutex;
+#define mti_wmutex	mt2.mt2_wmutex
+#endif
+		char pad[(MNAME_LEN+CACHELINE-1) & ~(CACHELINE-1)];
+	} mt2;
+#endif
+	MDB_reader	mti_readers[1];
+};
 
 	/** The database environment. */
 struct MDB_env {

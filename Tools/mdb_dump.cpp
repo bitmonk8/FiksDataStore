@@ -37,10 +37,10 @@ typedef SSIZE_T	ssize_t;
 #define PRINT	1
 static int mode;
 
-typedef struct flagbit {
+struct flagbit {
 	int bit;
 	const char *name;
-} flagbit;
+};
 
 flagbit dbflags[] = {
 	{ MDB_REVERSEKEY, "reversekey" },

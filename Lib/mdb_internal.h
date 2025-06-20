@@ -2,8 +2,6 @@
 
 #include "lmdb.h"
 #include "midl.h"
-#include "mdb_util.h"
-#include "mdb_page.h"
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE 1
@@ -267,11 +265,14 @@ int mdb_sem_wait(sem_t *sem);
 
 #elif defined MDB_USE_SYSV_SEM
 
-typedef struct mdb_mutex {
+struct mdb_mutex {
 	int semid;
 	int semnum;
 	int *locked;
-} mdb_mutex_t[1], *mdb_mutexref_t;
+};
+
+typedef mdb_mutex mdb_mutex_t[1];
+typedef mdb_mutex* mdb_mutexref_t;
 
 #define LOCK_MUTEX0(mutex)		mdb_sem_wait(mutex)
 #define UNLOCK_MUTEX(mutex)		do { \
@@ -447,116 +448,11 @@ typedef pthread_mutex_t *mdb_mutexref_t;
 #define CACHELINE	64
 #endif
 
-	/**	The information we store in a single slot of the reader table.
-	 *	In addition to a transaction ID, we also record the process and
-	 *	thread ID that owns a slot, so that we can detect stale information,
-	 *	e.g. threads or processes that went away without cleaning up.
-	 *	@note We currently don't check for stale records. We simply re-init
-	 *	the table when we know that we're the only process opening the
-	 *	lock file.
+	/** Enough space for 2^32 nodes with minimum of 2 keys per node. I.e., plenty.
+	 * At 4 keys per node, enough for 2^64 nodes, so there's probably no need to
+	 * raise this on a 64 bit machine.
 	 */
-typedef struct MDB_rxbody {
-	/**	Current Transaction ID when this transaction began, or (txnid_t)-1.
-	 *	Multiple readers that start at the same time will probably have the
-	 *	same ID here. Again, it's not important to exclude them from
-	 *	anything; all we need to know is which version of the DB they
-	 *	started from so we can avoid overwriting any data used in that
-	 *	particular version.
-	 */
-	volatile txnid_t		mrb_txnid;
-	/** The process ID of the process owning this reader txn. */
-	volatile MDB_PID_T	mrb_pid;
-	/** The thread ID of the thread owning this txn. */
-	volatile MDB_THR_T	mrb_tid;
-} MDB_rxbody;
-
-	/** The actual reader record, with cacheline padding. */
-typedef struct MDB_reader {
-	union {
-		MDB_rxbody mrx;
-		/** shorthand for mrb_txnid */
-#define	mr_txnid	mru.mrx.mrb_txnid
-#define	mr_pid	mru.mrx.mrb_pid
-#define	mr_tid	mru.mrx.mrb_tid
-		/** cache line alignment */
-		char pad[(sizeof(MDB_rxbody)+CACHELINE-1) & ~(CACHELINE-1)];
-	} mru;
-} MDB_reader;
-
-	/** The header for the reader table.
-	 *	The table resides in a memory-mapped file. (This is a different file
-	 *	than is used for the main database.)
-	 *
-	 *	For POSIX the actual mutexes reside in the shared memory of this
-	 *	mapped file. On Windows, mutexes are named objects allocated by the
-	 *	kernel; we store the mutex names in this mapped file so that other
-	 *	processes can grab them. This same approach is also used on
-	 *	MacOSX/Darwin (using named semaphores) since MacOSX doesn't support
-	 *	process-shared POSIX mutexes. For these cases where a named object
-	 *	is used, the object name is derived from a 64 bit FNV hash of the
-	 *	environment pathname. As such, naming collisions are extremely
-	 *	unlikely. If a collision occurs, the results are unpredictable.
-	 */
-typedef struct MDB_txbody {
-		/** Stamp identifying this as an LMDB file. It must be set
-		 *	to #MDB_MAGIC. */
-	uint32_t	mtb_magic;
-		/** Format of this lock file. Must be set to #MDB_LOCK_FORMAT. */
-	uint32_t	mtb_format;
-		/**	The ID of the last transaction committed to the database.
-		 *	This is recorded here only for convenience; the value can always
-		 *	be determined by reading the main database meta pages.
-		 */
-	volatile txnid_t		mtb_txnid;
-		/** The number of slots that have been used in the reader table.
-		 *	This always records the maximum count, it is not decremented
-		 *	when readers release their slots.
-		 */
-	volatile unsigned	mtb_numreaders;
-#if defined(_WIN32) || defined(MDB_USE_POSIX_SEM)
-		/** Binary form of names of the reader/writer locks */
-	mdb_hash_t			mtb_mutexid;
-#elif defined(MDB_USE_SYSV_SEM)
-	int 	mtb_semid;
-	int		mtb_rlocked;
-#else
-		/** Mutex protecting access to this table.
-		 *	This is the reader table lock used with LOCK_MUTEX().
-		 */
-	mdb_mutex_t	mtb_rmutex;
-#endif
-} MDB_txbody;
-
-	/** The actual reader table definition. */
-typedef struct MDB_txninfo {
-	union {
-		MDB_txbody mtb;
-#define mti_magic	mt1.mtb.mtb_magic
-#define mti_format	mt1.mtb.mtb_format
-#define mti_rmutex	mt1.mtb.mtb_rmutex
-#define mti_txnid	mt1.mtb.mtb_txnid
-#define mti_numreaders	mt1.mtb.mtb_numreaders
-#define mti_mutexid	mt1.mtb.mtb_mutexid
-#ifdef MDB_USE_SYSV_SEM
-#define	mti_semid	mt1.mtb.mtb_semid
-#define	mti_rlocked	mt1.mtb.mtb_rlocked
-#endif
-		char pad[(sizeof(MDB_txbody)+CACHELINE-1) & ~(CACHELINE-1)];
-	} mt1;
-#if !(defined(_WIN32) || defined(MDB_USE_POSIX_SEM))
-	union {
-#ifdef MDB_USE_SYSV_SEM
-		int mt2_wlocked;
-#define mti_wlocked	mt2.mt2_wlocked
-#else
-		mdb_mutex_t	mt2_wmutex;
-#define mti_wmutex	mt2.mt2_wmutex
-#endif
-		char pad[(MNAME_LEN+CACHELINE-1) & ~(CACHELINE-1)];
-	} mt2;
-#endif
-	MDB_reader	mti_readers[1];
-} MDB_txninfo;
+#define CURSOR_STACK		 32
 
 	/** Lockfile format signature: version, features and field layout */
 #define MDB_LOCK_FORMAT \
@@ -589,20 +485,6 @@ enum {
 /** @} */
 
 
-
-
-	/** Information about a single database in the environment. */
-typedef struct MDB_db {
-	uint32_t	md_pad;		/**< also ksize for LEAF2 pages */
-	uint16_t	md_flags;	/**< @ref mdb_dbi_open */
-	uint16_t	md_depth;	/**< depth of this tree */
-	pgno_t		md_branch_pages;	/**< number of internal pages */
-	pgno_t		md_leaf_pages;		/**< number of leaf pages */
-	pgno_t		md_overflow_pages;	/**< number of overflow pages */
-	mdb_size_t	md_entries;		/**< number of data items */
-	pgno_t		md_root;		/**< the root page of this tree */
-} MDB_db;
-
 #define MDB_VALID	0x8000		/**< DB handle is valid, for me_dbflags */
 #define PERSISTENT_FLAGS	(0xffff & ~(MDB_VALID))
 	/** #mdb_dbi_open() flags */
@@ -619,276 +501,39 @@ typedef struct MDB_db {
 	/** Number of meta pages - also hardcoded elsewhere */
 #define NUM_METAS	2
 
-	/** Meta page content.
-	 *	A meta page is the start point for accessing a database snapshot.
-	 *	Pages 0-1 are meta pages. Transaction N writes meta page #(N % 2).
-	 */
-typedef struct MDB_meta {
-		/** Stamp identifying this as an LMDB file. It must be set
-		 *	to #MDB_MAGIC. */
-	uint32_t	mm_magic;
-		/** Version number of this file. Must be set to #MDB_DATA_VERSION. */
-	uint32_t	mm_version;
-	void		*mm_address;		/**< address for fixed mapping */
-	mdb_size_t	mm_mapsize;			/**< size of mmap region */
-	MDB_db		mm_dbs[CORE_DBS];	/**< first is free space, 2nd is main db */
-	/** The size of pages used in this DB */
-#define	mm_psize	mm_dbs[FREE_DBI].md_pad
-	/** Any persistent environment flags. @ref mdb_env */
-#define	mm_flags	mm_dbs[FREE_DBI].md_flags
-	/** Last used page in the datafile.
-	 *	Actually the file may be shorter if the freeDB lists the final pages.
-	 */
-	pgno_t		mm_last_pg;
-	volatile txnid_t	mm_txnid;	/**< txnid that committed this page */
-} MDB_meta;
-
-
-/** Common header for all page types. The page type depends on #mp_flags.
- */
-typedef struct MDB_page {
-#define	mp_pgno	mp_p.p_pgno
-#define	mp_next	mp_p.p_next
-	union {
-		pgno_t		p_pgno;	/**< page number */
-		struct MDB_page *p_next; /**< for in-memory list of freed pages */
-	} mp_p;
-	uint16_t	mp_pad;			/**< key size if this is a LEAF2 page */
-	uint16_t	mp_flags;		/**< @ref mdb_page */
-#define mp_lower	mp_pb.pb.pb_lower
-#define mp_upper	mp_pb.pb.pb_upper
-#define mp_pages	mp_pb.pb_pages
-	union {
-		struct {
-			indx_t		pb_lower;		/**< lower bound of free space */
-			indx_t		pb_upper;		/**< upper bound of free space */
-		} pb;
-		uint32_t	pb_pages;	/**< number of overflow pages */
-	} mp_pb;
-	indx_t		mp_ptrs[0];		/**< dynamic size */
-} MDB_page;
-
-	/** Buffer for a stack-allocated meta page.
-	 *	The members define size and alignment, and silence type
-	 *	aliasing warnings.  They are not used directly; that could
-	 *	mean incorrectly using several union members in parallel.
-	 */
-typedef union MDB_metabuf {
-	MDB_page	mb_page;
-	struct {
-		char		mm_pad[PAGEHDRSZ];
-		MDB_meta	mm_meta;
-	} mb_metabuf;
-} MDB_metabuf;
-
 	/** Auxiliary DB info.
 	 *	The information here is mostly static/read-only. There is
 	 *	only a single copy of this record in the environment.
 	 */
-typedef struct MDB_dbx {
+ struct MDB_dbx {
 	MDB_val		md_name;		/**< name of the database */
 	MDB_cmp_func	*md_cmp;	/**< function for comparing keys */
 	MDB_cmp_func	*md_dcmp;	/**< function for comparing data items */
 	MDB_rel_func	*md_rel;	/**< user relocate function */
 	void		*md_relctx;		/**< user-provided context for md_rel */
-} MDB_dbx;
-
-	/** A database transaction.
-	 *	Every operation requires a transaction handle.
-	 */
-struct MDB_txn {
-	MDB_txn		*mt_parent;		/**< parent of a nested txn */
-	/** Nested txn under this txn, set together with flag #MDB_TXN_HAS_CHILD */
-	MDB_txn		*mt_child;
-	pgno_t		mt_next_pgno;	/**< next unallocated page */
-	/** The ID of this transaction. IDs are integers incrementing from 1.
-	 *	Only committed write transactions increment the ID. If a transaction
-	 *	aborts, the ID may be re-used by the next writer.
-	 */
-	txnid_t		mt_txnid;
-	MDB_env		*mt_env;		/**< the DB environment */
-	/** The list of pages that became unused during this transaction.
-	 */
-	MDB_IDL		mt_free_pgs;
-	/** The list of loose pages that became unused and may be reused
-	 *	in this transaction, linked through #NEXT_LOOSE_PAGE(page).
-	 */
-	MDB_page	*mt_loose_pgs;
-	/** Number of loose pages (#mt_loose_pgs) */
-	int			mt_loose_count;
-	/** The sorted list of dirty pages we temporarily wrote to disk
-	 *	because the dirty list was full. page numbers in here are
-	 *	shifted left by 1, deleted slots have the LSB set.
-	 */
-	MDB_IDL		mt_spill_pgs;
-	union {
-		/** For write txns: Modified pages. Sorted when not MDB_WRITEMAP. */
-		MDB_ID2L	dirty_list;
-		/** For read txns: This thread/txn's reader table slot, or NULL. */
-		MDB_reader	*reader;
-	} mt_u;
-	/** Array of records for each DB known in the environment. */
-	MDB_dbx		*mt_dbxs;
-	/** Array of MDB_db records for each known DB */
-	MDB_db		*mt_dbs;
-	/** Array of sequence numbers for each DB handle */
-	unsigned int	*mt_dbiseqs;
-/** @defgroup mt_dbflag	Transaction DB Flags
- *	@ingroup internal
- * @{
- */
-#define DB_DIRTY	0x01		/**< DB was written in this txn */
-#define DB_STALE	0x02		/**< Named-DB record is older than txnID */
-#define DB_NEW		0x04		/**< Named-DB handle opened in this txn */
-#define DB_VALID	0x08		/**< DB handle is valid, see also #MDB_VALID */
-#define DB_USRVALID	0x10		/**< As #DB_VALID, but not set for #FREE_DBI */
-#define DB_DUPDATA	0x20		/**< DB is #MDB_DUPSORT data */
-/** @} */
-	/** In write txns, array of cursors for each DB */
-	MDB_cursor	**mt_cursors;
-	/** Array of flags for each DB */
-	unsigned char	*mt_dbflags;
-	/**	Number of DB records in use, or 0 when the txn is finished.
-	 *	This number only ever increments until the txn finishes; we
-	 *	don't decrement it when individual DB handles are closed.
-	 */
-	MDB_dbi		mt_numdbs;
-
-/** @defgroup mdb_txn	Transaction Flags
- *	@ingroup internal
- *	@{
- */
-	/** #mdb_txn_begin() flags */
-#define MDB_TXN_BEGIN_FLAGS	(MDB_NOMETASYNC|MDB_NOSYNC|MDB_RDONLY)
-#define MDB_TXN_NOMETASYNC	MDB_NOMETASYNC	/**< don't sync meta for this txn on commit */
-#define MDB_TXN_NOSYNC		MDB_NOSYNC	/**< don't sync this txn on commit */
-#define MDB_TXN_RDONLY		MDB_RDONLY	/**< read-only transaction */
-	/* internal txn flags */
-#define MDB_TXN_WRITEMAP	MDB_WRITEMAP	/**< copy of #MDB_env flag in writers */
-#define MDB_TXN_FINISHED	0x01		/**< txn is finished or never began */
-#define MDB_TXN_ERROR		0x02		/**< txn is unusable after an error */
-#define MDB_TXN_DIRTY		0x04		/**< must write, even if dirty list is empty */
-#define MDB_TXN_SPILLS		0x08		/**< txn or a parent has spilled pages */
-#define MDB_TXN_HAS_CHILD	0x10		/**< txn has an #MDB_txn.%mt_child */
-	/** most operations on the txn are currently illegal */
-#define MDB_TXN_BLOCKED		(MDB_TXN_FINISHED|MDB_TXN_ERROR|MDB_TXN_HAS_CHILD)
-/** @} */
-	unsigned int	mt_flags;		/**< @ref mdb_txn */
-	/** #dirty_list room: Array size - \#dirty pages visible to this txn.
-	 *	Includes ancestor txns' dirty pages not hidden by other txns'
-	 *	dirty/spilled pages. Thus commit(nested txn) has room to merge
-	 *	dirty_list into mt_parent after freeing hidden mt_parent pages.
-	 */
-	unsigned int	mt_dirty_room;
 };
 
-
-struct MDB_xcursor;
-
-	/** Cursors are used for all DB operations.
-	 *	A cursor holds a path of (page pointer, key index) from the DB
-	 *	root to a position in the DB, plus other state. #MDB_DUPSORT
-	 *	cursors include an xcursor to the current data item. Write txns
-	 *	track their cursors and keep them up to date when data moves.
-	 *	Exception: An xcursor's pointer to a #P_SUBP page can be stale.
-	 *	(A node with #F_DUPDATA but no #F_SUBDATA contains a subpage).
+	/** A transaction ID.
+	 *	See struct MDB_txn.mt_txnid for details.
 	 */
-struct MDB_cursor {
-	/** Next cursor on this DB in this txn */
-	MDB_cursor	*mc_next;
-	/** Backup of the original cursor if this cursor is a shadow */
-	MDB_cursor	*mc_backup;
-	/** Context used for databases with #MDB_DUPSORT, otherwise NULL */
-	struct MDB_xcursor	*mc_xcursor;
-	/** The transaction that owns this cursor */
-	MDB_txn		*mc_txn;
-	/** The database handle this cursor operates on */
-	MDB_dbi		mc_dbi;
-	/** The database record for this cursor */
-	MDB_db		*mc_db;
-	/** The database auxiliary record for this cursor */
-	MDB_dbx		*mc_dbx;
-	/** The @ref mt_dbflag for this database */
-	unsigned char	*mc_dbflag;
-	unsigned short 	mc_snum;	/**< number of pushed pages */
-	unsigned short	mc_top;		/**< index of top page, normally mc_snum-1 */
-/** @defgroup mdb_cursor	Cursor Flags
- *	@ingroup internal
- *	Cursor state flags.
- *	@{
- */
-#define C_INITIALIZED	0x01	/**< cursor has been initialized and is valid */
-#define C_EOF	0x02			/**< No more data */
-#define C_SUB	0x04			/**< Cursor is a sub-cursor */
-#define C_DEL	0x08			/**< last op was a cursor_del */
-#define C_UNTRACK	0x40		/**< Un-track cursor when closing */
-#define C_WRITEMAP	MDB_TXN_WRITEMAP /**< Copy of txn flag */
-/** Read-only cursor into the txn's original snapshot in the map.
- *	Set for read-only txns. Only implements code which is necessary for this.
- */
-#define C_ORIG_RDONLY	MDB_TXN_RDONLY
-/** @} */
-	unsigned int	mc_flags;	/**< @ref mdb_cursor */
-	MDB_page	*mc_pg[CURSOR_STACK];	/**< stack of pushed pages */
-	indx_t		mc_ki[CURSOR_STACK];	/**< stack of page indices */
-#define MC_OVPG(mc)			((MDB_page *)0)
-#define MC_SET_OVPG(mc, pg)	((void)0)
+typedef MDB_ID	txnid_t;
 
-};
-
-	/** Context for sorted-dup records.
-	 *	We could have gone to a fully recursive design, with arbitrarily
-	 *	deep nesting of sub-databases. But for now we only handle these
-	 *	levels - main DB, optional sub-DB, sorted-duplicate DB.
+	/**	Used for offsets within a single page.
+	 *	Since memory pages are typically 4 or 8KB in size, 12-13 bits,
+	 *	this is plenty.
 	 */
-typedef struct MDB_xcursor {
-	/** A sub-cursor for traversing the Dup DB */
-	MDB_cursor mx_cursor;
-	/** The database record for this Dup DB */
-	MDB_db	mx_db;
-	/**	The auxiliary DB record for this Dup DB */
-	MDB_dbx	mx_dbx;
-	/** The @ref mt_dbflag for this Dup DB */
-	unsigned char mx_dbflag;
-} MDB_xcursor;
+typedef uint16_t	 indx_t;
 
-	/** Check if there is an inited xcursor */
-#define XCURSOR_INITED(mc) \
-	((mc)->mc_xcursor && ((mc)->mc_xcursor->mx_cursor.mc_flags & C_INITIALIZED))
+	/** max bytes to write in one call */
+static_assert(sizeof(ssize_t) == 8); // MAX_WRITE depends on 64 bit architecture
+#define MAX_WRITE		0x40000000U
 
-	/** Update the xcursor's sub-page pointer, if any, in \b mc.  Needed
-	 *	when the node which contains the sub-page may have moved.  Called
-	 *	with leaf page \b mp = mc->mc_pg[\b top].
+	/** A page number in the database.
+	 *	Note that 64 bit page numbers are overkill, since pages themselves
+	 *	already represent 12-13 bits of addressable memory, and the OS will
+	 *	always limit applications to a maximum of 63 bits of address space.
+	 *
+	 *	@note In the #MDB_node structure, we only store 48 bits of this value,
+	 *	which thus limits us to only 60 bits of addressable data.
 	 */
-#define XCURSOR_REFRESH(mc, top, mp) do { \
-	MDB_page *xr_pg = (mp); \
-	MDB_node *xr_node; \
-	if (!XCURSOR_INITED(mc) || (mc)->mc_ki[top] >= NUMKEYS(xr_pg)) break; \
-	xr_node = NODEPTR(xr_pg, (mc)->mc_ki[top]); \
-	if ((xr_node->mn_flags & (F_DUPDATA|F_SUBDATA)) == F_DUPDATA) \
-		(mc)->mc_xcursor->mx_cursor.mc_pg[0] = (MDB_page*)(NODEDATA(xr_node)); \
-} while (0)
-
-	/** State of FreeDB old pages, stored in the MDB_env */
-typedef struct MDB_pgstate {
-	pgno_t		*mf_pghead;	/**< Reclaimed freeDB pages, or NULL before use */
-	txnid_t		mf_pglast;	/**< ID of last used record, or 0 if !mf_pghead */
-} MDB_pgstate;
-
-	/** Nested transaction */
-typedef struct MDB_ntxn {
-	MDB_txn		mnt_txn;		/**< the transaction */
-	MDB_pgstate	mnt_pgstate;	/**< parent transaction's saved freestate */
-} MDB_ntxn;
-
-static_assert(sizeof(ssize_t) == 8);
-
-	/** Check \b txn and \b dbi arguments to a function */
-#define TXN_DBI_EXIST(txn, dbi, validity) \
-	((txn) && (dbi)<(txn)->mt_numdbs && ((txn)->mt_dbflags[dbi] & (validity)))
-
-	/** Check for misused \b dbi handles */
-#define TXN_DBI_CHANGED(txn, dbi) \
-	((txn)->mt_dbiseqs[dbi] != (txn)->mt_env->me_dbiseqs[dbi])
-
-
+typedef MDB_ID	pgno_t;

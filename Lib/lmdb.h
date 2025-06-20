@@ -249,20 +249,20 @@ typedef int mdb_filehandle_t;
  * A DB environment supports multiple databases, all residing in the same
  * shared-memory map.
  */
-typedef struct MDB_env MDB_env;
+struct MDB_env;
 
 /** @brief Opaque structure for a transaction handle.
  *
  * All database operations require a transaction handle. Transactions may be
  * read-only or read-write.
  */
-typedef struct MDB_txn MDB_txn;
+struct MDB_txn;
 
 /** @brief A handle for an individual database in the DB environment. */
 typedef unsigned int	MDB_dbi;
 
 /** @brief Opaque structure for navigating through a database */
-typedef struct MDB_cursor MDB_cursor;
+struct MDB_cursor;
 
 /** @brief Generic structure used for passing keys and data in and out
  * of the database.
@@ -275,10 +275,10 @@ typedef struct MDB_cursor MDB_cursor;
  * The same applies to data sizes in databases with the #MDB_DUPSORT flag.
  * Other data items can in theory be from 0 to 0xffffffff bytes long.
  */
-typedef struct MDB_val {
+struct MDB_val {
 	size_t		 mv_size;	/**< size of the data item */
 	void		*mv_data;	/**< address of the data item */
-} MDB_val;
+};
 
 /** @brief A callback function used to compare two keys in a database */
 typedef int  (MDB_cmp_func)(const MDB_val *a, const MDB_val *b);
@@ -479,7 +479,7 @@ typedef enum MDB_cursor_op {
 /** @} */
 
 /** @brief Statistics for a database in the environment */
-typedef struct MDB_stat {
+struct MDB_stat {
 	unsigned int	ms_psize;			/**< Size of a database page.
 											This is currently the same for all databases. */
 	unsigned int	ms_depth;			/**< Depth (height) of the B-tree */
@@ -487,17 +487,17 @@ typedef struct MDB_stat {
 	mdb_size_t		ms_leaf_pages;		/**< Number of leaf pages */
 	mdb_size_t		ms_overflow_pages;	/**< Number of overflow pages */
 	mdb_size_t		ms_entries;			/**< Number of data items */
-} MDB_stat;
+};
 
 /** @brief Information about the environment */
-typedef struct MDB_envinfo {
+struct MDB_envinfo {
 	void	*me_mapaddr;			/**< Address of map, if fixed */
 	mdb_size_t	me_mapsize;				/**< Size of the data memory map */
 	mdb_size_t	me_last_pgno;			/**< ID of the last used page */
 	mdb_size_t	me_last_txnid;			/**< ID of the last committed transaction */
 	unsigned int me_maxreaders;		/**< max reader slots in the environment */
 	unsigned int me_numreaders;		/**< max reader slots used in the environment */
-} MDB_envinfo;
+};
 
 	/** @brief Return the FiksStore library version information.
 	 *

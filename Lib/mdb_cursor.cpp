@@ -5,6 +5,7 @@
 #include "mdb_env.h"
 #include "mdb_debug.h"
 #include "mdb_db.h"
+#include "mdb_txn.h"
 
 #if MDB_DEBUG
 void

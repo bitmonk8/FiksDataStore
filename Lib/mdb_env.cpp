@@ -7,6 +7,7 @@
 #include "mdb_cursor.h"
 #include "mdb_debug.h"
 #include "mdb_hash.h"
+#include "mdb_db.h"
 
 	/**	@brief The maximum size of a database page.
 	 *
@@ -78,6 +79,19 @@ typedef char	mdb_nchar_t;
 #ifndef MAX_TLS_KEYS
 #define MAX_TLS_KEYS	64
 #endif
+
+	/** Buffer for a stack-allocated meta page.
+	 *	The members define size and alignment, and silence type
+	 *	aliasing warnings.  They are not used directly; that could
+	 *	mean incorrectly using several union members in parallel.
+	 */
+typedef union MDB_metabuf {
+	MDB_page	mb_page;
+	struct {
+		char		mm_pad[PAGEHDRSZ];
+		MDB_meta	mm_meta;
+	} mb_metabuf;
+} MDB_metabuf;
 
 /** Junk for arranging thread-specific callbacks on Windows. This is
  *	necessarily platform and compiler-specific. Windows supports up
@@ -193,11 +207,11 @@ static NtMapViewOfSectionFunc *NtMapViewOfSection;
 
 
 /** Filename - string of #mdb_nchar_t[] */
-typedef struct MDB_name {
+struct MDB_name {
 	int mn_len;					/**< Length  */
 	int mn_alloced;				/**< True if #mn_val was malloced */
 	mdb_nchar_t	*mn_val;		/**< Contents */
-} MDB_name;
+};
 
 /** Filename suffixes [datafile,lockfile][without,with MDB_NOSUBDIR] */
 static const mdb_nchar_t *const mdb_suffixes[2][2] = {
@@ -1665,7 +1679,7 @@ mdb_env_close(MDB_env *env)
 #define MDB_EOF		0x10	/**< #mdb_env_copyfd1() is done reading */
 
 	/** State needed for a double-buffering compacting copy. */
-typedef struct mdb_copy {
+struct mdb_copy {
 	MDB_env *mc_env;
 	MDB_txn *mc_txn;
 	pthread_mutex_t mc_mutex;
@@ -1682,7 +1696,7 @@ typedef struct mdb_copy {
 	 *	to fail the copy.  Not mutex-protected, LMDB expects atomic int.
 	 */
 	volatile int mc_error;
-} mdb_copy;
+};
 
 	/** Dedicated writer thread for compacting copy. */
 THREAD_RET ESECT CALL_CONV

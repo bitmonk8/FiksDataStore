@@ -5,6 +5,13 @@
 #include "mdb_lock.h"
 #include "mdb_debug.h"
 #include "mdb_cursor.h"
+#include "mdb_db.h"
+
+	/** Nested transaction */
+struct MDB_ntxn {
+	MDB_txn		mnt_txn;		/**< the transaction */
+	MDB_pgstate	mnt_pgstate;	/**< parent transaction's saved freestate */
+};
 
 /** Common code for #mdb_txn_begin() and #mdb_txn_renew().
  * @param[in] txn the transaction handle to initialize
