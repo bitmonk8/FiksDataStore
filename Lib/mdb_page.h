@@ -1,8 +1,7 @@
-#ifndef MDB_PAGE_H
-#define MDB_PAGE_H
+#pragma once
 
-#include "mdb_util.h"
 #include "mdb_internal.h"
+#include "mdb_util.h"
 #include "midl.h"
 
 // Forward declarations
@@ -273,5 +272,3 @@ int mdb_page_spill(MDB_cursor *m0, MDB_val *key, MDB_val *data);
 void mdb_page_dirty(MDB_txn *txn, MDB_page *mp);
 MDB_page *mdb_page_malloc(MDB_txn *txn, unsigned num);
 void mdb_dpage_free(MDB_env *env, MDB_page *dp);
-
-#endif /* MDB_PAGE_H */
