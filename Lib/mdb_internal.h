@@ -501,18 +501,6 @@ enum {
 	/** Number of meta pages - also hardcoded elsewhere */
 #define NUM_METAS	2
 
-	/** Auxiliary DB info.
-	 *	The information here is mostly static/read-only. There is
-	 *	only a single copy of this record in the environment.
-	 */
- struct MDB_dbx {
-	MDB_val		md_name;		/**< name of the database */
-	MDB_cmp_func	*md_cmp;	/**< function for comparing keys */
-	MDB_cmp_func	*md_dcmp;	/**< function for comparing data items */
-	MDB_rel_func	*md_rel;	/**< user relocate function */
-	void		*md_relctx;		/**< user-provided context for md_rel */
-};
-
 	/** A transaction ID.
 	 *	See struct MDB_txn.mt_txnid for details.
 	 */

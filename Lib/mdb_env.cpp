@@ -80,19 +80,6 @@ typedef char	mdb_nchar_t;
 #define MAX_TLS_KEYS	64
 #endif
 
-	/** Buffer for a stack-allocated meta page.
-	 *	The members define size and alignment, and silence type
-	 *	aliasing warnings.  They are not used directly; that could
-	 *	mean incorrectly using several union members in parallel.
-	 */
-typedef union MDB_metabuf {
-	MDB_page	mb_page;
-	struct {
-		char		mm_pad[PAGEHDRSZ];
-		MDB_meta	mm_meta;
-	} mb_metabuf;
-} MDB_metabuf;
-
 /** Junk for arranging thread-specific callbacks on Windows. This is
  *	necessarily platform and compiler-specific. Windows supports up
  *	to 1088 keys. Let's assume nobody opens more than 64 environments
@@ -446,6 +433,19 @@ mdb_env_sync(MDB_env *env, int force)
 int ESECT
 mdb_env_read_header(MDB_env *env, int prev, MDB_meta *meta)
 {
+		/** Buffer for a stack-allocated meta page.
+	 *	The members define size and alignment, and silence type
+	 *	aliasing warnings.  They are not used directly; that could
+	 *	mean incorrectly using several union members in parallel.
+	 */
+	union MDB_metabuf {
+		MDB_page	mb_page;
+		struct {
+			char		mm_pad[PAGEHDRSZ];
+			MDB_meta	mm_meta;
+		} mb_metabuf;
+	};
+
 	MDB_metabuf	pbuf;
 	MDB_page	*p;
 	MDB_meta	*m;

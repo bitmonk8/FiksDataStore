@@ -1,6 +1,7 @@
 #include "mdb_compare.h"
 
 #include "mdb_txn.h"
+#include "mdb_db.h"
 
 /** Compare two items pointing at aligned #mdb_size_t's */
 int
