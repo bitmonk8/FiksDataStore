@@ -356,15 +356,13 @@ static int ESECT mdb_fopen(const MDB_env *env, MDB_name *fname,
 				(void) fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
 		}
 		if (which == MDB_O_COPY && env->me_psize >= env->me_os_psize) {
-			/* This may require buffer alignment.  There is no portable
-			 * way to ask how much, so we require OS pagesize alignment.
-			 */
+			// This may require buffer alignment.  There is no portable
+			// way to ask how much, so we require OS pagesize alignment.
 # ifdef F_NOCACHE	// __APPLE__
 			(void) fcntl(fd, F_NOCACHE, 1);
 # elif defined O_DIRECT
-			/* open(...O_DIRECT...) would break on filesystems without
-			 * O_DIRECT support (ITS#7682). Try to set it here instead.
-			 */
+			// open(...O_DIRECT...) would break on filesystems without
+			// O_DIRECT support (ITS#7682). Try to set it here instead.
 			if ((flags = fcntl(fd, F_GETFL)) != -1)
 				(void) fcntl(fd, F_SETFL, flags | O_DIRECT);
 # endif

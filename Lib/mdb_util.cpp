@@ -7,7 +7,7 @@
 #include <windows.h>
 #endif
 
-/** Return the library version info. */
+// Return the library version info.
 const char* mdb_version(int *major, int *minor, int *patch)
 {
 	if (major) *major = MDB_VERSION_MAJOR;
@@ -16,7 +16,7 @@ const char* mdb_version(int *major, int *minor, int *patch)
 	return MDB_VERSION_STRING;
 }
 
-/** Table of descriptions for LMDB @ref errors */
+// Table of descriptions for LMDB @ref errors
 static const char *const mdb_errstr[] = {
 	"MDB_KEYEXIST: Key/data pair already exists",
 	"MDB_NOTFOUND: No matching key/data pair found",
@@ -69,13 +69,13 @@ const char* mdb_strerror(int err)
 	// have used LMDB-specific error codes for everything.
 	switch(err)
 	{
-	case ENOENT:	/* 2, FILE_NOT_FOUND */
-	case EIO:		/* 5, ACCESS_DENIED */
-	case ENOMEM:	/* 12, INVALID_ACCESS */
-	case EACCES:	/* 13, INVALID_DATA */
-	case EBUSY:		/* 16, CURRENT_DIRECTORY */
-	case EINVAL:	/* 22, BAD_COMMAND */
-	case ENOSPC:	/* 28, OUT_OF_PAPER */
+	case ENOENT:	// 2, FILE_NOT_FOUND
+	case EIO:		// 5, ACCESS_DENIED
+	case ENOMEM:	// 12, INVALID_ACCESS
+	case EACCES:	// 13, INVALID_DATA
+	case EBUSY:		// 16, CURRENT_DIRECTORY
+	case EINVAL:	// 22, BAD_COMMAND
+	case ENOSPC:	// 28, OUT_OF_PAPER
 		return strerror(err);
 	default:
 		;

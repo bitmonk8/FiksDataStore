@@ -7,16 +7,15 @@
 #include "mdb_cursor.h"
 #include "mdb_db.h"
 
-	/** Nested transaction */
+	// Nested transaction
 struct MDB_ntxn {
-	MDB_txn		mnt_txn;		/**< the transaction */
-	MDB_pgstate	mnt_pgstate;	/**< parent transaction's saved freestate */
+	MDB_txn		mnt_txn;		//< the transaction
+	MDB_pgstate	mnt_pgstate;	//< parent transaction's saved freestate
 };
 
-/** Common code for #mdb_txn_begin() and #mdb_txn_renew().
- * @param[in] txn the transaction handle to initialize
- * @return 0 on success, non-zero on failure.
- */
+// Common code for #mdb_txn_begin() and #mdb_txn_renew().
+// @param[in] txn the transaction handle to initialize
+// @return 0 on success, non-zero on failure.
 int
 mdb_txn_renew0(MDB_txn *txn)
 {
@@ -60,12 +59,11 @@ mdb_txn_renew0(MDB_txn *txn)
 					return MDB_READERS_FULL;
 				}
 				r = &ti->mti_readers[i];
-				/* Claim the reader slot, carefully since other code
-				 * uses the reader table un-mutexed: First reset the
-				 * slot, next publish it in mti_numreaders.  After
-				 * that, it is safe for mdb_env_close() to touch it.
-				 * When it will be closed, we can finally claim it.
-				 */
+				// Claim the reader slot, carefully since other code
+				// uses the reader table un-mutexed: First reset the
+				// slot, next publish it in mti_numreaders.  After
+				// that, it is safe for mdb_env_close() to touch it.
+				// When it will be closed, we can finally claim it.
 				r->mr_pid = 0;
 				r->mr_txnid = (txnid_t)-1;
 				r->mr_tid = tid;
@@ -95,7 +93,7 @@ mdb_txn_renew0(MDB_txn *txn)
 		}
 
 	} else {
-		/* Not yet touching txn == env->me_txn0, it may be active */
+		// Not yet touching txn == env->me_txn0, it may be active
 		if (ti) {
 			if (LOCK_MUTEX(rc, env, env->me_wmutex))
 				return rc;
@@ -123,14 +121,14 @@ mdb_txn_renew0(MDB_txn *txn)
 		memcpy(txn->mt_dbiseqs, env->me_dbiseqs, env->me_maxdbs * sizeof(unsigned int));
 	}
 
-	/* Copy the DB info and flags */
+	// Copy the DB info and flags
 	memcpy(txn->mt_dbs, meta->mm_dbs, CORE_DBS * sizeof(MDB_db));
 
-	/* Moved to here to avoid a data race in read TXNs */
+	// Moved to here to avoid a data race in read TXNs
 	txn->mt_next_pgno = meta->mm_last_pg+1;
 	txn->mt_flags = flags;
 
-	/* Setup db info */
+	// Setup db info
 	txn->mt_numdbs = env->me_numdbs;
 	for (i=CORE_DBS; i<txn->mt_numdbs; i++) {
 		x = env->me_dbflags[i];
@@ -169,7 +167,7 @@ mdb_txn_renew(MDB_txn *txn)
 	return rc;
 }
 
-/** Back up parent txn's cursors, then grab the originals for tracking */
+// Back up parent txn's cursors, then grab the originals for tracking
 static int mdb_cursor_shadow(MDB_txn *src, MDB_txn *dst)
 {
 	MDB_cursor *mc, *bk;
@@ -189,10 +187,9 @@ static int mdb_cursor_shadow(MDB_txn *src, MDB_txn *dst)
 				*bk = *mc;
 				mc->mc_backup = bk;
 				mc->mc_db = &dst->mt_dbs[i];
-				/* Kill pointers into src to reduce abuse: The
-				 * user may not use mc until dst ends. But we need a valid
-				 * txn pointer here for cursor fixups to keep working.
-				 */
+				// Kill pointers into src to reduce abuse: The
+				// user may not use mc until dst ends. But we need a valid
+				// txn pointer here for cursor fixups to keep working.
 				mc->mc_txn    = dst;
 				mc->mc_dbflag = &dst->mt_dbflags[i];
 				if ((mx = mc->mc_xcursor) != NULL) {
@@ -221,21 +218,20 @@ mdb_txn_begin(MDB_env *env, MDB_txn *parent, unsigned int flags, MDB_txn **ret)
 		return EACCES;
 
 	if (parent) {
-		/* Nested transactions: Max 1 child, write txns only, no writemap */
+		// Nested transactions: Max 1 child, write txns only, no writemap
 		flags |= parent->mt_flags;
 		if (flags & (MDB_RDONLY|MDB_WRITEMAP|MDB_TXN_BLOCKED)) {
 			return (parent->mt_flags & MDB_TXN_RDONLY) ? EINVAL : MDB_BAD_TXN;
 		}
-		/* Child txns save MDB_pgstate and use own copy of cursors */
+		// Child txns save MDB_pgstate and use own copy of cursors
 		size = env->me_maxdbs * (sizeof(MDB_db)+sizeof(MDB_cursor *)+1);
 		size += tsize = sizeof(MDB_ntxn);
 	} else if (flags & MDB_RDONLY) {
 		size = env->me_maxdbs * (sizeof(MDB_db)+1);
 		size += tsize = sizeof(MDB_txn);
 	} else {
-		/* Reuse preallocated write txn. However, do not touch it until
-		 * mdb_txn_renew0() succeeds, since it currently may be active.
-		 */
+		// Reuse preallocated write txn. However, do not touch it until
+		// mdb_txn_renew0() succeeds, since it currently may be active.
 		txn = env->me_txn0;
 		goto renew;
 	}
@@ -243,7 +239,7 @@ mdb_txn_begin(MDB_env *env, MDB_txn *parent, unsigned int flags, MDB_txn **ret)
 		DPRINTF(("calloc: %s", strerror(errno)));
 		return ENOMEM;
 	}
-	txn->mt_dbxs = env->me_dbxs;	/* static */
+	txn->mt_dbxs = env->me_dbxs;	// static
 	txn->mt_dbs = (MDB_db *) ((char *)txn + tsize);
 	txn->mt_dbflags = (unsigned char *)txn + size - env->me_maxdbs;
 	txn->mt_flags = flags;
@@ -271,12 +267,12 @@ mdb_txn_begin(MDB_env *env, MDB_txn *parent, unsigned int flags, MDB_txn **ret)
 		txn->mt_parent = parent;
 		txn->mt_numdbs = parent->mt_numdbs;
 		memcpy(txn->mt_dbs, parent->mt_dbs, txn->mt_numdbs * sizeof(MDB_db));
-		/* Copy parent's mt_dbflags, but clear DB_NEW */
+		// Copy parent's mt_dbflags, but clear DB_NEW
 		for (i=0; i<txn->mt_numdbs; i++)
 			txn->mt_dbflags[i] = parent->mt_dbflags[i] & ~DB_NEW;
 		rc = 0;
 		ntxn = (MDB_ntxn *)txn;
-		ntxn->mnt_pgstate = env->me_pgstate; /* save parent me_pghead & co */
+		ntxn->mnt_pgstate = env->me_pgstate; // save parent me_pghead & co
 		if (env->me_pghead) {
 			size = MDB_IDL_SIZEOF(env->me_pghead);
 			env->me_pghead = mdb_midl_alloc(env->me_pghead[0]);
@@ -324,7 +320,7 @@ mdb_txn_id(MDB_txn *txn)
     return txn->mt_txnid;
 }
 
-/** Export or close DBI handles opened in this txn. */
+// Export or close DBI handles opened in this txn.
 static void mdb_dbis_update(MDB_txn *txn, int keep)
 {
 	int i;
@@ -352,11 +348,10 @@ static void mdb_dbis_update(MDB_txn *txn, int keep)
 		env->me_numdbs = n;
 }
 
-/** Close this write txn's cursors, give parent txn's cursors back to parent.
- * @param[in] txn the transaction handle.
- * @param[in] merge true to keep changes to parent cursors, false to revert.
- * @return 0 on success, non-zero on failure.
- */
+// Close this write txn's cursors, give parent txn's cursors back to parent.
+// @param[in] txn the transaction handle.
+// @param[in] merge true to keep changes to parent cursors, false to revert.
+// @return 0 on success, non-zero on failure.
 static void mdb_cursors_close(MDB_txn *txn, unsigned merge)
 {
 	MDB_cursor **cursors = txn->mt_cursors, *mc, *next, *bk;
@@ -368,7 +363,7 @@ static void mdb_cursors_close(MDB_txn *txn, unsigned merge)
 			next = mc->mc_next;
 			if ((bk = mc->mc_backup) != NULL) {
 				if (merge) {
-					/* Commit changes to parent txn */
+					// Commit changes to parent txn
 					mc->mc_next = bk->mc_next;
 					mc->mc_backup = bk->mc_backup;
 					mc->mc_txn = bk->mc_txn;
@@ -377,21 +372,21 @@ static void mdb_cursors_close(MDB_txn *txn, unsigned merge)
 					if ((mx = mc->mc_xcursor) != NULL)
 						mx->mx_cursor.mc_txn = bk->mc_txn;
 				} else {
-					/* Abort nested txn */
+					// Abort nested txn
 					*mc = *bk;
 					if ((mx = mc->mc_xcursor) != NULL)
 						*mx = *(MDB_xcursor *)(bk+1);
 				}
 				mc = bk;
 			}
-			/* Only malloced cursors are permanently tracked. */
+			// Only malloced cursors are permanently tracked.
 			free(mc);
 		}
 		cursors[i] = NULL;
 	}
 }
 
-/**	Return all dirty pages to dpage list */
+// Return all dirty pages to dpage list
 static void mdb_dlist_free(MDB_txn *txn)
 {
 	MDB_env *env = txn->mt_env;
@@ -407,11 +402,10 @@ static void mdb_dlist_free(MDB_txn *txn)
 #define MDB_END_NAMES {"committed", "empty-commit", "abort", "reset", \
 	"reset-tmp", "fail-begin", "fail-beginchild"}
 
-/** End a transaction, except successful commit of a nested transaction.
- * May be called twice for readonly txns: First reset it, then abort.
- * @param[in] txn the transaction handle to end
- * @param[in] mode why and how to end the transaction
- */
+// End a transaction, except successful commit of a nested transaction.
+// May be called twice for readonly txns: First reset it, then abort.
+// @param[in] txn the transaction handle to end
+// @param[in] mode why and how to end the transaction
 void
 mdb_txn_end(MDB_txn *txn, unsigned mode)
 {
@@ -420,7 +414,7 @@ mdb_txn_end(MDB_txn *txn, unsigned mode)
 	static const char *const names[] = MDB_END_NAMES;
 #endif
 
-	/* Export or close DBI handles opened in this txn */
+	// Export or close DBI handles opened in this txn
 	mdb_dbis_update(txn, mode & MDB_END_UPDATE);
 
 	DPRINTF(("%s txn %" Yu "%c %p on mdbenv %p, root page %" Yu,
@@ -444,7 +438,7 @@ mdb_txn_end(MDB_txn *txn, unsigned mode)
 	} else if (!F_ISSET(txn->mt_flags, MDB_TXN_FINISHED)) {
 		pgno_t *pghead = env->me_pghead;
 
-		if (!(mode & MDB_END_UPDATE)) /* !(already closed cursors) */
+		if (!(mode & MDB_END_UPDATE)) // !(already closed cursors)
 			mdb_cursors_close(txn, 0);
 		if (!(env->me_flags & MDB_WRITEMAP)) {
 			mdb_dlist_free(txn);
@@ -456,12 +450,12 @@ mdb_txn_end(MDB_txn *txn, unsigned mode)
 		if (!txn->mt_parent) {
 			mdb_midl_shrink(&txn->mt_free_pgs);
 			env->me_free_pgs = txn->mt_free_pgs;
-			/* me_pgstate: */
+			// me_pgstate:
 			env->me_pghead = NULL;
 			env->me_pglast = 0;
 
 			env->me_txn = NULL;
-			mode = 0;	/* txn == env->me_txn0, do not free() it */
+			mode = 0;	// txn == env->me_txn0, do not free() it
 
 			/* The writer mutex was locked in mdb_txn_begin. */
 			if (env->me_txns)
@@ -487,7 +481,7 @@ mdb_txn_reset(MDB_txn *txn)
 	if (txn == NULL)
 		return;
 
-	/* This call is only valid for read-only txns */
+	// This call is only valid for read-only txns
 	if (!(txn->mt_flags & MDB_TXN_RDONLY))
 		return;
 
@@ -513,16 +507,14 @@ mdb_txn_abort(MDB_txn *txn)
 	_mdb_txn_abort(txn);
 }
 
-/** Save the freelist as of this transaction to the freeDB.
- * This changes the freelist. Keep trying until it stabilizes.
- */
+// Save the freelist as of this transaction to the freeDB.
+// This changes the freelist. Keep trying until it stabilizes.
 int
 mdb_freelist_save(MDB_txn *txn)
 {
-	/* env->me_pghead[] can grow and shrink during this call.
-	 * env->me_pglast and txn->mt_free_pgs[] can only grow.
-	 * Page numbers cannot disappear from txn->mt_free_pgs[].
-	 */
+	// env->me_pghead[] can grow and shrink during this call.
+	// env->me_pglast and txn->mt_free_pgs[] can only grow.
+	// Page numbers cannot disappear from txn->mt_free_pgs[].
 	MDB_cursor mc;
 	MDB_env	*env = txn->mt_env;
 	int rc, maxfree_1pg = env->me_maxfree_1pg, more = 1;
@@ -533,16 +525,15 @@ mdb_freelist_save(MDB_txn *txn)
 	mdb_cursor_init(&mc, txn, FREE_DBI, NULL);
 
 	if (env->me_pghead) {
-		/* Make sure first page of freeDB is touched and on freelist */
+		// Make sure first page of freeDB is touched and on freelist
 		rc = mdb_page_search(&mc, NULL, MDB_PS_FIRST|MDB_PS_MODIFY);
 		if (rc && rc != MDB_NOTFOUND)
 			return rc;
 	}
 
 	if (!env->me_pghead && txn->mt_loose_pgs) {
-		/* Put loose page numbers in mt_free_pgs, since
-		 * we may be unable to return them to me_pghead.
-		 */
+		// Put loose page numbers in mt_free_pgs, since
+		// we may be unable to return them to me_pghead.
 		MDB_page *mp = txn->mt_loose_pgs;
 		MDB_ID2 *dl = txn->mt_u.dirty_list;
 		unsigned x;
@@ -550,7 +541,7 @@ mdb_freelist_save(MDB_txn *txn)
 			return rc;
 		for (; mp; mp = NEXT_LOOSE_PAGE(mp)) {
 			mdb_midl_xappend(txn->mt_free_pgs, mp->mp_pgno);
-			/* must also remove from dirty list */
+			// must also remove from dirty list
 			if (txn->mt_flags & MDB_TXN_WRITEMAP) {
 				for (x=1; x<=dl[0].mid; x++)
 					if (dl[x].mid == mp->mp_pgno)
@@ -564,7 +555,7 @@ mdb_freelist_save(MDB_txn *txn)
 			dl[x].mptr = NULL;
 		}
 		{
-			/* squash freed slots out of the dirty list */
+			// squash freed slots out of the dirty list
 			unsigned y;
 			for (y=1; dl[y].mptr && y <= dl[0].mid; y++);
 			if (y <= dl[0].mid) {
@@ -575,7 +566,7 @@ mdb_freelist_save(MDB_txn *txn)
 				}
 				dl[0].mid = x-1;
 			} else {
-				/* all slots freed */
+				// all slots freed
 				dl[0].mid = 0;
 			}
 		}
@@ -583,19 +574,18 @@ mdb_freelist_save(MDB_txn *txn)
 		txn->mt_loose_count = 0;
 	}
 
-	/* MDB_RESERVE cancels meminit in ovpage malloc (when no WRITEMAP) */
+	// MDB_RESERVE cancels meminit in ovpage malloc (when no WRITEMAP)
 	clean_limit = (env->me_flags & (MDB_NOMEMINIT|MDB_WRITEMAP))
 		? SSIZE_MAX : maxfree_1pg;
 
 	for (;;) {
-		/* Come back here after each Put() in case freelist changed */
+		// Come back here after each Put() in case freelist changed
 		MDB_val key, data;
 		pgno_t *pgs;
 		ssize_t j;
 
-		/* If using records from freeDB which we have not yet
-		 * deleted, delete them and any we reserved for me_pghead.
-		 */
+		// If using records from freeDB which we have not yet
+		// deleted, delete them and any we reserved for me_pghead.
 		while (pglast < env->me_pglast) {
 			rc = mdb_cursor_first(&mc, &key, NULL);
 			if (rc)
@@ -608,16 +598,16 @@ mdb_freelist_save(MDB_txn *txn)
 				return rc;
 		}
 
-		/* Save the IDL of pages freed by this txn, to a single record */
+		// Save the IDL of pages freed by this txn, to a single record
 		if (freecnt < txn->mt_free_pgs[0]) {
 			if (!freecnt) {
-				/* Make sure last page of freeDB is touched and on freelist */
+				// Make sure last page of freeDB is touched and on freelist
 				rc = mdb_page_search(&mc, NULL, MDB_PS_LAST|MDB_PS_MODIFY);
 				if (rc && rc != MDB_NOTFOUND)
 					return rc;
 			}
 			free_pgs = txn->mt_free_pgs;
-			/* Write to last page of freeDB */
+			// Write to last page of freeDB
 			key.mv_size = sizeof(txn->mt_txnid);
 			key.mv_data = &txn->mt_txnid;
 			do {
@@ -626,7 +616,7 @@ mdb_freelist_save(MDB_txn *txn)
 				rc = _mdb_cursor_put(&mc, &key, &data, MDB_RESERVE);
 				if (rc)
 					return rc;
-				/* Retry if mt_free_pgs[] grew during the Put() */
+				// Retry if mt_free_pgs[] grew during the Put()
 				free_pgs = txn->mt_free_pgs;
 			} while (freecnt < free_pgs[0]);
 			mdb_midl_sort(free_pgs);
@@ -646,27 +636,26 @@ mdb_freelist_save(MDB_txn *txn)
 		mop = env->me_pghead;
 		mop_len = (mop ? mop[0] : 0) + txn->mt_loose_count;
 
-		/* Reserve records for me_pghead[]. Split it if multi-page,
-		 * to avoid searching freeDB for a page range. Use keys in
-		 * range [1,me_pglast]: Smaller than txnid of oldest reader.
-		 */
+		// Reserve records for me_pghead[]. Split it if multi-page,
+		// to avoid searching freeDB for a page range. Use keys in
+		// range [1,me_pglast]: Smaller than txnid of oldest reader.
 		if (total_room >= mop_len) {
 			if (total_room == mop_len || --more < 0)
 				break;
 		} else if (head_room >= maxfree_1pg && head_id > 1) {
-			/* Keep current record (overflow page), add a new one */
+			// Keep current record (overflow page), add a new one
 			head_id--;
 			head_room = 0;
 		}
-		/* (Re)write {key = head_id, IDL length = head_room} */
+		// (Re)write {key = head_id, IDL length = head_room}
 		total_room -= head_room;
 		head_room = mop_len - total_room;
 		if (head_room > maxfree_1pg && head_id > 1) {
-			/* Overflow multi-page for part of me_pghead */
-			head_room /= head_id; /* amortize page sizes */
+			// Overflow multi-page for part of me_pghead
+			head_room /= head_id; // amortize page sizes
 			head_room += maxfree_1pg - head_room % (maxfree_1pg + 1);
 		} else if (head_room < 0) {
-			/* Rare case, not bothering to delete this record */
+			// Rare case, not bothering to delete this record
 			head_room = 0;
 		}
 		key.mv_size = sizeof(head_id);
@@ -675,7 +664,7 @@ mdb_freelist_save(MDB_txn *txn)
 		rc = _mdb_cursor_put(&mc, &key, &data, MDB_RESERVE);
 		if (rc)
 			return rc;
-		/* IDL is initially empty, zero out at least the length */
+		// IDL is initially empty, zero out at least the length
 		pgs = (pgno_t *)data.mv_data;
 		j = head_room > clean_limit ? head_room : 0;
 		do {
@@ -684,14 +673,13 @@ mdb_freelist_save(MDB_txn *txn)
 		total_room += head_room;
 	}
 
-	/* Return loose page numbers to me_pghead, though usually none are
-	 * left at this point.  The pages themselves remain in dirty_list.
-	 */
+	// Return loose page numbers to me_pghead, though usually none are
+	// left at this point.  The pages themselves remain in dirty_list.
 	if (txn->mt_loose_pgs) {
 		MDB_page *mp = txn->mt_loose_pgs;
 		unsigned count = txn->mt_loose_count;
 		MDB_IDL loose;
-		/* Room for loose pages + temp IDL with same */
+		// Room for loose pages + temp IDL with same
 		if ((rc = mdb_midl_need(&env->me_pghead, 2*count+1)) != 0)
 			return rc;
 		mop = env->me_pghead;
@@ -706,7 +694,7 @@ mdb_freelist_save(MDB_txn *txn)
 		mop_len = mop[0];
 	}
 
-	/* Fill in the reserved me_pghead records */
+	// Fill in the reserved me_pghead records
 	rc = MDB_SUCCESS;
 	if (mop_len) {
 		MDB_val key, data;
@@ -746,7 +734,7 @@ _mdb_txn_commit(MDB_txn *txn)
 	if (txn == NULL)
 		return EINVAL;
 
-	/* mdb_txn_end() mode for a commit which writes nothing */
+	// mdb_txn_end() mode for a commit which writes nothing
 	end_mode = MDB_END_EMPTY_COMMIT|MDB_END_UPDATE|MDB_END_SLOT|MDB_END_FREE;
 
 	if (txn->mt_child) {
@@ -776,39 +764,38 @@ _mdb_txn_commit(MDB_txn *txn)
 		MDB_IDL pspill;
 		unsigned x, y, len, ps_len;
 
-		/* Append our free list to parent's */
+		// Append our free list to parent's
 		rc = mdb_midl_append_list(&parent->mt_free_pgs, txn->mt_free_pgs);
 		if (rc)
 			goto fail;
 		mdb_midl_free(txn->mt_free_pgs);
-		/* Failures after this must either undo the changes
-		 * to the parent or set MDB_TXN_ERROR in the parent.
-		 */
+		// Failures after this must either undo the changes
+		// to the parent or set MDB_TXN_ERROR in the parent.
 
 		parent->mt_next_pgno = txn->mt_next_pgno;
 		parent->mt_flags = txn->mt_flags;
 
-		/* Merge our cursors into parent's and close them */
+		// Merge our cursors into parent's and close them
 		mdb_cursors_close(txn, 1);
 
-		/* Update parent's DB table. */
+		// Update parent's DB table.
 		memcpy(parent->mt_dbs, txn->mt_dbs, txn->mt_numdbs * sizeof(MDB_db));
 		parent->mt_numdbs = txn->mt_numdbs;
 		parent->mt_dbflags[FREE_DBI] = txn->mt_dbflags[FREE_DBI];
 		parent->mt_dbflags[MAIN_DBI] = txn->mt_dbflags[MAIN_DBI];
 		for (i=CORE_DBS; i<txn->mt_numdbs; i++) {
-			/* preserve parent's DB_NEW status */
+			// preserve parent's DB_NEW status
 			x = parent->mt_dbflags[i] & DB_NEW;
 			parent->mt_dbflags[i] = txn->mt_dbflags[i] | x;
 		}
 
 		dst = parent->mt_u.dirty_list;
 		src = txn->mt_u.dirty_list;
-		/* Remove anything in our dirty list from parent's spill list */
+		// Remove anything in our dirty list from parent's spill list
 		if ((pspill = parent->mt_spill_pgs) && (ps_len = pspill[0])) {
 			x = y = ps_len;
 			pspill[0] = (pgno_t)-1;
-			/* Mark our dirty pages as deleted in parent spill list */
+			// Mark our dirty pages as deleted in parent spill list
 			for (i=0, len=src[0].mid; ++i <= len; ) {
 				MDB_ID pn = src[i].mid << 1;
 				while (pn > pspill[x])
@@ -818,19 +805,19 @@ _mdb_txn_commit(MDB_txn *txn)
 					y = --x;
 				}
 			}
-			/* Squash deleted pagenums if we deleted any */
+			// Squash deleted pagenums if we deleted any
 			for (x=y; ++x <= ps_len; )
 				if (!(pspill[x] & 1))
 					pspill[++y] = pspill[x];
 			pspill[0] = y;
 		}
 
-		/* Remove anything in our spill list from parent's dirty list */
+		// Remove anything in our spill list from parent's dirty list
 		if (txn->mt_spill_pgs && txn->mt_spill_pgs[0]) {
 			for (i=1; i<=txn->mt_spill_pgs[0]; i++) {
 				MDB_ID pn = txn->mt_spill_pgs[i];
 				if (pn & 1)
-					continue;	/* deleted spillpg */
+					continue;	// deleted spillpg
 				pn >>= 1;
 				y = mdb_mid2l_search(dst, pn);
 				if (y <= dst[0].mid && dst[y].mid == pn) {
@@ -844,9 +831,9 @@ _mdb_txn_commit(MDB_txn *txn)
 			}
 		}
 
-		/* Find len = length of merging our dirty list with parent's */
+		// Find len = length of merging our dirty list with parent's
 		x = dst[0].mid;
-		dst[0].mid = 0;		/* simplify loops */
+		dst[0].mid = 0;		// simplify loops
 		if (parent->mt_parent) {
 			len = x + src[0].mid;
 			y = mdb_mid2l_search(src, dst[x].mid + 1) - 1;
@@ -859,10 +846,10 @@ _mdb_txn_commit(MDB_txn *txn)
 					len--;
 				}
 			}
-		} else { /* Simplify the above for single-ancestor case */
+		} else { // Simplify the above for single-ancestor case
 			len = MDB_IDL_UM_MAX - txn->mt_dirty_room;
 		}
-		/* Merge our dirty list with parent's */
+		// Merge our dirty list with parent's
 		y = src[0].mid;
 		for (i = len; y; dst[i--] = src[y--]) {
 			pgno_t yp = src[y].mid;
@@ -877,7 +864,7 @@ _mdb_txn_commit(MDB_txn *txn)
 		parent->mt_dirty_room = txn->mt_dirty_room;
 		if (txn->mt_spill_pgs) {
 			if (parent->mt_spill_pgs) {
-				/* TODO: Prevent failure here, so parent does not fail */
+				// TODO: Prevent failure here, so parent does not fail
 				rc = mdb_midl_append_list(&parent->mt_spill_pgs, txn->mt_spill_pgs);
 				if (rc)
 					parent->mt_flags |= MDB_TXN_ERROR;
@@ -888,7 +875,7 @@ _mdb_txn_commit(MDB_txn *txn)
 			}
 		}
 
-		/* Append our loose page list to parent's */
+		// Append our loose page list to parent's
 		for (lp = &parent->mt_loose_pgs; *lp; lp = &NEXT_LOOSE_PAGE(*lp))
 			;
 		*lp = txn->mt_loose_pgs;
@@ -915,7 +902,7 @@ _mdb_txn_commit(MDB_txn *txn)
 	DPRINTF(("committing txn %" Yu " %p on mdbenv %p, root page %" Yu,
 	    txn->mt_txnid, (void*)txn, (void*)env, txn->mt_dbs[MAIN_DBI].md_root));
 
-	/* Update DB root pointers */
+	// Update DB root pointers
 	if (txn->mt_numdbs > CORE_DBS) {
 		MDB_cursor mc;
 		MDB_dbi i;

@@ -1,18 +1,17 @@
-/* mtest2.cpp - memory-mapped database tester/toy */
-/*
- * Copyright 2011-2021 Howard Chu, Symas Corp.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted only as authorized by the OpenLDAP
- * Public License.
- *
- * A copy of this license is available in the file LICENSE in the
- * top-level directory of the distribution or, alternatively, at
- * <http://www.OpenLDAP.org/license.html>.
- */
-
-/* Just like mtest.cpp, but using a subDB instead of the main DB */
+// mtest2.cpp - memory-mapped database tester/toy
+//
+// Copyright 2011-2021 Howard Chu, Symas Corp.
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted only as authorized by the OpenLDAP
+// Public License.
+//
+// A copy of this license is available in the file LICENSE in the
+// top-level directory of the distribution or, alternatively, at
+// <http://www.OpenLDAP.org/license.html>.
+//
+// Just like mtest.cpp, but using a subDB instead of the main DB
 
 #ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS

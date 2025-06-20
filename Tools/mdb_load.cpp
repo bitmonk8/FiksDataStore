@@ -1,16 +1,16 @@
-/* mdb_load.c - memory-mapped database load tool */
-/*
- * Copyright 2011-2021 Howard Chu, Symas Corp.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted only as authorized by the OpenLDAP
- * Public License.
- *
- * A copy of this license is available in the file LICENSE in the
- * top-level directory of the distribution or, alternatively, at
- * <http://www.OpenLDAP.org/license.html>.
- */
+// mdb_load.c - memory-mapped database load tool
+//
+// Copyright 2011-2021 Howard Chu, Symas Corp.
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted only as authorized by the OpenLDAP
+// Public License.
+//
+// A copy of this license is available in the file LICENSE in the
+// top-level directory of the distribution or, alternatively, at
+// <http://www.OpenLDAP.org/license.html>.
+//
 #ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS
 #endif
@@ -198,13 +198,13 @@ static int readline(MDB_val *out, MDB_val *buf)
 			lineno++;
 			if (fgets((char*)buf->mv_data, (int)buf->mv_size, stdin) == NULL) {
 badend:
-				Eof = 1;
-				badend();
-				return EOF;
-			}
-			if (c == 'D' && !strncmp((char*)buf->mv_data, "ATA=END", STRLENOF("ATA=END")))
-				return EOF;
-			goto badend;
+			Eof = 1;
+			badend();
+			return EOF;
+		}
+		if (c == 'D' && !strncmp((char*)buf->mv_data, "ATA=END", STRLENOF("ATA=END")))
+			return EOF;
+		goto badend;
 		}
 	}
 	if (fgets((char*)buf->mv_data, (int)buf->mv_size, stdin) == NULL) {
@@ -217,7 +217,7 @@ badend:
 	len = strlen((char *)c1);
 	l2 = len;
 
-	/* Is buffer too short? */
+	// Is buffer too short?
 	while (c1[len-1] != '\n') {
 		buf->mv_data = realloc(buf->mv_data, buf->mv_size*2);
 		if (!buf->mv_data) {
@@ -257,12 +257,12 @@ badend:
 				}
 				c2 += 2;
 			} else {
-				/* copies are redundant when no escapes were used */
+				// copies are redundant when no escapes were used
 				*c1++ = *c2++;
 			}
 		}
 	} else {
-		/* odd length not allowed */
+		// odd length not allowed
 		if (len & 1) {
 			Eof = 1;
 			badend();
@@ -313,21 +313,21 @@ int main(int argc, char *argv[])
 		usage();
 	}
 
-    /* simple, portable argument scanner */
+    // simple, portable argument scanner
     int idx = 1;
     while (idx < argc) {
         const char *arg = argv[idx];
 
-        /* first non-option stops the scan → env-path */
+        // first non-option stops the scan → env-path
         if (arg[0] != '-')
             break;
 
-        /* single-letter options identical to original ------------------ */
+        // single-letter options identical to original ------------------
         if (strcmp(arg, "-a") == 0) {
             append = 1;
 
         } else if (strcmp(arg, "-f") == 0) {
-            if (++idx == argc)               /* need the file name */
+            if (++idx == argc)               // need the file name
                 usage();
             const char *fname = argv[idx];
             if (freopen(fname, "r", stdin) == NULL) {
@@ -342,7 +342,7 @@ int main(int argc, char *argv[])
         } else if (strcmp(arg, "-s") == 0) {
             if (++idx == argc)
                 usage();
-            subname = mdb_strdup(argv[idx]); /* unchanged helper */
+            subname = mdb_strdup(argv[idx]); // unchanged helper
 
         } else if (strcmp(arg, "-N") == 0) {
             putflags = MDB_NOOVERWRITE | MDB_NODUPDATA;
@@ -357,14 +357,14 @@ int main(int argc, char *argv[])
             printf("%s\n", MDB_VERSION_STRING);
             return 0;
 
-        } else {              /* unknown switch */
+        } else {              // unknown switch
             usage();
         }
 
-        ++idx;                 /* advance to next argv item */
+        ++idx;                 // advance to next argv item
     }
 
-    /* after options, exactly one positional argument must remain -------- */
+    // after options, exactly one positional argument must remain --------
     if (idx != argc - 1)
         usage();
 
@@ -441,7 +441,7 @@ int main(int argc, char *argv[])
 
 		while(1) {
 			rc = readline(&key, &kbuf);
-			if (rc)  /* rc == EOF */
+			if (rc)  // rc == EOF
 				break;
 
 			rc = readline(&data, &dbuf);

@@ -1,17 +1,16 @@
-/* mdb_dump.c - memory-mapped database dump tool */
-/*
- * Copyright 2011-2021 Howard Chu, Symas Corp.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted only as authorized by the OpenLDAP
- * Public License.
- *
- * A copy of this license is available in the file LICENSE in the
- * top-level directory of the distribution or, alternatively, at
- * <http://www.OpenLDAP.org/license.html>.
- */
-
+// mdb_dump.c - memory-mapped database dump tool
+//
+// Copyright 2011-2021 Howard Chu, Symas Corp.
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted only as authorized by the OpenLDAP
+// Public License.
+//
+// A copy of this license is available in the file LICENSE in the
+// top-level directory of the distribution or, alternatively, at
+// <http://www.OpenLDAP.org/license.html>.
+//
 #ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS
 #endif
@@ -101,7 +100,7 @@ static void byte2(MDB_val *v)
 	putchar('\n');
 }
 
-/* Dump in BDB-compatible format */
+// Dump in BDB-compatible format
 static int dumpit(MDB_txn *txn, MDB_dbi dbi, char *name)
 {
 	MDB_cursor *mc;
@@ -172,7 +171,7 @@ static void usage(char *prog)
 int main(int argc, char *argv[])
 {
     int alldbs = 0, envflags = 0, list = 0, mode = 0;
-    int i;                        /* outer argv index             */
+    int i;                        // outer argv index
     MDB_env *env;
     MDB_txn *txn;
     MDB_dbi dbi;
@@ -180,24 +179,24 @@ int main(int argc, char *argv[])
     char *envname  = NULL;
     char *subname  = NULL;
 
-    /* ---------- manual option parsing (no getopt) ---------- */
+    // ---------- manual option parsing (no getopt) ----------
     for (i = 1; i < argc; ++i)
     {
         char *arg = argv[i];
 
-        /* stop at first non-option or at “--” */
+        // stop at first non-option or at “--”
         if (arg[0] != '-' || strcmp(arg, "--") == 0)
         {
-            if (strcmp(arg, "--") == 0)         /* skip “--” itself */
+            if (strcmp(arg, "--") == 0)         // skip “--” itself
                 ++i;
             break;
         }
 
-        /* scan each character after the leading “-” */
+        // scan each character after the leading “-”
         for (size_t j = 1; arg[j] != '\0'; ++j)
         {
             char opt = arg[j];
-            char *optarg = NULL;                /* value, if needed */
+            char *optarg = NULL;                // value, if needed
 
             switch (opt)
             {
@@ -207,7 +206,7 @@ int main(int argc, char *argv[])
 
             case 'l':
                 list = 1;
-                /* FALLTHROUGH */
+                // FALLTHROUGH
             case 'a':
                 if (subname)
                     usage(prog);
@@ -226,15 +225,15 @@ int main(int argc, char *argv[])
                 mode |= PRINT;
                 break;
 
-            /* ---- options that take an argument ---- */
+            // ---- options that take an argument ----
             case 'f':
             case 's':
-                /* any characters left on this option?  */
+                // any characters left on this option?
                 if (arg[j + 1] != '\0') {
-                    optarg = &arg[j + 1];       /*  -ffile   */
-                    j = strlen(arg) - 1;        /*  stop scanning this arg */
+                    optarg = &arg[j + 1];       //  -ffile
+                    j = strlen(arg) - 1;        //  stop scanning this arg
                 } else {
-                    if (++i >= argc)            /*  -f file  */
+                    if (++i >= argc)            //  -f file
                         usage(prog);
                     optarg = argv[i];
                 }
@@ -245,12 +244,12 @@ int main(int argc, char *argv[])
                                 prog, optarg, strerror(errno));
                         exit(EXIT_FAILURE);
                     }
-                } else {                       /* opt == 's' */
+                } else {                       // opt == 's'
                     if (alldbs)
                         usage(prog);
                     subname = optarg;
                 }
-                /* reset inner loop because we consumed next argv (if any) */
+                // reset inner loop because we consumed next argv (if any)
                 j = strlen(arg) - 1;
                 break;
 
@@ -260,13 +259,13 @@ int main(int argc, char *argv[])
         }
     }
 
-    /* ---------- positional arguments ---------- */
-    if (i != argc - 1)          /* need exactly one env path */
+    // ---------- positional arguments ----------
+    if (i != argc - 1)          // need exactly one env path
         usage(prog);
 
     envname = argv[i];
 
-    /* ---------- signal handling (unchanged) ---- */
+    // ---------- signal handling (unchanged) ----
 #ifdef SIGPIPE
     signal(SIGPIPE, dumpsig);
 #endif

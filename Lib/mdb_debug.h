@@ -2,9 +2,9 @@
 
 #include "mdb_internal.h"
 
-/** assert(3) variant in cursor context */
+// assert(3) variant in cursor context
 #define mdb_cassert(mc, expr)	mdb_assert0((mc)->mc_txn->mt_env, expr, #expr)
-/** assert(3) variant in transaction context */
+// assert(3) variant in transaction context
 #define mdb_tassert(txn, expr)	mdb_assert0((txn)->mt_env, expr, #expr)
 
 #ifndef NDEBUG
@@ -16,14 +16,12 @@ void ESECT mdb_assert_fail(MDB_env *env, const char *expr_txt, const char *func,
 #endif /* NDEBUG */
 
 
-/** @defgroup debug	Debug Macros
- *	@{
- */
+// @defgroup debug	Debug Macros
+//	@{
 #ifndef MDB_DEBUG
-	/**	Enable debug output.  Needs variable argument macros (a C99 feature).
-	 *	Set this to 1 for copious tracing. Set to 2 to add dumps of all IDLs
-	 *	read from and written to the database (used for free space management).
-	 */
+//	Enable debug output.  Needs variable argument macros (a C99 feature).
+//	Set this to 1 for copious tracing. Set to 2 to add dumps of all IDLs
+//	read from and written to the database (used for free space management).
 #define MDB_DEBUG 0
 #endif
 
@@ -34,13 +32,12 @@ void ESECT mdb_assert_fail(MDB_env *env, const char *expr_txt, const char *func,
 extern int mdb_debug = MDB_DBG_TRACE;
 extern txnid_t mdb_debug_start;
 
-	/**	Print a debug message with printf formatting.
-	 *	Requires double parenthesis around 2 or more args.
-	 */
+//	Print a debug message with printf formatting.
+//	Requires double parenthesis around 2 or more args.
 # define DPRINTF(args) ((void) ((mdb_debug & MDB_DBG_INFO) && DPRINTF0 args))
 # define DPRINTF0(fmt, ...) \
 	fprintf(stderr, "%s:%d " fmt "\n", __func__, __LINE__, __VA_ARGS__)
-	/** Trace info for replaying */
+// Trace info for replaying
 # define MDB_TRACE(args)	((void) ((mdb_debug & MDB_DBG_TRACE) && DPRINTF1 args))
 # define DPRINTF1(fmt, ...) \
 	fprintf(stderr, ">%d:%s: " fmt "\n", getpid(), __func__, __VA_ARGS__)
@@ -48,34 +45,29 @@ extern txnid_t mdb_debug_start;
 # define DPRINTF(args)	((void) 0)
 # define MDB_TRACE(args)	((void) 0)
 #endif
-	/**	Print a debug string.
-	 *	The string is printed literally, with no format processing.
-	 */
+//	Print a debug string.
+//	The string is printed literally, with no format processing.
 #define DPUTS(arg)	DPRINTF(("%s", arg))
 
-	/** Debugging output value of a cursor DBI: Negative in a sub-cursor. */
+// Debugging output value of a cursor DBI: Negative in a sub-cursor.
 #define DDBI(mc) \
 	(((mc)->mc_flags & C_SUB) ? -(int)(mc)->mc_dbi : (int)(mc)->mc_dbi)
 
 #if MDB_DEBUG
-	/**	Key size which fits in a #DKBUF.
-	 *	@ingroup debug
-	 */
+//	Key size which fits in a #DKBUF.
+//	@ingroup debug
 #define DKBUF_MAXKEYSIZE ((MDB_MAXKEYSIZE) > 0 ? (MDB_MAXKEYSIZE) : 511)
-	/**	A key buffer.
-	 *	@ingroup debug
-	 *	This is used for printing a hex dump of a key's contents.
-	 */
+//	A key buffer.
+//	@ingroup debug
+//	This is used for printing a hex dump of a key's contents.
 #define DKBUF	char kbuf[DKBUF_MAXKEYSIZE*2+1]
-	/**	A data value buffer.
-	 *	@ingroup debug
-	 *	This is used for printing a hex dump of a #MDB_DUPSORT value's contents.
-	 */
+//	A data value buffer.
+//	@ingroup debug
+//	This is used for printing a hex dump of a #MDB_DUPSORT value's contents.
 #define DDBUF	char dbuf[DKBUF_MAXKEYSIZE*2+1+2]
-	/**	Display a key in hex.
-	 *	@ingroup debug
-	 *	Invoke a function to display a key in hex.
-	 */
+//	Display a key in hex.
+//	@ingroup debug
+//	Invoke a function to display a key in hex.
 #define	DKEY(x)	mdb_dkey(x, kbuf)
 #else
 #define	DKBUF

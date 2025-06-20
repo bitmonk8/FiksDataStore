@@ -1,16 +1,16 @@
-/* mdb_drop.c - memory-mapped database delete tool */
-/*
- * Copyright 2016-2021 Howard Chu, Symas Corp.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted only as authorized by the OpenLDAP
- * Public License.
- *
- * A copy of this license is available in the file LICENSE in the
- * top-level directory of the distribution or, alternatively, at
- * <http://www.OpenLDAP.org/license.html>.
- */
+// mdb_drop.c - memory-mapped database delete tool
+//
+// Copyright 2016-2021 Howard Chu, Symas Corp.
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted only as authorized by the OpenLDAP
+// Public License.
+//
+// A copy of this license is available in the file LICENSE in the
+// top-level directory of the distribution or, alternatively, at
+// <http://www.OpenLDAP.org/license.html>.
+//
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -34,13 +34,13 @@ static void usage(char *prog)
 
 static int
 parse_cmdline(int argc, char **argv,
-              int *envflags, int *do_delete, char **subname)
+               int *envflags, int *do_delete, char **subname)
 {
-    int i = 1;                       /* skip argv[0] */
+    int i = 1;                       // skip argv[0]
     for (; i < argc; ++i) {
         char *arg = argv[i];
 
-        /* stop when the first non-option is seen */
+        // stop when the first non-option is seen
         if (arg[0] != '-')
             break;
 
@@ -52,11 +52,11 @@ parse_cmdline(int argc, char **argv,
             printf("%s\n", MDB_VERSION_STRING);
             exit(EXIT_SUCCESS);
         } else if (strcmp(arg, "-s") == 0) {
-            if (++i == argc)        /* need a value after -s */
+            if (++i == argc)        // need a value after -s
                 usage(argv[0]);
             *subname = argv[i];
         } else {
-            usage(argv[0]);         /* unknown option */
+            usage(argv[0]);         // unknown option
         }
     }
     return i;

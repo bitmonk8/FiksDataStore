@@ -1,20 +1,19 @@
-/**	@file midl.c
- *	@brief ldap bdb back-end ID List functions */
-/* $OpenLDAP$ */
-/* This work is part of OpenLDAP Software <http://www.openldap.org/>.
- *
- * Copyright 2000-2021 The OpenLDAP Foundation.
- * Portions Copyright 2001-2021 Howard Chu, Symas Corp.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted only as authorized by the OpenLDAP
- * Public License.
- *
- * A copy of this license is available in the file LICENSE in the
- * top-level directory of the distribution or, alternatively, at
- * <http://www.OpenLDAP.org/license.html>.
- */
+//	@file midl.c
+//	@brief ldap bdb back-end ID List functions
+// $OpenLDAP$
+// This work is part of OpenLDAP Software <http://www.openldap.org/>.
+//
+// Copyright 2000-2021 The OpenLDAP Foundation.
+// Portions Copyright 2001-2021 Howard Chu, Symas Corp.
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted only as authorized by the OpenLDAP
+// Public License.
+//
+// A copy of this license is available in the file LICENSE in the
+// top-level directory of the distribution or, alternatively, at
+// <http://www.OpenLDAP.org/license.html>.
 
 #include "midl.h"
 
@@ -24,21 +23,21 @@
 #include <errno.h>
 #include <sys/types.h>
 
-/** @defgroup internal	LMDB Internals
- *	@{
- */
-/** @defgroup idls	ID List Management
- *	@{
- */
+// @defgroup internal	LMDB Internals
+//	@{
+//
+// @defgroup idls	ID List Management
+//	@{
+//
 #define CMP(x,y)	 ( (x) < (y) ? -1 : (x) > (y) )
 
 unsigned mdb_midl_search( MDB_IDL ids, MDB_ID id )
 {
-	/*
-	 * binary search of id in ids
-	 * if found, returns position of id
-	 * if not found, returns first position greater than id
-	 */
+	//
+	// binary search of id in ids
+	// if found, returns position of id
+	// if not found, returns first position greater than id
+	//
 	unsigned base = 0;
 	unsigned cursor = 1;
 	int val = 0;
@@ -67,39 +66,39 @@ unsigned mdb_midl_search( MDB_IDL ids, MDB_ID id )
 	return cursor;
 }
 
-#if 0	/* superseded by append/sort */
-int mdb_midl_insert( MDB_IDL ids, MDB_ID id )
-{
-	unsigned x, i;
-
-	x = mdb_midl_search( ids, id );
-	assert( x > 0 );
-
-	if( x < 1 ) {
-		/* internal error */
-		return -2;
-	}
-
-	if ( x <= ids[0] && ids[x] == id ) {
-		/* duplicate */
-		assert(0);
-		return -1;
-	}
-
-	if ( ++ids[0] >= MDB_IDL_DB_MAX ) {
-		/* no room */
-		--ids[0];
-		return -2;
-
-	} else {
-		/* insert id */
-		for (i=ids[0]; i>x; i--)
-			ids[i] = ids[i-1];
-		ids[x] = id;
-	}
-
-	return 0;
-}
+#if 0	// superseded by append/sort
+//int mdb_midl_insert( MDB_IDL ids, MDB_ID id )
+//{
+//	unsigned x, i;
+//
+//	x = mdb_midl_search( ids, id );
+//	assert( x > 0 );
+//
+//	if( x < 1 ) {
+//		// internal error
+//		return -2;
+//	}
+//
+//	if ( x <= ids[0] && ids[x] == id ) {
+//		// duplicate
+//		assert(0);
+//		return -1;
+//	}
+//
+//	if ( ++ids[0] >= MDB_IDL_DB_MAX ) {
+//		// no room
+//		--ids[0];
+//		return -2;
+//
+//	} else {
+//		// insert id
+//		for (i=ids[0]; i>x; i--)
+//			ids[i] = ids[i-1];
+//		ids[x] = id;
+//	}
+//
+//	return 0;
+//}
 #endif
 
 MDB_IDL mdb_midl_alloc(int num)
@@ -281,11 +280,11 @@ mdb_midl_sort( MDB_IDL ids )
 
 unsigned mdb_mid2l_search( MDB_ID2L ids, MDB_ID id )
 {
-	/*
-	 * binary search of id in ids
-	 * if found, returns position of id
-	 * if not found, returns first position greater than id
-	 */
+	//
+	// binary search of id in ids
+	// if found, returns position of id
+	// if not found, returns first position greater than id
+	//
 	unsigned base = 0;
 	unsigned cursor = 1;
 	int val = 0;
@@ -356,5 +355,5 @@ int mdb_mid2l_append( MDB_ID2L ids, MDB_ID2 *id )
 	return 0;
 }
 
-/** @} */
-/** @} */
+// @}
+// @}

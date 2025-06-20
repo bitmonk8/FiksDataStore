@@ -101,9 +101,8 @@ mdb_reader_list(MDB_env *env, MDB_msg_func *func, void *ctx)
 	return rc;
 }
 
-/** Insert pid into list if not already present.
- * return -1 if already present.
- */
+// Insert pid into list if not already present.
+// return -1 if already present.
 static int ESECT mdb_pid_insert(MDB_PID_T *ids, MDB_PID_T pid)
 {
 	// binary search of pid in list
@@ -155,13 +154,12 @@ mdb_reader_check(MDB_env *env, int *dead)
 	return env->me_txns ? mdb_reader_check0(env, 0, dead) : MDB_SUCCESS;
 }
 
-/** Handle #LOCK_MUTEX0() failure.
- * Try to repair the lock file if the mutex owner died.
- * @param[in] env	the environment handle
- * @param[in] mutex	LOCK_MUTEX0() mutex
- * @param[in] rc	LOCK_MUTEX0() error (nonzero)
- * @return 0 on success with the mutex locked, or an error code on failure.
- */
+// Handle #LOCK_MUTEX0() failure.
+// Try to repair the lock file if the mutex owner died.
+// @param[in] env	the environment handle
+// @param[in] mutex	LOCK_MUTEX0() mutex
+// @param[in] rc	LOCK_MUTEX0() error (nonzero)
+// @return 0 on success with the mutex locked, or an error code on failure.
 int ESECT
 mdb_mutex_failed(MDB_env *env, mdb_mutexref_t mutex, int rc)
 {

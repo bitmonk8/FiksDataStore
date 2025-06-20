@@ -1,16 +1,16 @@
-/* mtest.cpp - memory-mapped database tester/toy */
-/*
- * Copyright 2011-2021 Howard Chu, Symas Corp.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted only as authorized by the OpenLDAP
- * Public License.
- *
- * A copy of this license is available in the file LICENSE in the
- * top-level directory of the distribution or, alternatively, at
- * <http://www.OpenLDAP.org/license.html>.
- */
+// mtest.cpp - memory-mapped database tester/toy
+//
+// Copyright 2011-2021 Howard Chu, Symas Corp.
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted only as authorized by the OpenLDAP
+// Public License.
+//
+// A copy of this license is available in the file LICENSE in the
+// top-level directory of the distribution or, alternatively, at
+// <http://www.OpenLDAP.org/license.html>.
+//
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -68,7 +68,7 @@ int main(int argc,char * argv[])
 		printf("Adding %d values\n", count);
 	    for (i=0;i<count;i++) {	
 			snprintf(sval, sizeof(sval), "%03x %d foo bar", values[i], values[i]);
-			/* Set <data> in each iteration, since MDB_NOOVERWRITE may modify it */
+			// Set <data> in each iteration, since MDB_NOOVERWRITE may modify it
 			data.mv_size = sizeof(sval);
 			data.mv_data = sval;
 			if (RES(MDB_KEYEXIST, mdb_put(txn, dbi, &key, &data, MDB_NOOVERWRITE))) {

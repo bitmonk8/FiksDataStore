@@ -1,18 +1,17 @@
-/* mtest4.c - memory-mapped database tester/toy */
-/*
- * Copyright 2011-2021 Howard Chu, Symas Corp.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted only as authorized by the OpenLDAP
- * Public License.
- *
- * A copy of this license is available in the file LICENSE in the
- * top-level directory of the distribution or, alternatively, at
- * <http://www.OpenLDAP.org/license.html>.
- */
-
-/* Tests for sorted duplicate DBs with fixed-size keys */
+// mtest4.c - memory-mapped database tester/toy
+//
+// Copyright 2011-2021 Howard Chu, Symas Corp.
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted only as authorized by the OpenLDAP
+// Public License.
+//
+// A copy of this license is available in the file LICENSE in the
+// top-level directory of the distribution or, alternatively, at
+// <http://www.OpenLDAP.org/license.html>.
+//
+// Tests for sorted duplicate DBs with fixed-size keys
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -80,8 +79,8 @@ int main(int argc,char * argv[])
 	E(mdb_txn_commit(txn));
 	E(mdb_env_stat(env, &mst));
 
-	/* there should be one full page of dups now.
-	 */
+	// there should be one full page of dups now.
+	//
 	E(mdb_txn_begin(env, NULL, MDB_RDONLY, &txn));
 	E(mdb_cursor_open(txn, dbi, &cursor));
 	while ((rc = mdb_cursor_get(cursor, &key, &data, MDB_NEXT)) == 0) {
@@ -93,11 +92,11 @@ int main(int argc,char * argv[])
 	mdb_cursor_close(cursor);
 	mdb_txn_abort(txn);
 
-	/* test all 3 branches of split code:
-	 * 1: new key in lower half
-	 * 2: new key at split point
-	 * 3: new key in upper half
-	 */
+	// test all 3 branches of split code:
+	// 1: new key in lower half
+	// 2: new key at split point
+	// 3: new key in upper half
+	//
 
 	key.mv_size = sizeof(int);
 	key.mv_data = kval;
@@ -119,7 +118,7 @@ int main(int argc,char * argv[])
 	(void)RES(MDB_KEYEXIST, mdb_put(txn, dbi, &key, &data, MDB_NODUPDATA));
 	E(mdb_txn_commit(txn));
 
-	/* Try MDB_NEXT_MULTIPLE */
+	// Try MDB_NEXT_MULTIPLE
 	E(mdb_txn_begin(env, NULL, 0, &txn));
 	E(mdb_cursor_open(txn, dbi, &cursor));
 	while ((rc = mdb_cursor_get(cursor, &key, &data, MDB_NEXT_MULTIPLE)) == 0) {

@@ -1,49 +1,47 @@
-/**	@file midl.h
- *	@brief LMDB ID List header file.
- *
- *	MIDL stands for "Memory ID List" and provides specialized data structures
- *	and operations for managing sorted arrays of IDs in the LMDB system.
- *
- *	This file was originally part of back-bdb but has been
- *	modified for use in libmdb. Most of the macros defined
- *	in this file are unused, just left over from the original.
- *
- *	This file is only used internally in libmdb and its definitions
- *	are not exposed publicly.
- *
- *	@section usage Usage in LMDB Context
- *	This code is used internally by LMDB for:
- *	- Free page management: Tracking which database pages are available for reuse
- *	- Transaction management: Managing transaction IDs and their associated data
- *	- Index operations: Maintaining sorted lists of record IDs
- *	- Memory mapping: Associating page IDs with memory locations
- *
- *	@section performance Performance Characteristics
- *	- Search operations: O(log n) using binary search
- *	- Insert operations: O(n) for maintaining sort order
- *	- Append operations: O(1) for adding to end
- *	- Sort operations: O(n log n) using hybrid quicksort/insertion sort
- *	- Merge operations: O(n + m) for combining sorted lists
- *
- *	@section memory Memory Layout
- *	IDLs use a compact array layout where allocation size is stored at ids[-1]
- *	for efficient dynamic resizing with 25% overhead plus 256-element alignment.
- */
-/* $OpenLDAP$ */
-/* This work is part of OpenLDAP Software <http://www.openldap.org/>.
- *
- * Copyright 2000-2021 The OpenLDAP Foundation.
- * Portions Copyright 2001-2021 Howard Chu, Symas Corp.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted only as authorized by the OpenLDAP
- * Public License.
- *
- * A copy of this license is available in the file LICENSE in the
- * top-level directory of the distribution or, alternatively, at
- * <http://www.OpenLDAP.org/license.html>.
- */
+// @file midl.h
+// @brief LMDB ID List header file.
+//
+// MIDL stands for "Memory ID List" and provides specialized data structures
+// and operations for managing sorted arrays of IDs in the LMDB system.
+//
+// This file was originally part of back-bdb but has been
+// modified for use in libmdb. Most of the macros defined
+// in this file are unused, just left over from the original.
+//
+// This file is only used internally in libmdb and its definitions
+// are not exposed publicly.
+//
+// @section usage Usage in LMDB Context
+// This code is used internally by LMDB for:
+// - Free page management: Tracking which database pages are available for reuse
+// - Transaction management: Managing transaction IDs and their associated data
+// - Index operations: Maintaining sorted lists of record IDs
+// - Memory mapping: Associating page IDs with memory locations
+//
+// @section performance Performance Characteristics
+// - Search operations: O(log n) using binary search
+// - Insert operations: O(n) for maintaining sort order
+// - Append operations: O(1) for adding to end
+// - Sort operations: O(n log n) using hybrid quicksort/insertion sort
+// - Merge operations: O(n + m) for combining sorted lists
+//
+// @section memory Memory Layout
+// IDLs use a compact array layout where allocation size is stored at ids[-1]
+// for efficient dynamic resizing with 25% overhead plus 256-element alignment.
+// $OpenLDAP$
+// This work is part of OpenLDAP Software <http://www.openldap.org/>.
+//
+// Copyright 2000-2021 The OpenLDAP Foundation.
+// Portions Copyright 2001-2021 Howard Chu, Symas Corp.
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted only as authorized by the OpenLDAP
+// Public License.
+//
+// A copy of this license is available in the file LICENSE in the
+// top-level directory of the distribution or, alternatively, at
+// <http://www.OpenLDAP.org/license.html>.
 
 #ifndef _MDB_MIDL_H_
 #define _MDB_MIDL_H_
@@ -62,17 +60,16 @@
 	 */
 typedef mdb_size_t MDB_ID;
 
-	/** An IDL is an ID List, a sorted array of IDs. The first
-	 * element of the array is a counter for how many actual
-	 * IDs are in the list. In the original back-bdb code, IDLs are
-	 * sorted in ascending order. For libmdb IDLs are sorted in
-	 * descending order.
-	 *
-	 * Memory layout: [count][id1][id2]...[idN]
-	 * - Element [0]: Contains count of actual IDs
-	 * - Elements [1] to [count]: Contains sorted IDs in descending order
-	 * - Used for managing page IDs, transaction IDs, and database identifiers
-	 */
+	// An IDL is an ID List, a sorted array of IDs. The first
+	// element of the array is a counter for how many actual
+	// IDs are in the list. In the original back-bdb code, IDLs are
+	// sorted in ascending order. For libmdb IDLs are sorted in
+	// descending order.
+	//
+	// Memory layout: [count][id1][id2]...[idN]
+	// - Element [0]: Contains count of actual IDs
+	// - Elements [1] to [count]: Contains sorted IDs in descending order
+	// - Used for managing page IDs, transaction IDs, and database identifiers
 typedef MDB_ID *MDB_IDL;
 
 /* IDL sizes - likely should be even bigger
@@ -175,17 +172,16 @@ struct MDB_ID2 {
 	void *mptr;		/**< The pointer */
 };
 
-	/** An ID2L is an ID2 List, a sorted array of ID2s.
-	 * The first element's \b mid member is a count of how many actual
-	 * elements are in the array. The \b mptr member of the first element is unused.
-	 * The array is sorted in ascending order by \b mid.
-	 *
-	 * Memory layout: [count_entry][id2_1][id2_2]...[id2_N]
-	 * - Element [0].mid: Contains count of actual ID2 pairs
-	 * - Element [0].mptr: Unused
-	 * - Elements [1] to [count]: Contains ID/pointer pairs sorted by ID in ascending order
-	 * - Used for mapping IDs to memory locations or data structures
-	 */
+	// An ID2L is an ID2 List, a sorted array of ID2s.
+	// The first element's \b mid member is a count of how many actual
+	// elements are in the array. The \b mptr member of the first element is unused.
+	// The array is sorted in ascending order by \b mid.
+	//
+	// Memory layout: [count_entry][id2_1][id2_2]...[id2_N]
+	// - Element [0].mid: Contains count of actual ID2 pairs
+	// - Element [0].mptr: Unused
+	// - Elements [1] to [count]: Contains ID/pointer pairs sorted by ID in ascending order
+	// - Used for mapping IDs to memory locations or data structures
 typedef MDB_ID2 *MDB_ID2L;
 
 	/** Search for an ID in an ID2L.

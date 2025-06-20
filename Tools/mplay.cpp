@@ -1,16 +1,16 @@
-/* mplay.c - memory-mapped database log replay */
-/*
- * Copyright 2011-2023 Howard Chu, Symas Corp.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted only as authorized by the OpenLDAP
- * Public License.
- *
- * A copy of this license is available in the file LICENSE in the
- * top-level directory of the distribution or, alternatively, at
- * <http://www.OpenLDAP.org/license.html>.
- */
+// mplay.c - memory-mapped database log replay
+//
+// Copyright 2011-2023 Howard Chu, Symas Corp.
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted only as authorized by the OpenLDAP
+// Public License.
+//
+// A copy of this license is available in the file LICENSE in the
+// top-level directory of the distribution or, alternatively, at
+// <http://www.OpenLDAP.org/license.html>.
+//
 #include <stdio.h>
 #include <stdlib.h>
 #ifndef _WIN32
@@ -46,12 +46,12 @@ int maxkey;
 #define MAXPIDS	16
 
 struct crspair {
-	void *tcrs;	/* scanned text pointer */
+	void *tcrs;	// scanned text pointer
 	MDB_cursor *rcrs;
 };
 
 struct txnpair {
-	void *ttxn;	/* scanned text pointer */
+	void *ttxn;	// scanned text pointer
 	MDB_txn *rtxn;
 	crspair cursors[MAXCRSS];
 	int ncursors;
@@ -178,7 +178,7 @@ static txnpair *findtxn(void *ttxn)
 			}
 		}
 	}
-	assert(0);	/* should have found it */
+	assert(0);	// should have found it
 }
 
 static void deltxn(txnpair *tp)
@@ -244,7 +244,7 @@ static crspair *findcrs(void *tcrs)
 			}
 		}
 	}
-	assert(0);	/* should have found it already */
+	assert(0);	// should have found it already
 }
 
 static void delcrs(void *tcrs)
@@ -315,7 +315,7 @@ void child()
 			ep = findenv(tenv);
 			mdb_env_close(ep->renv);
 			delenv(ep);
-			if (!nenvs)	/* if no other envs left, this process is done */
+			if (!nenvs)	// if no other envs left, this process is done
 				break;
 		} else if (!strncmp(ptr, SCMP("mdb_txn_begin"))) {
 			unsigned int flags;
@@ -441,7 +441,6 @@ void child()
 				snprintf(dbuf, dbufsize, "%09ld", (long)mdb_txn_id(tp->rtxn));
 			}
 			data.mv_data = dbuf;
-			sscanf(ptr+1, "%u", &flags);
 			RES(MDB_KEYEXIST,mdb_put(tp->rtxn, tdbi, &key, &data, flags));
 		} else if (!strncmp(ptr, SCMP("mdb_del"))) {
 			void *ttxn;
@@ -483,7 +482,7 @@ static pidpair *addpid(int tpid)
 	pipe(fdout);
 	pipe(fdin);
 	if ((pid = fork()) == 0) {
-		/* child */
+		// child
 		fclose(stdin);
 		fclose(stdout);
 		dup2(fdout[0], 0);
@@ -491,7 +490,7 @@ static pidpair *addpid(int tpid)
 		stdin = fdopen(0, "r");
 		stdout = fdopen(1, "w");
 		child();
-		return 0;	/* NOTREACHED */
+		return 0;	// NOTREACHED
 	} else {
 		pids[npids].rpid = pid;
 		pids[npids].fdout = fdout[1];
@@ -571,11 +570,11 @@ int main(int argc,char * argv[])
 		sscanf(ptr, "%d:%n", &tpid, &len);
 		pp = findpid(tpid);
 		if (!pp)
-			pp = addpid(tpid);	/* new process */
+			pp = addpid(tpid);	// new process
 
 		ptr = inbuf+len+1;
 		len = strlen(ptr);
-		write(pp->fdout, ptr, len);	/* send command and wait for ack */
+		write(pp->fdout, ptr, len);	// send command and wait for ack
 		read(pp->fdin, &c, 1);
 	}
 	while (npids)

@@ -1,16 +1,16 @@
-/* mdb_stat.c - memory-mapped database status tool */
-/*
- * Copyright 2011-2021 Howard Chu, Symas Corp.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted only as authorized by the OpenLDAP
- * Public License.
- *
- * A copy of this license is available in the file LICENSE in the
- * top-level directory of the distribution or, alternatively, at
- * <http://www.OpenLDAP.org/license.html>.
- */
+// mdb_stat.c - memory-mapped database status tool
+//
+// Copyright 2011-2021 Howard Chu, Symas Corp.
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted only as authorized by the OpenLDAP
+// Public License.
+//
+// A copy of this license is available in the file LICENSE in the
+// top-level directory of the distribution or, alternatively, at
+// <http://www.OpenLDAP.org/license.html>.
+//
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,7 +30,7 @@ typedef SSIZE_T	ssize_t;
 static void prstat(MDB_stat *ms)
 {
 #if 0
-	printf("  Page size: %u\n", ms->ms_psize);
+//	printf("  Page size: %u\n", ms->ms_psize);
 #endif
 	printf("  Tree depth: %u\n", ms->ms_depth);
 	printf("  Branch pages: %" Yu "\n",   ms->ms_branch_pages);
@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
     MDB_stat    mst;
     MDB_envinfo mei;
 
-    /* options */
+// options
     const char *prog     = argv[0];
     const char *envname  = NULL;
     const char *subname  = NULL;
@@ -64,17 +64,17 @@ int main(int argc, char *argv[])
     int rdrinfo  = 0;
     unsigned envflags = 0;
 
-    /* ------------- option parser (replaces getopt) ------------- */
+// ------------- option parser (replaces getopt) -------------
     int optind = 1;          /* first argv index to examine       */
 
     while (optind < argc && argv[optind][0] == '-') {
         const char *arg = argv[optind++];
 
-        /* lone “--” terminates option scanning */
+// lone “--” terminates option scanning
         if (strcmp(arg, "--") == 0)
             break;
 
-        /* walk through the cluster, skipping the leading “-” */
+// walk through the cluster, skipping the leading “-”
         for (size_t pos = 1; arg[pos]; ++pos) {
             char opt = arg[pos];
 
@@ -110,19 +110,19 @@ int main(int argc, char *argv[])
                 break;
 
             case 's':    /* needs an argument */
-                /* if characters remain in the same token, use them */
+// if characters remain in the same token, use them
                 if (arg[pos + 1]) {
                     subname = &arg[pos + 1];
                     pos = strlen(arg) - 1;   /* exit inner loop */
                 } else {
-                    /* otherwise take the next argv element */
+// otherwise take the next argv element
                     if (optind >= argc)
                         usage(prog);
                     subname = argv[optind++];
                 }
                 if (alldbs)                /* -s conflicts with -a */
                     usage(prog);
-                /* stop processing the rest of this cluster */
+// stop processing the rest of this cluster
                 pos = strlen(arg) - 1;
                 break;
 
@@ -131,9 +131,9 @@ int main(int argc, char *argv[])
             }
         }
     }
-    /* ------------- end of option parser ------------------------ */
+// ------------- end of option parser ------------------------
 
-    /* exactly one non-option argument (the environment path) */
+// exactly one non-option argument (the environment path)
     if (optind != argc - 1)
         usage(prog);
     envname = argv[optind];
