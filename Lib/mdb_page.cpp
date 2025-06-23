@@ -6,13 +6,12 @@
 #include "mdb_db.h"
 #include "mdb_txn.h"
 
-/** Page Management Operations
-*/
-
-/** Allocate memory for a page.
- Re-use old malloc'd pages first for singletons, otherwise just malloc.
- Set #MDB_TXN_ERROR on failure.
-*/
+// Page Management Operations
+//
+// Allocate memory for a page.
+// Re-use old malloc'd pages first for singletons, otherwise just malloc.
+// Set #MDB_TXN_ERROR on failure.
+//
 MDB_page *
 mdb_page_malloc(MDB_txn *txn, unsigned num)
 {
@@ -56,10 +55,10 @@ mdb_page_malloc(MDB_txn *txn, unsigned num)
 	return ret;
 }
 
-/** Free a single page.
- Saves single pages to a list, for future reuse.
- (This is not used for multi-page overflow pages.)
-*/
+// Free a single page.
+// Saves single pages to a list, for future reuse.
+// (This is not used for multi-page overflow pages.)
+//
 void
 mdb_page_free(MDB_env *env, MDB_page *mp)
 {
@@ -68,7 +67,7 @@ mdb_page_free(MDB_env *env, MDB_page *mp)
 	env->me_dpages = mp;
 }
 
-/** Free a dirty page */
+// Free a dirty page
 void
 mdb_dpage_free(MDB_env *env, MDB_page *dp)
 {
@@ -84,16 +83,16 @@ mdb_dpage_free(MDB_env *env, MDB_page *dp)
 	}
 }
 
-/** Loosen or free a single page.
- Saves single pages to a list for future reuse
- in this same txn. It has been pulled from the freeDB
- and already resides on the dirty list, but has been
- deleted. Use these pages first before pulling again
- from the freeDB.
-
- If the page wasn't dirtied in this txn, just add it
- to this txn's free list.
-*/
+// Loosen or free a single page.
+// Saves single pages to a list for future reuse
+// in this same txn. It has been pulled from the freeDB
+// and already resides on the dirty list, but has been
+// deleted. Use these pages first before pulling again
+// from the freeDB.
+//
+// If the page wasn't dirtied in this txn, just add it
+// to this txn's free list.
+//
 int
 mdb_page_loose(MDB_cursor *mc, MDB_page *mp)
 {
@@ -149,13 +148,13 @@ mdb_page_loose(MDB_cursor *mc, MDB_page *mp)
 	return MDB_SUCCESS;
 }
 
-/** Set or clear P_KEEP in dirty, non-overflow, non-sub pages watched by txn.
- mc A cursor handle for the current operation.
- pflags Flags of the pages to update:
- P_DIRTY to set P_KEEP, P_DIRTY|P_KEEP to clear it.
- all No shortcuts. Needed except after a full #mdb_page_flush().
- 0 on success, non-zero on failure.
-*/
+// Set or clear P_KEEP in dirty, non-overflow, non-sub pages watched by txn.
+// mc A cursor handle for the current operation.
+// pflags Flags of the pages to update:
+// P_DIRTY to set P_KEEP, P_DIRTY|P_KEEP to clear it.
+// all No shortcuts. Needed except after a full #mdb_page_flush().
+// 0 on success, non-zero on failure.
+//
 int
 mdb_pages_xkeep(MDB_cursor *mc, unsigned pflags, int all)
 {
@@ -221,11 +220,11 @@ mark_done:
 	return rc;
 }
 
-/** Flush (some) dirty pages to the map, after clearing their dirty flag.
- txn the transaction that's being committed
- keep number of initial pages in dirty_list to keep dirty.
- 0 on success, non-zero on failure.
-*/
+// Flush (some) dirty pages to the map, after clearing their dirty flag.
+// txn the transaction that's being committed
+// keep number of initial pages in dirty_list to keep dirty.
+// 0 on success, non-zero on failure.
+//
 int
 mdb_page_flush(MDB_txn *txn, int keep)
 {
@@ -476,38 +475,37 @@ done:
 	return MDB_SUCCESS;
 }
 
-/**	Spill pages from the dirty list back to disk.
- This is intended to prevent running into #MDB_TXN_FULL situations,
- but note that they may still occur in a few cases:
-	1) our estimate of the txn size could be too small. Currently this
-	 seems unlikely, except with a large number of #MDB_MULTIPLE items.
-	2) child txns may run out of space if their parents dirtied a
-	 lot of pages and never spilled them. TODO: we probably should do
-	 a preemptive spill during #mdb_txn_begin() of a child txn, if
-	 the parent's dirty_room is below a given threshold.
-
- Otherwise, if not using nested txns, it is expected that apps will
- not run into #MDB_TXN_FULL any more. The pages are flushed to disk
- the same way as for a txn commit, e.g. their P_DIRTY flag is cleared.
- If the txn never references them again, they can be left alone.
- If the txn only reads them, they can be used without any fuss.
- If the txn writes them again, they can be dirtied immediately without
- going thru all of the work of #mdb_page_touch(). Such references are
- handled by #mdb_page_unspill().
-
- Also note, we never spill DB root pages, nor pages of active cursors,
- because we'll need these back again soon anyway. And in nested txns,
- we can't spill a page in a child txn if it was already spilled in a
- parent txn. That would alter the parent txns' data even though
- the child hasn't committed yet, and we'd have no way to undo it if
- the child aborted.
-
- m0 cursor A cursor handle identifying the transaction and
-	database for which we are checking space.
- key For a put operation, the key being stored.
- data For a put operation, the data being stored.
- 0 on success, non-zero on failure.
-*/
+// Spill pages from the dirty list back to disk.
+// This is intended to prevent running into #MDB_TXN_FULL situations,
+// but note that they may still occur in a few cases:
+// 1) our estimate of the txn size could be too small. Currently this
+// seems unlikely, except with a large number of #MDB_MULTIPLE items.
+// 2) child txns may run out of space if their parents dirtied a
+// lot of pages and never spilled them. TODO: we probably should do
+// a preemptive spill during #mdb_txn_begin() of a child txn, if
+// the parent's dirty_room is below a given threshold.
+//
+// Otherwise, if not using nested txns, it is expected that apps will
+// not run into #MDB_TXN_FULL any more. The pages are flushed to disk
+// the same way as for a txn commit, e.g. their P_DIRTY flag is cleared.
+// If the txn never references them again, they can be left alone.
+// If the txn only reads them, they can be used without any fuss.
+// If the txn writes them again, they can be dirtied immediately without
+// going thru all of the work of #mdb_page_touch(). Such references are
+// handled by #mdb_page_unspill().
+//
+// Also note, we never spill DB root pages, nor pages of active cursors,
+// because we'll need these back again soon anyway. And in nested txns,
+// we can't spill a page in a child txn if it was already spilled in a
+// parent txn. That would alter the parent txns' data even though
+// the child hasn't committed yet, and we'd have no way to undo it if
+// the child aborted.
+//
+// m0 cursor A cursor handle identifying the transaction and
+// database for which we are checking space.
+// key For a put operation, the key being stored.
+// data For a put operation, the data being stored.
+// 0 on success, non-zero on failure.
 /** Back up parent txn's cursors, then grab the originals for tracking */
 int
 mdb_page_spill(MDB_cursor *m0, MDB_val *key, MDB_val *data)
@@ -616,7 +614,7 @@ done:
 	return rc;
 }
 
-/** Find oldest txnid still referenced. Expects txn->mt_txnid > 0. */
+// Find oldest txnid still referenced. Expects txn->mt_txnid > 0.
 txnid_t
 mdb_find_oldest(MDB_txn *txn)
 {
@@ -638,7 +636,7 @@ mdb_find_oldest(MDB_txn *txn)
 	return oldest;
 }
 
-/** Add a page to the txn's dirty list */
+// Add a page to the txn's dirty list
 void
 mdb_page_dirty(MDB_txn *txn, MDB_page *mp)
 {
@@ -661,29 +659,28 @@ mdb_page_dirty(MDB_txn *txn, MDB_page *mp)
 	txn->mt_dirty_room--;
 }
 
-/** Allocate page numbers and memory for writing.  Maintain me_pglast,
- me_pghead and mt_next_pgno.  Set #MDB_TXN_ERROR on failure.int
- If there are free pages available from older transactions, they
- are re-used first. Otherwise allocate a new page at mt_next_pgno.
- Do not modify the freedB, just merge freeDB records into me_pghead[]
- and move me_pglast to say which records were consumed.  Only this
- function can create me_pghead and move me_pglast/mt_next_pgno.
- mc cursor A cursor handle identifying the transaction and
-	database for which we are allocating.
- num the number of pages to allocate.
- mp Address of the allocated page(s). Requests for multiple pages
-  will always be satisfied by a single contiguous chunk of memory.
- 0 on success, non-zero on failure.
-*/
+// Allocate page numbers and memory for writing.  Maintain me_pglast,
+// me_pghead and mt_next_pgno.  Set #MDB_TXN_ERROR on failure.int
+// If there are free pages available from older transactions, they
+// are re-used first. Otherwise allocate a new page at mt_next_pgno.
+// Do not modify the freedB, just merge freeDB records into me_pghead[]
+// and move me_pglast to say which records were consumed.  Only this
+// function can create me_pghead and move me_pglast/mt_next_pgno.
+// mc cursor A cursor handle identifying the transaction and
+// database for which we are allocating.
+// num the number of pages to allocate.
+// mp Address of the allocated page(s). Requests for multiple pages
+// will always be satisfied by a single contiguous chunk of memory.
+// 0 on success, non-zero on failure.
+//
 int mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp)
 {
-#ifdef MDB_PARANOID	/* Seems like we can ignore this now */
-	/* Get at most <Max_retries> more freeDB records once me_pghead
-	 * has enough pages.  If not enough, use new pages from the map.
-	 * If <Paranoid> and mc is updating the freeDB, only get new
-	 * records if me_pghead is empty. Then the freelist cannot play
-	 * catch-up with itself by growing while trying to save it.
-	 */
+#ifdef MDB_PARANOID	// Seems like we can ignore this now
+	// Get at most <Max_retries> more freeDB records once me_pghead
+	// has enough pages.  If not enough, use new pages from the map.
+	// If <Paranoid> and mc is updating the freeDB, only get new
+	// records if me_pghead is empty. Then the freelist cannot play
+	// catch-up with itself by growing while trying to save it.
 	enum { Paranoid = 1, Max_retries = 500 };
 #else
 	enum { Paranoid = 0, Max_retries = INT_MAX /*infinite*/ };
@@ -885,11 +882,11 @@ fail:
 	return rc;
 }
 
-/** Copy the used portions of a non-overflow page.
- dst page to copy into
- src page to copy from
- psize size of a page
-*/
+// Copy the used portions of a non-overflow page.
+// dst page to copy into
+// src page to copy from
+// psize size of a page
+//
 void
 mdb_page_copy(MDB_page *dst, MDB_page *src, unsigned int psize)
 {
@@ -912,14 +909,14 @@ mdb_page_copy(MDB_page *dst, MDB_page *src, unsigned int psize)
 	}
 }
 
-/** Pull a page off the txn's spill list, if present.
- If a page being referenced was spilled to disk in this txn, bring
- it back and make it dirty/writable again.
- txn the transaction handle.
- mp the page being referenced. It must not be dirty.
- ret the writable page, if any. ret is unchanged if
- mp wasn't spilled.
-*/
+// Pull a page off the txn's spill list, if present.
+// If a page being referenced was spilled to disk in this txn, bring
+// it back and make it dirty/writable again.
+// txn the transaction handle.
+// mp the page being referenced. It must not be dirty.
+// ret the writable page, if any. ret is unchanged if
+// mp wasn't spilled.
+//
 int
 mdb_page_unspill(MDB_txn *txn, MDB_page *mp, MDB_page **ret)
 {
@@ -980,11 +977,11 @@ mdb_page_unspill(MDB_txn *txn, MDB_page *mp, MDB_page **ret)
 	return MDB_SUCCESS;
 }
 
-/** Touch a page: make it dirty and re-insert into tree with updated pgno.
- Set #MDB_TXN_ERROR on failure.
- mc cursor pointing to the page to be touched
- 0 on success, non-zero on failure.
-*/
+// Touch a page: make it dirty and re-insert into tree with updated pgno.
+// Set #MDB_TXN_ERROR on failure.
+// mc cursor pointing to the page to be touched
+// 0 on success, non-zero on failure.
+//
 int
 mdb_page_touch(MDB_cursor *mc)
 {
@@ -1100,14 +1097,14 @@ fail:
 	return rc;
 }
 
-/** Find the address of the page corresponding to a given page number.
- Set #MDB_TXN_ERROR on failure.
- mc the cursor accessing the page.
- pgno the page number for the page to retrieve.
- ret address of a pointer where the page's address will be stored.
- lvl dirty_list inheritance level of found page. 1=current txn, 0=mapped page.
- 0 on success, non-zero on failure.
-*/
+// Find the address of the page corresponding to a given page number.
+// Set #MDB_TXN_ERROR on failure.
+// mc the cursor accessing the page.
+// pgno the page number for the page to retrieve.
+// ret address of a pointer where the page's address will be stored.
+// lvl dirty_list inheritance level of found page. 1=current txn, 0=mapped page.
+// 0 on success, non-zero on failure.
+//
 int
 mdb_page_get(MDB_cursor *mc, pgno_t pgno, MDB_page **ret, int *lvl)
 {
@@ -1172,9 +1169,9 @@ done:
 	return MDB_SUCCESS;
 }
 
-/** Finish #mdb_page_search() / #mdb_page_search_lowest().
-	The cursor is at the root page, set up the rest of it.
-*/
+// Finish #mdb_page_search() / #mdb_page_search_lowest().
+// The cursor is at the root page, set up the rest of it.
+//
 int
 mdb_page_search_root(MDB_cursor *mc, MDB_val *key, int flags)
 {
@@ -1266,12 +1263,12 @@ ready:
 	return MDB_SUCCESS;
 }
 
-/** Search for the lowest key under the current branch page.
- This just bypasses a NUMKEYS check in the current page
- before calling mdb_page_search_root(), because the callers
- are all in situations where the current page is known to
- be underfilled.
-*/
+// Search for the lowest key under the current branch page.
+// This just bypasses a NUMKEYS check in the current page
+// before calling mdb_page_search_root(), because the callers
+// are all in situations where the current page is known to
+// be underfilled.
+//
 int
 mdb_page_search_lowest(MDB_cursor *mc)
 {
@@ -1288,12 +1285,12 @@ mdb_page_search_lowest(MDB_cursor *mc)
 	return mdb_page_search_root(mc, NULL, MDB_PS_FIRST);
 }
 
-/** Search for the lowest key under the current branch page.
- This just bypasses a NUMKEYS check in the current page
- before calling mdb_page_search_root(), because the callers
- are all in situations where the current page is known to
- be underfilled.
-*/
+// Search for the lowest key under the current branch page.
+// This just bypasses a NUMKEYS check in the current page
+// before calling mdb_page_search_root(), because the callers
+// are all in situations where the current page is known to
+// be underfilled.
+//
 int
 mdb_page_search(MDB_cursor *mc, MDB_val *key, int flags)
 {
@@ -1390,14 +1387,14 @@ mdb_ovpage_free(MDB_cursor *mc, MDB_page *mp)
 	int rc;
 
 	DPRINTF(("free ov page %" Yu " (%d)", pg, ovpages));
-	/* If the page is dirty or on the spill list we just acquired it,
-	 * so we should give it back to our current free list, if any.
-	 * Otherwise put it onto the list of pages we freed in this txn.
-	 *
-	 * Won't create me_pghead: me_pglast must be inited along with it.
-	 * Unsupported in nested txns: They would need to hide the page
-	 * range in ancestor txns' dirty and spilled lists.
-	 */
+	// If the page is dirty or on the spill list we just acquired it,
+	// so we should give it back to our current free list, if any.
+	// Otherwise put it onto the list of pages we freed in this txn.
+	//
+	// Won't create me_pghead: me_pglast must be inited along with it.
+	// Unsupported in nested txns: They would need to hide the page
+	// range in ancestor txns' dirty and spilled lists.
+	//
 	if (env->me_pghead &&
 		!txn->mt_parent &&
 		((mp->mp_flags & P_DIRTY) ||
@@ -1461,15 +1458,15 @@ release:
 	return 0;
 }
 
-/** Allocate and initialize new pages for a database.
- Set #MDB_TXN_ERROR on failure.
- mc a cursor on the database being added to.
- flags flags defining what type of page is being allocated.
- num the number of pages to allocate. This is usually 1,
- unless allocating overflow pages for a large record.
- mp Address of a page, or NULL on failure.
- 0 on success, non-zero on failure.
-*/
+// Allocate and initialize new pages for a database.
+// Set #MDB_TXN_ERROR on failure.
+// mc a cursor on the database being added to.
+// flags flags defining what type of page is being allocated.
+// num the number of pages to allocate. This is usually 1,
+// unless allocating overflow pages for a large record.
+// mp Address of a page, or NULL on failure.
+// 0 on success, non-zero on failure.
+//
 int
 mdb_page_new(MDB_cursor *mc, uint32_t flags, int num, MDB_page **mp)
 {
@@ -1498,17 +1495,17 @@ mdb_page_new(MDB_cursor *mc, uint32_t flags, int num, MDB_page **mp)
 	return 0;
 }
 
-/** Calculate the size of a leaf node.
- The size depends on the environment's page size; if a data item
- is too large it will be put onto an overflow page and the node
- size will only include the key and not the data. Sizes are always
- rounded up to an even number of bytes, to guarantee 2-byte alignment
- of the #MDB_node headers.
- env The environment handle.
- key The key for the node.
- data The data for the node.
- The number of bytes needed to store the node.
-*/
+// Calculate the size of a leaf node.
+// The size depends on the environment's page size; if a data item
+// is too large it will be put onto an overflow page and the node
+// size will only include the key and not the data. Sizes are always
+// rounded up to an even number of bytes, to guarantee 2-byte alignment
+// of the #MDB_node headers.
+// env The environment handle.
+// key The key for the node.
+// data The data for the node.
+// The number of bytes needed to store the node.
+//
 size_t
 mdb_leaf_size(MDB_env *env, MDB_val *key, MDB_val *data)
 {
@@ -1524,16 +1521,16 @@ mdb_leaf_size(MDB_env *env, MDB_val *key, MDB_val *data)
 	return EVEN(sz + sizeof(indx_t));
 }
 
-/** Calculate the size of a branch node.
- The size should depend on the environment's page size but since
- we currently don't support spilling large keys onto overflow
- pages, it's simply the size of the #MDB_node header plus the
- size of the key. Sizes are always rounded up to an even number
- of bytes, to guarantee 2-byte alignment of the #MDB_node headers.
- env The environment handle.
- key The key for the node.
- The number of bytes needed to store the node.
-*/
+// Calculate the size of a branch node.
+// The size should depend on the environment's page size but since
+// we currently don't support spilling large keys onto overflow
+// pages, it's simply the size of the #MDB_node header plus the
+// size of the key. Sizes are always rounded up to an even number
+// of bytes, to guarantee 2-byte alignment of the #MDB_node headers.
+// env The environment handle.
+// key The key for the node.
+// The number of bytes needed to store the node.
+//
 size_t
 mdb_branch_size(MDB_env *env, MDB_val *key)
 {
@@ -1550,22 +1547,20 @@ mdb_branch_size(MDB_env *env, MDB_val *key)
 	return sz + sizeof(indx_t);
 }
 
-/** Add a node to the page pointed to by the cursor.
- Set #MDB_TXN_ERROR on failure.
- mc The cursor for this operation.
- indx The index on the page where the new node should be added.
- key The key for the new node.
- data The data for the new node, if any.
- pgno The page number, if adding a branch node.
- flags Flags for the node.
- 0 on success, non-zero on failure. Possible errors are:
- <ul>
-	<li>ENOMEM - failed to allocate overflow pages for the node.
-	<li>MDB_PAGE_FULL - there is insufficient room in the page. This error
-	should never happen since all callers already calculate the
-	page's free space before calling this function.
- </ul>
-*/
+// Add a node to the page pointed to by the cursor.
+// Set #MDB_TXN_ERROR on failure.
+// mc The cursor for this operation.
+// indx The index on the page where the new node should be added.
+// key The key for the new node.
+// data The data for the new node, if any.
+// pgno The page number, if adding a branch node.
+// flags Flags for the node.
+// 0 on success, non-zero on failure. Possible errors are:
+// ENOMEM - failed to allocate overflow pages for the node.
+// MDB_PAGE_FULL - there is insufficient room in the page. This error
+// should never happen since all callers already calculate the
+// page's free space before calling this function.
+//
 int
 mdb_node_add(MDB_cursor *mc, indx_t indx,
     MDB_val *key, MDB_val *data, pgno_t pgno, unsigned int flags)
@@ -1699,11 +1694,11 @@ full:
 	return MDB_PAGE_FULL;
 }
 
-/** Delete the specified node from a page.
- mc Cursor pointing to the node to delete.
- ksize The size of a node. Only used if the page is
- part of a #MDB_DUPFIXED database.
-*/
+// Delete the specified node from a page.
+// mc Cursor pointing to the node to delete.
+// ksize The size of a node. Only used if the page is
+// part of a #MDB_DUPFIXED database.
+//
 void
 mdb_node_del(MDB_cursor *mc, int ksize)
 {
@@ -1760,10 +1755,10 @@ mdb_node_del(MDB_cursor *mc, int ksize)
 	MP_UPPER(mp) += sz;
 }
 
-/** Compact the main page after deleting a node on a subpage.
- mp The main page to operate on.
- indx The index of the subpage on the main page.
-*/
+// Compact the main page after deleting a node on a subpage.
+// mp The main page to operate on.
+// indx The index of the subpage on the main page.
+//
 void
 mdb_node_shrink(MDB_page *mp, indx_t indx)
 {
@@ -1810,8 +1805,8 @@ mdb_node_shrink(MDB_page *mp, indx_t indx)
 	mp->mp_upper += delta;
 }
 
-/** Move a node from csrc to cdst.
-*/
+// Move a node from csrc to cdst.
+//
 int
 mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft)
 {
@@ -2072,14 +2067,14 @@ mdb_node_move(MDB_cursor *csrc, MDB_cursor *cdst, int fromleft)
 	return MDB_SUCCESS;
 }
 
-/** Merge one page into another.
-  The nodes from the page pointed to by \b csrc will
-	be copied to the page pointed to by \b cdst and then
-	the \b csrc page will be freed.
- csrc Cursor pointing to the source page.
- cdst Cursor pointing to the destination page.
- 0 on success, non-zero on failure.
-*/
+// Merge one page into another.
+// The nodes from the page pointed to by \b csrc will
+// be copied to the page pointed to by \b cdst and then
+// the \b csrc page will be freed.
+// csrc Cursor pointing to the source page.
+// cdst Cursor pointing to the destination page.
+// 0 on success, non-zero on failure.
+//
 int
 mdb_page_merge(MDB_cursor *csrc, MDB_cursor *cdst)
 {
@@ -2235,11 +2230,11 @@ mdb_page_merge(MDB_cursor *csrc, MDB_cursor *cdst)
 	return rc;
 }
 
-/** Rebalance the tree after a delete operation.
- mc Cursor pointing to the page where rebalancing
- should begin.
- 0 on success, non-zero on failure.
-*/
+// Rebalance the tree after a delete operation.
+// mc Cursor pointing to the page where rebalancing
+// should begin.
+// 0 on success, non-zero on failure.
+//
 int
 mdb_rebalance(MDB_cursor *mc)
 {
@@ -2452,17 +2447,17 @@ mdb_rebalance(MDB_cursor *mc)
 	return rc;
 }
 
-/** Split a page and insert a new node.
- Set #MDB_TXN_ERROR on failure.
- @param[in,out] mc Cursor pointing to the page and desired insertion index.
- The cursor will be updated to point to the actual page and index where
- the node got inserted after the split.
- newkey The key for the newly inserted node.
- newdata The data for the newly inserted node.
- newpgno The page number, if the new node is a branch node.
- nflags The #NODE_ADD_FLAGS for the new node.
- 0 on success, non-zero on failure.
-*/
+// Split a page and insert a new node.
+// Set #MDB_TXN_ERROR on failure.
+// @param[in,out] mc Cursor pointing to the page and desired insertion index.
+// The cursor will be updated to point to the actual page and index where
+// the node got inserted after the split.
+// newkey The key for the newly inserted node.
+// newdata The data for the newly inserted node.
+// newpgno The page number, if the new node is a branch node.
+// nflags The #NODE_ADD_FLAGS for the new node.
+// 0 on success, non-zero on failure.
+//
 int
 mdb_page_split(MDB_cursor *mc, MDB_val *newkey, MDB_val *newdata, pgno_t newpgno,
 	unsigned int nflags)
