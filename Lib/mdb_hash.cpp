@@ -30,8 +30,9 @@
  */
 mdb_hash_t mdb_hash(const void* val, size_t len)
 {
-    const unsigned char *s = (const unsigned char*)val, *end = s + len;
-    mdb_hash_t hval = 0xcbf29ce484222325ULL;
+    const unsigned char* s{(const unsigned char*)val};
+    const unsigned char* end{s + len};
+    mdb_hash_t hval{0xcbf29ce484222325ULL};
     // FNV-1a hash each octet of the buffer
     while (s < end)
     {

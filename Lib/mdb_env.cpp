@@ -617,27 +617,19 @@ int ESECT mdb_env_init_meta(MDB_env* env, MDB_meta* meta)
 // Return 0 on success, non-zero on failure.
 int mdb_env_write_meta(MDB_txn* txn)
 {
-    MDB_env* env;
-    MDB_meta meta, metab, *mp;
-    unsigned flags;
-    mdb_size_t mapsize;
-    MDB_OFF_T off;
-    int rc, len, toggle;
-    char* ptr;
-    HANDLE mfd;
 #ifdef _WIN32
     OVERLAPPED ov;
 #else
     int r2;
 #endif
 
-    toggle = txn->mt_txnid & 1;
+    int toggle{static_cast<int>(txn->mt_txnid & 1)};
     DPRINTF(("writing meta page %d for root page %" Yu, toggle, txn->mt_dbs[MAIN_DBI].md_root));
 
-    env = txn->mt_env;
-    flags = txn->mt_flags | env->me_flags;
-    mp = env->me_metas[toggle];
-    mapsize = env->me_metas[toggle ^ 1]->mm_mapsize;
+    MDB_env* env{txn->mt_env};
+    unsigned flags{txn->mt_flags | env->me_flags};
+    MDB_meta* mp{env->me_metas[toggle]};
+    mdb_size_t mapsize{env->me_metas[toggle ^ 1]->mm_mapsize};
     // Persist any increases of mapsize config
     if (mapsize < env->me_mapsize)
         mapsize = env->me_mapsize;
@@ -673,24 +665,27 @@ int mdb_env_write_meta(MDB_txn* txn)
         goto done;
     }
 #endif
+    MDB_meta metab{};
     metab.mm_txnid = mp->mm_txnid;
     metab.mm_last_pg = mp->mm_last_pg;
 
+    MDB_meta meta{};
     meta.mm_mapsize = mapsize;
     meta.mm_dbs[FREE_DBI] = txn->mt_dbs[FREE_DBI];
     meta.mm_dbs[MAIN_DBI] = txn->mt_dbs[MAIN_DBI];
     meta.mm_last_pg = txn->mt_next_pgno - 1;
     meta.mm_txnid = txn->mt_txnid;
 
-    off = offsetof(MDB_meta, mm_mapsize);
-    ptr = (char*)&meta + off;
-    len = sizeof(MDB_meta) - off;
+    MDB_OFF_T off{offsetof(MDB_meta, mm_mapsize)};
+    char* ptr{(char*)&meta + off};
+    int len{static_cast<int>(sizeof(MDB_meta) - off)};
     off += (char*)mp - env->me_map;
 
     // Write to the SYNC fd unless MDB_NOSYNC/MDB_NOMETASYNC.
     // (me_mfd goes to the same file as me_fd, but writing to it
     // also syncs to disk.  Avoids a separate fdatasync() call.)
-    mfd = (flags & (MDB_NOSYNC | MDB_NOMETASYNC)) ? env->me_fd : env->me_mfd;
+    HANDLE mfd{(flags & (MDB_NOSYNC | MDB_NOMETASYNC)) ? env->me_fd : env->me_mfd};
+    int rc{};
 #ifdef _WIN32
     {
         memset(&ov, 0, sizeof(ov));
@@ -1232,11 +1227,11 @@ int ESECT mdb_env_setup_locks(MDB_env* env, MDB_name* fname, int mode, int* excl
 #define MDB_ERRCODE_ROFS EROFS
 #endif
 #ifdef MDB_USE_SYSV_SEM
-    int semid;
-    union semun semu;
+    int semid{};
+    union semun semu{};
 #endif
-    int rc;
-    MDB_OFF_T size, rsize;
+    int rc{};
+    MDB_OFF_T size{}, rsize{};
 
     rc = mdb_fopen(env, fname, MDB_O_LOCKS, mode, &env->me_lfd);
     if (rc)

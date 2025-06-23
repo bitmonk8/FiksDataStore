@@ -21,10 +21,9 @@ int mdb_txn_renew0(MDB_txn* txn)
 {
     MDB_env* env = txn->mt_env;
     MDB_txninfo* ti = env->me_txns;
-    MDB_meta* meta;
-    unsigned int i, nr, flags = txn->mt_flags;
-    uint16_t x;
-    int rc, new_notls = 0;
+    MDB_meta* meta{nullptr};
+    unsigned int i{}, nr{}, flags = txn->mt_flags;
+    int rc{}, new_notls{0};
 
     flags &= MDB_TXN_RDONLY;
     if (flags != 0)
@@ -157,7 +156,7 @@ int mdb_txn_renew0(MDB_txn* txn)
     txn->mt_numdbs = env->me_numdbs;
     for (i = CORE_DBS; i < txn->mt_numdbs; i++)
     {
-        x = env->me_dbflags[i];
+        uint16_t x = env->me_dbflags[i];
         txn->mt_dbs[i].md_flags = x & PERSISTENT_FLAGS;
         txn->mt_dbflags[i] = (x & MDB_VALID) ? DB_VALID | DB_USRVALID | DB_STALE : 0;
     }
@@ -204,10 +203,10 @@ int mdb_txn_renew(MDB_txn* txn)
 // Back up parent txn's cursors, then grab the originals for tracking
 static int mdb_cursor_shadow(MDB_txn* src, MDB_txn* dst)
 {
-    MDB_cursor *mc, *bk;
-    MDB_xcursor* mx;
-    size_t size;
-    int i;
+    MDB_cursor *mc{nullptr}, *bk{nullptr};
+    MDB_xcursor* mx{nullptr};
+    size_t size{};
+    int i{};
 
     for (i = src->mt_numdbs; --i >= 0;)
     {
@@ -246,9 +245,9 @@ static int mdb_cursor_shadow(MDB_txn* src, MDB_txn* dst)
 
 int mdb_txn_begin(MDB_env* env, MDB_txn* parent, unsigned int flags, MDB_txn** ret)
 {
-    MDB_txn* txn;
-    MDB_ntxn* ntxn;
-    int rc, size, tsize;
+    MDB_txn* txn{nullptr};
+    MDB_ntxn* ntxn{nullptr};
+    int rc{}, size{}, tsize{};
 
     flags &= MDB_TXN_BEGIN_FLAGS;
     flags |= env->me_flags & MDB_WRITEMAP;
@@ -464,7 +463,7 @@ static void mdb_dlist_free(MDB_txn* txn)
 {
     MDB_env* env = txn->mt_env;
     MDB_ID2L dl = txn->mt_u.dirty_list;
-    unsigned i, n = dl[0].mid;
+    unsigned i{}, n = dl[0].mid;
 
     for (i = 1; i <= n; i++)
     {
@@ -596,12 +595,12 @@ int mdb_freelist_save(MDB_txn* txn)
     // env->me_pghead[] can grow and shrink during this call.
     // env->me_pglast and txn->mt_free_pgs[] can only grow.
     // Page numbers cannot disappear from txn->mt_free_pgs[].
-    MDB_cursor mc;
+    MDB_cursor mc{};
     MDB_env* env = txn->mt_env;
-    int rc, maxfree_1pg = env->me_maxfree_1pg, more = 1;
-    txnid_t pglast = 0, head_id = 0;
-    pgno_t freecnt = 0, *free_pgs, *mop;
-    ssize_t head_room = 0, total_room = 0, mop_len, clean_limit;
+    int rc{}, maxfree_1pg = env->me_maxfree_1pg, more{1};
+    txnid_t pglast{0}, head_id{0};
+    pgno_t freecnt{0}, *free_pgs{nullptr}, *mop{nullptr};
+    ssize_t head_room{0}, total_room{0}, mop_len{}, clean_limit{};
 
     mdb_cursor_init(&mc, txn, FREE_DBI, NULL);
 
@@ -675,9 +674,9 @@ int mdb_freelist_save(MDB_txn* txn)
     for (;;)
     {
         // Come back here after each Put() in case freelist changed
-        MDB_val key, data;
-        pgno_t* pgs;
-        ssize_t j;
+        MDB_val key{}, data{};
+        pgno_t* pgs{nullptr};
+        ssize_t j{};
 
         // If using records from freeDB which we have not yet
         // deleted, delete them and any we reserved for me_pghead.
@@ -805,7 +804,7 @@ int mdb_freelist_save(MDB_txn* txn)
     rc = MDB_SUCCESS;
     if (mop_len)
     {
-        MDB_val key, data;
+        MDB_val key{}, data{};
 
         mop += mop_len;
         rc = mdb_cursor_first(&mc, &key, &data);
@@ -837,9 +836,9 @@ int mdb_freelist_save(MDB_txn* txn)
 
 int mdb_txn_commit_impl(MDB_txn* txn)
 {
-    int rc;
-    unsigned int i, end_mode;
-    MDB_env* env;
+    int rc{};
+    unsigned int i{}, end_mode{};
+    MDB_env* env{nullptr};
 
     if (txn == NULL)
         return EINVAL;
@@ -873,10 +872,10 @@ int mdb_txn_commit_impl(MDB_txn* txn)
     if (txn->mt_parent)
     {
         MDB_txn* parent = txn->mt_parent;
-        MDB_page** lp;
-        MDB_ID2L dst, src;
-        MDB_IDL pspill;
-        unsigned x, y, len, ps_len;
+        MDB_page** lp{nullptr};
+        MDB_ID2L dst{nullptr}, src{nullptr};
+        MDB_IDL pspill{nullptr};
+        unsigned x{}, y{}, len{}, ps_len{};
 
         // Append our free list to parent's
         rc = mdb_midl_append_list(&parent->mt_free_pgs, txn->mt_free_pgs);

@@ -10,7 +10,7 @@ txnid_t mdb_debug_start;
 #ifndef NDEBUG
 void ESECT mdb_assert_fail(MDB_env* env, const char* expr_txt, const char* func, const char* file, int line)
 {
-    char buf[400];
+    char buf[400]{};
 
     // C99-style, size-bounded formatting
     int n{snprintf(buf, sizeof(buf), "%.100s:%d: Assertion '%.200s' failed in %.40s()", file, line, expr_txt, func)};
@@ -31,7 +31,7 @@ void ESECT mdb_assert_fail(MDB_env* env, const char* expr_txt, const char* func,
 // Return the page number of mp which may be sub-page, for debug output
 pgno_t mdb_dbg_pgno(MDB_page* mp)
 {
-    pgno_t ret;
+    pgno_t ret{};
     COPY_PGNO(ret, MP_PGNO(mp));
     return ret;
 }
@@ -46,16 +46,16 @@ char* mdb_dkey(MDB_val* key, char* buf)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
-    char* ptr = buf;
-    unsigned char* c = key->mv_data;
-
     if (!key)
         return "";
 
     if (key->mv_size > DKBUF_MAXKEYSIZE)
         return "MDB_MAXKEYSIZE";
+    
     // may want to make this a dynamic check: if the key is mostly
     // printable characters, print it as-is instead of converting to hex.
+    char* ptr{buf};
+    unsigned char* c{(unsigned char*)key->mv_data};
     buf[0] = '\0';
     for (unsigned int i{}; i < key->mv_size; ++i)
         ptr += sprintf(ptr, "%02x", *c++);
@@ -92,11 +92,9 @@ const char* mdb_leafnode_type(MDB_node* n)
 // Display all the keys in the page.
 void mdb_page_list(MDB_page* mp)
 {
-    pgno_t pgno = mdb_dbg_pgno(mp);
-    const char *type, *state = (MP_FLAGS(mp) & P_DIRTY) ? ", dirty" : "";
-    MDB_node* node;
-    unsigned int i, nkeys, nsize, total = 0;
-    MDB_val key;
+    pgno_t pgno{mdb_dbg_pgno(mp)};
+    const char* state{(MP_FLAGS(mp) & P_DIRTY) ? ", dirty" : ""};
+    const char* type{nullptr};
     DKBUF;
 
     switch (MP_FLAGS(mp) & (P_BRANCH | P_LEAF | P_LEAF2 | P_META | P_OVERFLOW | P_SUBP))
@@ -127,23 +125,27 @@ void mdb_page_list(MDB_page* mp)
         return;
     }
 
-    nkeys = NUMKEYS(mp);
+    unsigned int nkeys{NUMKEYS(mp)};
     fprintf(stderr, "%s %" Yu " numkeys %d%s\n", type, pgno, nkeys, state);
 
-    for (i = 0; i < nkeys; i++)
+    unsigned int total{0};
+    for (unsigned int i{0}; i < nkeys; i++)
     {
         if (IS_LEAF2(mp))
         {  // LEAF2 pages have no mp_ptrs[] or node headers
-            key.mv_size = nsize = mp->mp_pad;
+            unsigned int nsize{mp->mp_pad};
+            MDB_val key{};
+            key.mv_size = nsize;
             key.mv_data = LEAF2KEY(mp, i, nsize);
             total += nsize;
             fprintf(stderr, "key %d: nsize %d, %s\n", i, nsize, DKEY(&key));
             continue;
         }
-        node = NODEPTR(mp, i);
+        MDB_node* node{NODEPTR(mp, i)};
+        MDB_val key{};
         key.mv_size = node->mn_ksize;
         key.mv_data = node->mn_data;
-        nsize = NODESIZE + key.mv_size;
+        unsigned int nsize{NODESIZE + key.mv_size};
         if (IS_BRANCH(mp))
         {
             fprintf(stderr, "key %d: page %" Yu ", %s\n", i, NODEPGNO(node), DKEY(&key));
@@ -176,24 +178,22 @@ void mdb_page_list(MDB_page* mp)
 // All named DBs must be open for a correct count.
 void mdb_audit(MDB_txn* txn)
 {
-    MDB_cursor mc;
-    MDB_val key, data;
-    MDB_ID freecount, count;
-    MDB_dbi i;
-    int rc;
-
-    freecount = 0;
+    MDB_cursor mc{};
+    MDB_val key{}, data{};
+    
+    MDB_ID freecount{0};
     mdb_cursor_init(&mc, txn, FREE_DBI, NULL);
+    int rc{};
     while ((rc = mdb_cursor_get(&mc, &key, &data, MDB_NEXT)) == 0)
         freecount += *(MDB_ID*)data.mv_data;
     mdb_tassert(txn, rc == MDB_NOTFOUND);
 
-    count = 0;
-    for (i = 0; i < txn->mt_numdbs; i++)
+    MDB_ID count{0};
+    for (MDB_dbi i{0}; i < txn->mt_numdbs; i++)
     {
-        MDB_xcursor mx;
         if (!(txn->mt_dbflags[i] & DB_VALID))
             continue;
+        MDB_xcursor mx{};
         mdb_cursor_init(&mc, txn, i, &mx);
         if (txn->mt_dbs[i].md_root == P_INVALID)
             continue;
@@ -203,15 +203,13 @@ void mdb_audit(MDB_txn* txn)
             rc = mdb_page_search(&mc, NULL, MDB_PS_FIRST);
             for (; rc == MDB_SUCCESS; rc = mdb_cursor_sibling(&mc, 1))
             {
-                unsigned j;
-                MDB_page* mp;
-                mp = mc.mc_pg[mc.mc_top];
-                for (j = 0; j < NUMKEYS(mp); j++)
+                MDB_page* mp{mc.mc_pg[mc.mc_top]};
+                for (unsigned j{0}; j < NUMKEYS(mp); j++)
                 {
-                    MDB_node* leaf = NODEPTR(mp, j);
+                    MDB_node* leaf{NODEPTR(mp, j)};
                     if (leaf->mn_flags & F_SUBDATA)
                     {
-                        MDB_db db;
+                        MDB_db db{};
                         memcpy(&db, NODEDATA(leaf), sizeof(db));
                         count += db.md_branch_pages + db.md_leaf_pages + db.md_overflow_pages;
                     }

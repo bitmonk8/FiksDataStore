@@ -50,34 +50,26 @@ int mdb_cmp_cint(const MDB_val* a, const MDB_val* b)
 // Compare two items lexically
 int mdb_cmp_memn(const MDB_val* a, const MDB_val* b)
 {
-    int diff;
-    ssize_t len_diff;
-    unsigned int len;
-
-    len = a->mv_size;
-    len_diff = (ssize_t)a->mv_size - (ssize_t)b->mv_size;
+    unsigned int len = a->mv_size;
+    ssize_t len_diff{(ssize_t)a->mv_size - (ssize_t)b->mv_size};
     if (len_diff > 0)
     {
         len = b->mv_size;
         len_diff = 1;
     }
 
-    diff = memcmp(a->mv_data, b->mv_data, len);
+    int diff{memcmp(a->mv_data, b->mv_data, len)};
     return diff ? diff : len_diff < 0 ? -1 : len_diff;
 }
 
 // Compare two items in reverse byte order
 int mdb_cmp_memnr(const MDB_val* a, const MDB_val* b)
 {
-    const unsigned char *p1, *p2, *p1_lim;
-    ssize_t len_diff;
-    int diff;
+    const unsigned char* p1_lim{(const unsigned char*)a->mv_data};
+    const unsigned char* p1{(const unsigned char*)a->mv_data + a->mv_size};
+    const unsigned char* p2{(const unsigned char*)b->mv_data + b->mv_size};
 
-    p1_lim = (const unsigned char*)a->mv_data;
-    p1 = (const unsigned char*)a->mv_data + a->mv_size;
-    p2 = (const unsigned char*)b->mv_data + b->mv_size;
-
-    len_diff = (ssize_t)a->mv_size - (ssize_t)b->mv_size;
+    ssize_t len_diff{(ssize_t)a->mv_size - (ssize_t)b->mv_size};
     if (len_diff > 0)
     {
         p1_lim += len_diff;
@@ -86,7 +78,7 @@ int mdb_cmp_memnr(const MDB_val* a, const MDB_val* b)
 
     while (p1 > p1_lim)
     {
-        diff = *--p1 - *--p2;
+        int diff{*--p1 - *--p2};
         if (diff)
             return diff;
     }

@@ -159,12 +159,16 @@ int mdb_pages_xkeep(MDB_cursor* mc, unsigned pflags, int all)
         Mask = P_SUBP | P_DIRTY | P_LOOSE | P_KEEP
     };
     MDB_txn* txn = mc->mc_txn;
-    MDB_cursor *m3, *m0 = mc;
-    MDB_xcursor* mx;
-    MDB_page *dp, *mp;
-    MDB_node* leaf;
-    unsigned i, j;
-    int rc = MDB_SUCCESS, level;
+    MDB_cursor* m0 = mc;
+    int rc{MDB_SUCCESS};
+    MDB_cursor* m3{nullptr};
+    MDB_xcursor* mx{nullptr};
+    MDB_page* dp{nullptr};
+    MDB_page* mp{nullptr};
+    MDB_node* leaf{nullptr};
+    unsigned i{};
+    unsigned j{};
+    int level{};
 
     /* Mark pages seen by cursors: First m0, then tracked cursors */
     for (i = txn->mt_numdbs;;)
@@ -229,25 +233,30 @@ int mdb_page_flush(MDB_txn* txn, int keep)
 {
     MDB_env* env = txn->mt_env;
     MDB_ID2L dl = txn->mt_u.dirty_list;
-    unsigned psize = env->me_psize, j;
-    int i, pagecount = dl[0].mid, rc;
-    size_t size = 0;
-    MDB_OFF_T pos = 0;
-    pgno_t pgno = 0;
-    MDB_page* dp = NULL;
+    unsigned psize = env->me_psize;
+    int pagecount = dl[0].mid;
+    int rc{};
 #ifdef _WIN32
     OVERLAPPED* ov = env->ov;
-    MDB_page* wdp;
-    int async_i = 0;
+    MDB_page* wdp{nullptr};
+    int async_i{0};
     HANDLE fd = (env->me_flags & MDB_NOSYNC) ? env->me_fd : env->me_ovfd;
 #else
     struct iovec iov[MDB_COMMIT_PAGES];
     HANDLE fd = env->me_fd;
 #endif
-    ssize_t wsize = 0, wres;
-    MDB_OFF_T wpos = 0, next_pos = 1; /* impossible pos, so pos != next_pos */
-    int n = 0;
+    ssize_t wsize{0};
+    ssize_t wres{};
+    MDB_OFF_T wpos{0};
+    MDB_OFF_T next_pos{1}; /* impossible pos, so pos != next_pos */
+    int n{0};
+    size_t size{0};
+    MDB_OFF_T pos{0};
+    pgno_t pgno{0};
+    MDB_page* dp{nullptr};
 
+    unsigned j{};
+    int i{};
     j = i = keep;
     if (env->me_flags & MDB_WRITEMAP
 #ifdef _WIN32
@@ -260,7 +269,7 @@ int mdb_page_flush(MDB_txn* txn, int keep)
         /* Clear dirty flags */
         while (++i <= pagecount)
         {
-            dp = (MDB_page*)dl[i].mptr;
+            MDB_page* dp = (MDB_page*)dl[i].mptr;
             /* Don't flush this page yet */
             if (dp->mp_flags & (P_LOOSE | P_KEEP))
             {
@@ -641,8 +650,9 @@ txnid_t mdb_find_oldest(MDB_txn* txn)
 // Add a page to the txn's dirty list
 void mdb_page_dirty(MDB_txn* txn, MDB_page* mp)
 {
-    MDB_ID2 mid;
-    int rc, (*insert)(MDB_ID2L, MDB_ID2*);
+    MDB_ID2 mid{};
+    int rc{};
+    int (*insert)(MDB_ID2L, MDB_ID2*){};
 #ifdef _WIN32 /* With Windows we always write dirty pages with WriteFile,                                              \
                * so we always want them ordered */
     insert = mdb_mid2l_insert;
@@ -694,16 +704,22 @@ int mdb_page_alloc(MDB_cursor* mc, int num, MDB_page** mp)
         Max_retries = INT_MAX /*infinite*/
     };
 #endif
-    int rc, retry = num * 60;
+    int rc{};
+    int retry = num * 60;
     MDB_txn* txn = mc->mc_txn;
     MDB_env* env = txn->mt_env;
-    pgno_t pgno, *mop = env->me_pghead;
-    unsigned i, j, mop_len = mop ? mop[0] : 0, n2 = num - 1;
-    MDB_page* np;
-    txnid_t oldest = 0, last;
-    MDB_cursor_op op;
-    MDB_cursor m2;
-    int found_old = 0;
+    pgno_t* mop = env->me_pghead;
+    unsigned mop_len = mop ? mop[0] : 0;
+    unsigned n2 = num - 1;
+    pgno_t pgno{};
+    unsigned i{};
+    unsigned j{};
+    MDB_page* np{nullptr};
+    txnid_t oldest{0};
+    txnid_t last{};
+    MDB_cursor_op op{};
+    MDB_cursor m2{};
+    int found_old{0};
 
     /* If there are any loose pages, just use them */
     if (num == 1 && txn->mt_loose_pgs)
@@ -1397,11 +1413,12 @@ int mdb_ovpage_free(MDB_cursor* mc, MDB_page* mp)
 {
     MDB_txn* txn = mc->mc_txn;
     pgno_t pg = mp->mp_pgno;
-    unsigned x = 0, ovpages = mp->mp_pages;
+    unsigned ovpages = mp->mp_pages;
     MDB_env* env = txn->mt_env;
     MDB_IDL sl = txn->mt_spill_pgs;
     MDB_ID pn = pg << 1;
-    int rc;
+    int rc{};
+    unsigned x{0};
 
     DPRINTF(("free ov page %" Yu " (%d)", pg, ovpages));
     // If the page is dirty or on the spill list we just acquired it,
@@ -1722,10 +1739,13 @@ void mdb_node_del(MDB_cursor* mc, int ksize)
 {
     MDB_page* mp = mc->mc_pg[mc->mc_top];
     indx_t indx = mc->mc_ki[mc->mc_top];
-    unsigned int sz;
-    indx_t i, j, numkeys, ptr;
-    MDB_node* node;
-    char* base;
+    unsigned int sz{};
+    indx_t numkeys{};
+    indx_t ptr{};
+    MDB_node* node{nullptr};
+    char* base{nullptr};
+    indx_t i{};
+    indx_t j{};
 
     DPRINTF(("delete node %u on %s page %" Yu, indx, IS_LEAF(mp) ? "leaf" : "branch", mdb_dbg_pgno(mp)));
     numkeys = NUMKEYS(mp);
@@ -1778,12 +1798,15 @@ void mdb_node_del(MDB_cursor* mc, int ksize)
 //
 void mdb_node_shrink(MDB_page* mp, indx_t indx)
 {
-    MDB_node* node;
-    MDB_page *sp, *xp;
-    char* base;
-    indx_t delta, len, ptr;
-    unsigned int nsize;
-    int i;
+    MDB_node* node{nullptr};
+    MDB_page* sp{nullptr};
+    MDB_page* xp{nullptr};
+    char* base{nullptr};
+    indx_t delta{};
+    indx_t len{};
+    indx_t ptr{};
+    unsigned int nsize{};
+    int i{};
 
     node = NODEPTR(mp, indx);
     sp = reinterpret_cast<MDB_page*>(reinterpret_cast<char*>(node->mn_data) + node->mn_ksize);
@@ -1825,12 +1848,13 @@ void mdb_node_shrink(MDB_page* mp, indx_t indx)
 //
 int mdb_node_move(MDB_cursor* csrc, MDB_cursor* cdst, int fromleft)
 {
-    MDB_node* srcnode;
-    MDB_val key, data;
-    pgno_t srcpg;
-    MDB_cursor mn;
-    int rc;
-    unsigned short flags;
+    MDB_node* srcnode{nullptr};
+    MDB_val key{};
+    MDB_val data{};
+    pgno_t srcpg{};
+    MDB_cursor mn{};
+    int rc{};
+    unsigned short flags{};
 
     DKBUF;
 
@@ -2094,12 +2118,15 @@ int mdb_node_move(MDB_cursor* csrc, MDB_cursor* cdst, int fromleft)
 //
 int mdb_page_merge(MDB_cursor* csrc, MDB_cursor* cdst)
 {
-    MDB_page *psrc, *pdst;
-    MDB_node* srcnode;
-    MDB_val key, data;
-    unsigned nkeys;
-    int rc;
-    indx_t i, j;
+    MDB_page* psrc{nullptr};
+    MDB_page* pdst{nullptr};
+    MDB_node* srcnode{nullptr};
+    MDB_val key{};
+    MDB_val data{};
+    unsigned nkeys{};
+    int rc{};
+    indx_t i{};
+    indx_t j{};
 
     psrc = csrc->mc_pg[csrc->mc_top];
     pdst = cdst->mc_pg[cdst->mc_top];
@@ -2256,11 +2283,14 @@ int mdb_page_merge(MDB_cursor* csrc, MDB_cursor* cdst)
 //
 int mdb_rebalance(MDB_cursor* mc)
 {
-    MDB_node* node;
-    int rc, fromleft;
-    unsigned int ptop, minkeys, thresh;
-    MDB_cursor mn;
-    indx_t oldki;
+    MDB_node* node{nullptr};
+    int rc{};
+    int fromleft{};
+    unsigned int ptop{};
+    unsigned int minkeys{};
+    unsigned int thresh{};
+    MDB_cursor mn{};
+    indx_t oldki{};
 
     if (IS_BRANCH(mc->mc_pg[mc->mc_top]))
     {
@@ -2478,18 +2508,29 @@ int mdb_rebalance(MDB_cursor* mc)
 //
 int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t newpgno, unsigned int nflags)
 {
-    unsigned int flags;
-    int rc = MDB_SUCCESS, new_root = 0, did_split = 0;
-    indx_t newindx;
-    pgno_t pgno = 0;
-    int i, j, split_indx, nkeys, pmax;
+    unsigned int flags{};
+    int rc{MDB_SUCCESS};
+    int new_root{0};
+    int did_split{0};
+    indx_t newindx{};
+    pgno_t pgno{0};
+    int i{};
+    int j{};
+    int split_indx{};
+    int nkeys{};
+    int pmax{};
     MDB_env* env = mc->mc_txn->mt_env;
-    MDB_node* node;
-    MDB_val sepkey, rkey, xdata, *rdata = &xdata;
-    MDB_page* copy = NULL;
-    MDB_page *mp, *rp, *pp;
-    int ptop;
-    MDB_cursor mn;
+    MDB_node* node{nullptr};
+    MDB_val sepkey{};
+    MDB_val rkey{};
+    MDB_val xdata{};
+    MDB_val* rdata = &xdata;
+    MDB_page* copy{nullptr};
+    MDB_page* mp{nullptr};
+    MDB_page* rp{nullptr};
+    MDB_page* pp{nullptr};
+    int ptop{};
+    MDB_cursor mn{};
     DKBUF;
 
     mp = mc->mc_pg[mc->mc_top];

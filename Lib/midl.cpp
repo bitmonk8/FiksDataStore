@@ -242,19 +242,15 @@ void mdb_midl_sort(MDB_IDL ids)
 {
     /* Max possible depth of int-indexed tree * 2 items/level */
     int istack[sizeof(int) * CHAR_BIT * 2];
-    int i, j, k, l, ir, jstack;
-    MDB_ID a, itmp;
+    int i{}, j{}, k{}, l{1}, ir{(int)ids[0]}, jstack{0};
 
-    ir = (int)ids[0];
-    l = 1;
-    jstack = 0;
     for (;;)
     {
         if (ir - l < SMALL)
         { /* Insertion sort */
             for (j = l + 1; j <= ir; j++)
             {
-                a = ids[j];
+                MDB_ID a{ids[j]};
                 for (i = j - 1; i >= 1; i--)
                 {
                     if (ids[i] >= a)
@@ -271,6 +267,7 @@ void mdb_midl_sort(MDB_IDL ids)
         else
         {
             int k{(l + ir) >> 1}; /* Choose median of left, center, right */
+            MDB_ID itmp{};
             MIDL_SWAP(ids[k], ids[l + 1]);
             if (ids[l] < ids[ir])
             {
@@ -286,7 +283,7 @@ void mdb_midl_sort(MDB_IDL ids)
             }
             i = l + 1;
             j = ir;
-            a = ids[l + 1];
+            MDB_ID a{ids[l + 1]};
             for (;;)
             {
                 do
@@ -358,9 +355,7 @@ unsigned mdb_mid2l_search(MDB_ID2L ids, MDB_ID id)
 
 int mdb_mid2l_insert(MDB_ID2L ids, MDB_ID2* id)
 {
-    unsigned x, i;
-
-    x = mdb_mid2l_search(ids, id->mid);
+    unsigned x{mdb_mid2l_search(ids, id->mid)};
 
     if (x < 1)
     {
@@ -383,7 +378,7 @@ int mdb_mid2l_insert(MDB_ID2L ids, MDB_ID2* id)
     {
         /* insert id */
         ids[0].mid++;
-        for (i = (unsigned)ids[0].mid; i > x; i--)
+        for (unsigned i{(unsigned)ids[0].mid}; i > x; i--)
             ids[i] = ids[i - 1];
         ids[x] = *id;
     }
