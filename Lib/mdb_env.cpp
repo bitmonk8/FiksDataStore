@@ -158,6 +158,23 @@ static NtMapViewOfSectionFunc *NtMapViewOfSection;
 # define MDB_FDATASYNC	fdatasync
 #endif
 
+#ifndef _WIN32
+// A flag for opening a file and requesting synchronous data writes.
+// This is only used when writing a meta page. It's not strictly needed;
+// we could just do a normal write and then immediately perform a flush.
+// But if this flag is available it saves us an extra system call.
+//
+// @note If O_DSYNC is undefined but exists in /usr/include,
+// preferably set some compiler flag to get the definition.
+#ifndef MDB_DSYNC
+# ifdef O_DSYNC
+# define MDB_DSYNC	O_DSYNC
+# else
+# define MDB_DSYNC	O_SYNC
+# endif
+#endif
+#endif
+
 #ifndef MDB_MSYNC
 # define MDB_MSYNC(addr,len,flags)	msync(addr,len,flags)
 #endif
