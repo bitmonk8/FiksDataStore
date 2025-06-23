@@ -108,14 +108,14 @@ int ESECT mdb_reader_list(MDB_env* env, MDB_msg_func* func, void* ctx)
 static int ESECT mdb_pid_insert(MDB_PID_T* ids, MDB_PID_T pid)
 {
     // binary search of pid in list
-    unsigned base = 0;
-    unsigned cursor = 1;
-    int val = 0;
+    unsigned base{0};
+    unsigned cursor{1};
+    int val{0};
     unsigned n = ids[0];
 
     while (0 < n)
     {
-        unsigned pivot = n >> 1;
+        unsigned pivot{n >> 1};
         cursor = base + pivot + 1;
         val = pid - ids[cursor];
 

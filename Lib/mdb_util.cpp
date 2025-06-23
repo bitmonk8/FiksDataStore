@@ -56,14 +56,12 @@ const char* mdb_strerror(int err)
 #define PADSIZE 4096
     static char buf[MSGSIZE + PADSIZE], *ptr = buf;
 #endif
-    int i;
     if (!err)
         return ("Successful return: 0");
 
     if (err >= MDB_KEYEXIST && err <= MDB_LAST_ERRCODE)
     {
-        i = err - MDB_KEYEXIST;
-        return mdb_errstr[i];
+        return mdb_errstr[err - MDB_KEYEXIST];
     }
 
 #ifdef _WIN32

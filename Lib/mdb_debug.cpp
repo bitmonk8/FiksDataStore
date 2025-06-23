@@ -13,10 +13,10 @@ void ESECT mdb_assert_fail(MDB_env* env, const char* expr_txt, const char* func,
     char buf[400];
 
     // C99-style, size-bounded formatting
-    int n = snprintf(buf, sizeof(buf), "%.100s:%d: Assertion '%.200s' failed in %.40s()", file, line, expr_txt, func);
+    int n{snprintf(buf, sizeof(buf), "%.100s:%d: Assertion '%.200s' failed in %.40s()", file, line, expr_txt, func)};
 
     // guarantee a terminator even on pathological libraries
-    if (n < 0 || (size_t)n >= sizeof(buf))
+    if (n < 0 || static_cast<size_t>(n) >= sizeof(buf))
         buf[sizeof(buf) - 1] = '\0';
 
     if (env->me_assert_func)
@@ -48,7 +48,6 @@ char* mdb_dkey(MDB_val* key, char* buf)
 #endif
     char* ptr = buf;
     unsigned char* c = key->mv_data;
-    unsigned int i;
 
     if (!key)
         return "";
@@ -58,7 +57,7 @@ char* mdb_dkey(MDB_val* key, char* buf)
     // may want to make this a dynamic check: if the key is mostly
     // printable characters, print it as-is instead of converting to hex.
     buf[0] = '\0';
-    for (i = 0; i < key->mv_size; i++)
+    for (unsigned int i{}; i < key->mv_size; ++i)
         ptr += sprintf(ptr, "%02x", *c++);
     return buf;
 

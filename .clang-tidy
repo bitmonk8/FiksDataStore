@@ -3,6 +3,7 @@ ExtraArgs:
 Checks: '-*,
          clang-diagnostic-*,
          bugprone-*,
+         readability-localizing-variables,
          -bugprone-narrowing-conversions,
          -bugprone-easily-swappable-parameters'
 WarningsAsErrors: ''

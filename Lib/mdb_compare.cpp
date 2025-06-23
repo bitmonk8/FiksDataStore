@@ -26,28 +26,24 @@ int mdb_cmp_int(const MDB_val* a, const MDB_val* b)
 int mdb_cmp_cint(const MDB_val* a, const MDB_val* b)
 {
 #if BYTE_ORDER == LITTLE_ENDIAN
-    unsigned short *u, *c;
-    int x;
-
-    u = (unsigned short*)((char*)a->mv_data + a->mv_size);
-    c = (unsigned short*)((char*)b->mv_data + a->mv_size);
+    unsigned short* u = (unsigned short*)((char*)a->mv_data + a->mv_size);
+    unsigned short* c = (unsigned short*)((char*)b->mv_data + a->mv_size);
     do
     {
-        x = *--u - *--c;
-    } while (!x && u > (unsigned short*)a->mv_data);
-    return x;
+        int x{*--u - *--c};
+        if (x) return x;
+    } while (u > (unsigned short*)a->mv_data);
+    return 0;
 #else
-    unsigned short *u, *c, *end;
-    int x;
-
-    end = (unsigned short*)((char*)a->mv_data + a->mv_size);
-    u = (unsigned short*)a->mv_data;
-    c = (unsigned short*)b->mv_data;
+    unsigned short* end = (unsigned short*)((char*)a->mv_data + a->mv_size);
+    unsigned short* u = (unsigned short*)a->mv_data;
+    unsigned short* c = (unsigned short*)b->mv_data;
     do
     {
-        x = *u++ - *c++;
-    } while (!x && u < end);
-    return x;
+        int x{*u++ - *c++};
+        if (x) return x;
+    } while (u < end);
+    return 0;
 #endif
 }
 

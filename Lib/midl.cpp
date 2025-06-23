@@ -43,7 +43,7 @@ unsigned mdb_midl_search(MDB_IDL ids, MDB_ID id)
 
     while (0 < n)
     {
-        unsigned pivot = n >> 1;
+        unsigned pivot{n >> 1};
         cursor = base + pivot + 1;
         val = CMP(ids[cursor], id);
 
@@ -270,7 +270,7 @@ void mdb_midl_sort(MDB_IDL ids)
         }
         else
         {
-            k = (l + ir) >> 1; /* Choose median of left, center, right */
+            int k{(l + ir) >> 1}; /* Choose median of left, center, right */
             MIDL_SWAP(ids[k], ids[l + 1]);
             if (ids[l] < ids[ir])
             {
@@ -330,7 +330,7 @@ unsigned mdb_mid2l_search(MDB_ID2L ids, MDB_ID id)
 
     while (0 < n)
     {
-        unsigned pivot = n >> 1;
+        unsigned pivot{n >> 1};
         cursor = base + pivot + 1;
         val = CMP(id, ids[cursor].mid);
 
