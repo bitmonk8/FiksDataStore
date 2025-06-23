@@ -31,7 +31,8 @@ int main(int argc, char* argv[])
 {
     int rc;
     MDB_env* env;
-    const char *progname = argv[0], *act;
+    const char *progname = argv[0];
+    const char *act;
     unsigned flags = MDB_RDONLY;
     unsigned cpflags = 0;
 

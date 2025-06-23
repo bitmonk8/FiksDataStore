@@ -202,8 +202,10 @@ int main(int argc, char* argv[])
     if (freinfo)
     {
         MDB_cursor* cursor;
-        MDB_val key, data;
-        mdb_size_t pages = 0, *iptr;
+        MDB_val key;
+        MDB_val data;
+        mdb_size_t pages = 0;
+        mdb_size_t *iptr;
 
         printf("Freelist Status\n");
         dbi = 0;
@@ -227,8 +229,11 @@ int main(int argc, char* argv[])
             if (freinfo > 1)
             {
                 const char* bad = "";
-                mdb_size_t pg, prev;
-                ssize_t i, j, span = 0;
+                mdb_size_t pg;
+                mdb_size_t prev;
+                ssize_t i;
+                ssize_t j;
+                ssize_t span = 0;
                 j = *iptr++;
                 for (i = j, prev = 1; --i >= 0;)
                 {

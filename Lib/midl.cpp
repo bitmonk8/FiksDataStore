@@ -198,7 +198,8 @@ int mdb_midl_append_list(MDB_IDL* idp, MDB_IDL app)
 
 int mdb_midl_append_range(MDB_IDL* idp, MDB_ID id, unsigned n)
 {
-    MDB_ID *ids = *idp, len = ids[0];
+    MDB_ID *ids = *idp;
+    MDB_ID len = ids[0];
     /* Too big? */
     if (len + n > ids[-1])
     {
@@ -215,7 +216,12 @@ int mdb_midl_append_range(MDB_IDL* idp, MDB_ID id, unsigned n)
 
 void mdb_midl_xmerge(MDB_IDL idl, MDB_IDL merge)
 {
-    MDB_ID old_id, merge_id, i = merge[0], j = idl[0], k = i + j, total = k;
+    MDB_ID old_id;
+    MDB_ID merge_id;
+    MDB_ID i = merge[0];
+    MDB_ID j = idl[0];
+    MDB_ID k = i + j;
+    MDB_ID total = k;
     idl[0] = (MDB_ID)-1; /* delimiter for idl scan below */
     old_id = idl[j];
     while (i)
@@ -242,7 +248,12 @@ void mdb_midl_sort(MDB_IDL ids)
 {
     /* Max possible depth of int-indexed tree * 2 items/level */
     int istack[sizeof(int) * CHAR_BIT * 2];
-    int i{}, j{}, k{}, l{1}, ir{(int)ids[0]}, jstack{0};
+    int i{};
+    int j{};
+    int k{};
+    int l{1};
+    int ir{(int)ids[0]};
+    int jstack{0};
 
     for (;;)
     {

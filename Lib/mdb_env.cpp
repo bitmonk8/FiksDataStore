@@ -232,7 +232,8 @@ static const mdb_nchar_t* const mdb_suffixes[2][2] = {
 // Convert src to new wchar_t[] string with room for xtra extra chars
 static int ESECT utf8_to_utf16(const char* src, MDB_name* dst, int xtra)
 {
-    int rc, need = 0;
+    int rc;
+    int need = 0;
     wchar_t* result = NULL;
     for (;;)
     {  // malloc result, then fill it in
@@ -482,7 +483,9 @@ int ESECT mdb_env_read_header(MDB_env* env, int prev, MDB_meta* meta)
     MDB_metabuf pbuf;
     MDB_page* p;
     MDB_meta* m;
-    int i, rc, off;
+    int i;
+    int rc;
+    int off;
     enum
     {
         Size = sizeof(pbuf)
@@ -560,7 +563,8 @@ void ESECT mdb_env_init_meta0(MDB_env* env, MDB_meta* meta)
 // Return 0 on success, non-zero on failure.
 int ESECT mdb_env_init_meta(MDB_env* env, MDB_meta* meta)
 {
-    MDB_page *p, *q;
+    MDB_page *p;
+    MDB_page *q;
     int rc;
     unsigned int psize;
 #ifdef _WIN32
@@ -793,7 +797,9 @@ int ESECT mdb_env_map(MDB_env* env, void* addr)
     HANDLE mh;
     void* map;
     SIZE_T msize;
-    ULONG pageprot = PAGE_READONLY, secprot, alloctype;
+    ULONG pageprot = PAGE_READONLY;
+    ULONG secprot;
+    ULONG alloctype;
 
     if (flags & MDB_WRITEMAP)
     {
@@ -946,7 +952,9 @@ int ESECT mdb_env_get_maxreaders(MDB_env* env, unsigned int* readers)
 int ESECT mdb_env_open2(MDB_env* env, int prev)
 {
     unsigned int flags = env->me_flags;
-    int i, newenv = 0, rc;
+    int i;
+    int newenv = 0;
+    int rc;
     MDB_meta meta;
 
 #ifdef _WIN32
@@ -1498,7 +1506,8 @@ fail:
 
 int ESECT mdb_env_open(MDB_env* env, const char* path, unsigned int flags, mdb_mode_t mode)
 {
-    int rc, excl = -1;
+    int rc;
+    int excl = -1;
     MDB_name fname;
 
     if (env->me_fd != INVALID_HANDLE_VALUE || (flags & ~(CHANGEABLE | CHANGELESS)))
@@ -1590,8 +1599,8 @@ int ESECT mdb_env_open(MDB_env* env, const char* path, unsigned int flags, mdb_m
         if (!(flags & MDB_RDONLY))
         {
             MDB_txn* txn;
-            int tsize = sizeof(MDB_txn),
-                size = tsize + env->me_maxdbs * (sizeof(MDB_db) + sizeof(MDB_cursor*) + sizeof(unsigned int) + 1);
+            int tsize = sizeof(MDB_txn);
+            int size = tsize + env->me_maxdbs * (sizeof(MDB_db) + sizeof(MDB_cursor*) + sizeof(unsigned int) + 1);
             env->me_pbuf = calloc(1, env->me_psize);
             txn = (MDB_txn*)calloc(1, size);
             if (env->me_pbuf && txn)
@@ -1906,9 +1915,13 @@ int ESECT mdb_env_cwalk(mdb_copy* my, pgno_t* pg, int flags)
 {
     MDB_cursor mc = {0};
     MDB_node* ni;
-    MDB_page *mo, *mp, *leaf;
-    char *buf, *ptr;
-    int rc, toggle;
+    MDB_page *mo;
+    MDB_page *mp;
+    MDB_page *leaf;
+    char *buf;
+    char *ptr;
+    int rc;
+    int toggle;
     unsigned int i;
 
     // Empty DB, nothing to do
@@ -2085,7 +2098,8 @@ int ESECT mdb_env_copyfd1(MDB_env* env, HANDLE fd)
     mdb_copy my = {0};
     MDB_txn* txn = NULL;
     pthread_t thr;
-    pgno_t root, new_root;
+    pgno_t root;
+    pgno_t new_root;
     int rc = MDB_SUCCESS;
 
 #ifdef _WIN32
@@ -2159,7 +2173,8 @@ int ESECT mdb_env_copyfd1(MDB_env* env, HANDLE fd)
         // to find the new last_pg, which also becomes the new root.
         MDB_ID freecount = 0;
         MDB_cursor mc;
-        MDB_val key, data;
+        MDB_val key;
+        MDB_val data;
         mdb_cursor_init(&mc, txn, FREE_DBI, NULL);
         while ((rc = mdb_cursor_get(&mc, &key, &data, MDB_NEXT)) == 0)
             freecount += *(MDB_ID*)data.mv_data;
@@ -2242,7 +2257,8 @@ int ESECT mdb_env_copyfd0(MDB_env* env, HANDLE fd)
     MDB_txn* txn = NULL;
     mdb_mutexref_t wmutex = NULL;
     int rc;
-    mdb_size_t wsize, w3;
+    mdb_size_t wsize;
+    mdb_size_t w3;
     char* ptr;
 #ifdef _WIN32
     DWORD len, w2;

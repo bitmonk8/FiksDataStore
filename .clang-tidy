@@ -4,6 +4,7 @@ Checks: '-*,
          clang-diagnostic-*,
          bugprone-*,
          readability-localizing-variables,
+         readability-isolate-declaration,
          -bugprone-narrowing-conversions,
          -bugprone-easily-swappable-parameters'
 WarningsAsErrors: ''

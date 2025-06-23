@@ -113,6 +113,42 @@ int mdb_env_create(MDB_env **env) {
 }
 ```
 
+### 4. Variable Declaration Style
+**MANDATORY**: Declare only a single variable per declaration statement.
+
+**Rule**: Each variable declaration must be on its own separate statement. Multiple variable declarations in a single statement are prohibited.
+
+**Rationale**: Single variable declarations improve code readability, make debugging easier by allowing breakpoints on individual variable declarations, and reduce the likelihood of initialization errors. This style also makes it clearer when variables have different types or initialization patterns.
+
+**Examples**:
+```cpp
+// ✅ Correct - Single variable per declaration
+int status;
+int count;
+MDB_env *env;
+MDB_txn *txn;
+
+// ✅ Correct - Each variable clearly initialized
+int readers = 0;
+int writers = 0;
+bool is_valid = false;
+
+// ✅ Correct - Different types clearly separated
+size_t data_size = sizeof(MDB_val);
+void *data_ptr = nullptr;
+uint32_t flags = MDB_RDONLY;
+
+// ❌ Incorrect - Multiple variables in single declaration
+int status, count;
+MDB_env *env, *backup_env;
+
+// ❌ Incorrect - Mixed initialization patterns
+int readers = 0, writers, max_readers = DEFAULT_READERS;
+
+// ❌ Incorrect - Pointer declarations can be confusing
+char *buffer, filename[256];  // Only buffer is a pointer!
+```
+
 ## Code Organization
 
 ### 1. Header Inclusion Order
@@ -131,8 +167,9 @@ To validate compliance with coding conventions:
 1. Check struct declarations use modern C++ style (no typedef patterns)
 2. Verify comment style follows single-line `//` preference and ensure no C style `/* */` comments are used for regular documentation
 3. Confirm brace placement follows separate-line rule
-4. Ensure consistency with existing codebase patterns
-5. Run `xmake test` to verify functionality is preserved
+4. Verify variable declarations use single variable per statement
+5. Ensure consistency with existing codebase patterns
+6. Run `xmake test` to verify functionality is preserved
 
 ### Comment Style Validation
 To check for prohibited C style multiline comments in regular code:

@@ -40,13 +40,17 @@
 
 int main(int argc, char* argv[])
 {
-    int i = 0, j = 0, rc;
+    int i = 0;
+    int j = 0;
+    int rc;
     MDB_env* env;
     MDB_dbi dbi;
-    MDB_val key, data;
+    MDB_val key;
+    MDB_val data;
     MDB_txn* txn;
     MDB_stat mst;
-    MDB_cursor *cursor, *cur2;
+    MDB_cursor *cursor;
+    MDB_cursor *cur2;
     MDB_cursor_op op;
     int count;
     int* values;

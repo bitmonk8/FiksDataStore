@@ -16,7 +16,9 @@ MDB_page* mdb_page_malloc(MDB_txn* txn, unsigned num)
 {
     MDB_env* env = txn->mt_env;
     MDB_page* ret = env->me_dpages;
-    size_t psize = env->me_psize, sz = psize, off;
+    size_t psize = env->me_psize;
+    size_t sz = psize;
+    size_t off;
     /* For ! #MDB_NOMEMINIT, psize counts how much to init.
      * For a single page alloc, we init everything after the page header.
      * For multi-page, we init the final page; if the caller needed that
@@ -522,7 +524,9 @@ int mdb_page_spill(MDB_cursor* m0, MDB_val* key, MDB_val* data)
     MDB_txn* txn = m0->mc_txn;
     MDB_page* dp;
     MDB_ID2L dl = txn->mt_u.dirty_list;
-    unsigned int i, j, need;
+    unsigned int i;
+    unsigned int j;
+    unsigned int need;
     int rc;
 
     if (m0->mc_flags & C_SUB)
@@ -630,7 +634,8 @@ done:
 txnid_t mdb_find_oldest(MDB_txn* txn)
 {
     int i;
-    txnid_t mr, oldest = txn->mt_txnid - 1;
+    txnid_t mr;
+    txnid_t oldest = txn->mt_txnid - 1;
     if (txn->mt_env->me_txns)
     {
         MDB_reader* r = txn->mt_env->me_txns->mti_readers;
@@ -743,7 +748,8 @@ int mdb_page_alloc(MDB_cursor* mc, int num, MDB_page** mp)
 
     for (op = MDB_FIRST;; op = MDB_NEXT)
     {
-        MDB_val key, data;
+        MDB_val key;
+        MDB_val data;
         MDB_node* leaf;
         pgno_t* idl;
 
@@ -923,7 +929,9 @@ void mdb_page_copy(MDB_page* dst, MDB_page* src, unsigned int psize)
     {
         Align = sizeof(pgno_t)
     };
-    indx_t upper = src->mp_upper, lower = src->mp_lower, unused = upper - lower;
+    indx_t upper = src->mp_upper;
+    indx_t lower = src->mp_lower;
+    indx_t unused = upper - lower;
 
     /* If page isn't full, just copy the used portion. Adjust
      * alignment so memcpy may copy words instead of bytes.
@@ -956,7 +964,8 @@ int mdb_page_unspill(MDB_txn* txn, MDB_page* mp, MDB_page** ret)
     MDB_env* env = txn->mt_env;
     const MDB_txn* tx2;
     unsigned x;
-    pgno_t pgno = mp->mp_pgno, pn = pgno << 1;
+    pgno_t pgno = mp->mp_pgno;
+    pgno_t pn = pgno << 1;
 
     for (tx2 = txn; tx2; tx2 = tx2->mt_parent)
     {
@@ -1017,9 +1026,11 @@ int mdb_page_unspill(MDB_txn* txn, MDB_page* mp, MDB_page** ret)
 //
 int mdb_page_touch(MDB_cursor* mc)
 {
-    MDB_page *mp = mc->mc_pg[mc->mc_top], *np;
+    MDB_page *mp = mc->mc_pg[mc->mc_top];
+    MDB_page *np;
     MDB_txn* txn = mc->mc_txn;
-    MDB_cursor *m2, *m3;
+    MDB_cursor *m2;
+    MDB_cursor *m3;
     pgno_t pgno;
     int rc;
 
@@ -1057,7 +1068,8 @@ int mdb_page_touch(MDB_cursor* mc)
     }
     else if (txn->mt_parent && !IS_SUBP(mp))
     {
-        MDB_ID2 mid, *dl = txn->mt_u.dirty_list;
+        MDB_ID2 mid;
+        MDB_ID2 *dl = txn->mt_u.dirty_list;
         pgno = mp->mp_pgno;
         /* If txn has a parent, make sure the page is in our
          * dirty list.
@@ -1437,9 +1449,12 @@ int mdb_ovpage_free(MDB_cursor* mc, MDB_page* mp)
     }
     if (env->me_pghead && !txn->mt_parent && ((mp->mp_flags & P_DIRTY) || (sl && spill_condition)))
     {
-        unsigned i, j;
+        unsigned i;
+        unsigned j;
         pgno_t* mop;
-        MDB_ID2 *dl, ix, iy;
+        MDB_ID2 *dl;
+        MDB_ID2 ix;
+        MDB_ID2 iy;
         rc = mdb_midl_need(&env->me_pghead, ovpages);
         if (rc)
             return rc;
@@ -1621,7 +1636,8 @@ int mdb_node_add(MDB_cursor* mc, indx_t indx, MDB_val* key, MDB_val* data, pgno_
     if (IS_LEAF2(mp))
     {
         /* Move higher keys up one slot. */
-        int ksize = mc->mc_db->md_pad, dif;
+        int ksize = mc->mc_db->md_pad;
+        int dif;
         char* ptr = LEAF2KEY(mp, indx, static_cast<size_t>(ksize));
         dif = NUMKEYS(mp) - indx;
         if (dif > 0)
@@ -1965,9 +1981,11 @@ int mdb_node_move(MDB_cursor* csrc, MDB_cursor* cdst, int fromleft)
 
     {
         /* Adjust other cursors pointing to mp */
-        MDB_cursor *m2, *m3;
+        MDB_cursor *m2;
+        MDB_cursor *m3;
         MDB_dbi dbi = csrc->mc_dbi;
-        MDB_page *mpd, *mps;
+        MDB_page *mpd;
+        MDB_page *mps;
 
         mps = csrc->mc_pg[csrc->mc_top];
         /* If we're adding on the left, bump others up */
@@ -2234,7 +2252,8 @@ int mdb_page_merge(MDB_cursor* csrc, MDB_cursor* cdst)
         csrc->mc_db->md_branch_pages--;
     {
         /* Adjust other cursors pointing to mp */
-        MDB_cursor *m2, *m3;
+        MDB_cursor *m2;
+        MDB_cursor *m3;
         MDB_dbi dbi = csrc->mc_dbi;
         unsigned int top = csrc->mc_top;
 
@@ -2336,7 +2355,8 @@ int mdb_rebalance(MDB_cursor* mc)
             mc->mc_top = 0;
             mc->mc_flags &= ~C_INITIALIZED;
             {
-                MDB_cursor *m2, *m3;
+                MDB_cursor *m2;
+                MDB_cursor *m3;
                 MDB_dbi dbi = mc->mc_dbi;
 
                 for (m2 = mc->mc_txn->mt_cursors[dbi]; m2; m2 = m2->mc_next)
@@ -2381,7 +2401,8 @@ int mdb_rebalance(MDB_cursor* mc)
             }
             {
                 /* Adjust other cursors pointing to mp */
-                MDB_cursor *m2, *m3;
+                MDB_cursor *m2;
+                MDB_cursor *m3;
                 MDB_dbi dbi = mc->mc_dbi;
 
                 for (m2 = mc->mc_txn->mt_cursors[dbi]; m2; m2 = m2->mc_next)
@@ -2612,9 +2633,12 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
 
         if (IS_LEAF2(rp))
         {
-            char *split, *ins;
+            char *split;
+            char *ins;
             int x;
-            unsigned int lsize, rsize, ksize;
+            unsigned int lsize;
+            unsigned int rsize;
+            unsigned int ksize;
             /* Move half of the keys to the right sibling */
             x = mc->mc_ki[mc->mc_top] - split_indx;
             ksize = mc->mc_db->md_pad;
@@ -2660,7 +2684,10 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
         }
         else
         {
-            int psize, nsize, k, keythresh;
+            int psize;
+            int nsize;
+            int k;
+            int keythresh;
 
             /* Maximum free space in an empty page */
             pmax = env->me_psize - PAGEHDRSZ;
@@ -2947,7 +2974,8 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
 
     {
         /* Adjust other cursors pointing to mp */
-        MDB_cursor *m2, *m3;
+        MDB_cursor *m2;
+        MDB_cursor *m3;
         MDB_dbi dbi = mc->mc_dbi;
         nkeys = NUMKEYS(mp);
 

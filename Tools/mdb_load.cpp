@@ -232,7 +232,8 @@ static void badend(void)
 
 static int unhex(unsigned char* c2)
 {
-    int x, c;
+    int x;
+    int c;
     x = *c2++ & 0x4f;
     if (x & 0x40)
         x -= 55;
@@ -246,8 +247,11 @@ static int unhex(unsigned char* c2)
 
 static int readline(MDB_val* out, MDB_val* buf)
 {
-    unsigned char *c1, *c2, *end;
-    size_t len, l2;
+    unsigned char *c1;
+    unsigned char *c2;
+    unsigned char *end;
+    size_t len;
+    size_t l2;
     int c;
 
     if (!(mode & NOHDR))
@@ -381,14 +385,17 @@ static int greater(const MDB_val* a, const MDB_val* b)
 
 int main(int argc, char* argv[])
 {
-    int i, rc;
+    int i;
+    int rc;
     MDB_env* env;
     MDB_txn* txn;
     MDB_cursor* mc;
     MDB_dbi dbi;
     char* envname;
-    int envflags = MDB_NOSYNC, putflags = 0;
-    int dohdr = 0, append = 0;
+    int envflags = MDB_NOSYNC;
+    int putflags = 0;
+    int dohdr = 0;
+    int append = 0;
     MDB_val prevk;
 
     prog = argv[0];
@@ -516,7 +523,8 @@ int main(int argc, char* argv[])
 
     while (!Eof)
     {
-        MDB_val key, data;
+        MDB_val key;
+        MDB_val data;
         int batch = 0;
         int appflag;
 
@@ -622,7 +630,8 @@ int main(int argc, char* argv[])
                 }
                 if (append)
                 {
-                    MDB_val k, d;
+                    MDB_val k;
+                    MDB_val d;
                     mdb_cursor_get(mc, &k, &d, MDB_LAST);
                     memcpy(prevk.mv_data, k.mv_data, k.mv_size);
                     prevk.mv_size = k.mv_size;

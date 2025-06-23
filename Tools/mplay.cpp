@@ -96,7 +96,8 @@ unsigned long lcount;
 // Helper function to unhex a character.
 static int unhex(unsigned char *c2)
 {
-	int x, c;
+	int x;
+	int c;
 	x = *c2++ & 0x4f;
 	if (x & 0x40)
 		x -= 55;
@@ -170,7 +171,8 @@ static void addtxn(void *tenv, void *ttxn, MDB_txn *rtxn)
 
 static txnpair *findtxn(void *ttxn)
 {
-	int i, j;
+	int i;
+	int j;
 	if (lasttxn && lasttxn->ttxn == ttxn)
 		return lasttxn;
 	if (lastenv)
@@ -222,7 +224,9 @@ static void addcrs(txnpair *tp, void *tcrs, MDB_cursor *rcrs)
 
 static crspair *findcrs(void *tcrs)
 {
-	int i, j, k;
+	int i;
+	int j;
+	int k;
 	envpair *ep;
 	txnpair *tp;
 	crspair *cp;
@@ -292,7 +296,8 @@ static void delcrs(void *tcrs)
 void child()
 {
 	int rc;
-	MDB_val key, data;
+	MDB_val key;
+	MDB_val data;
 	char *ptr;
 
 	while (fgets(inbuf, sizeof(inbuf), stdin))
@@ -333,7 +338,8 @@ void child()
 			envpair *ep;
 			char *path;
 			int len;
-			unsigned int flags, mode;
+			unsigned int flags;
+			unsigned int mode;
 			sscanf(ptr+SOFF("mdb_env_open"), "%p, %n", &tenv, &len);
 			path = ptr+SOFF("mdb_env_open")+len;
 			ptr = strchr(path, ',');
@@ -363,7 +369,8 @@ void child()
 		else if (!strncmp(ptr, SCMP("mdb_txn_begin")))
 		{
 			unsigned int flags;
-			void *tenv, *ttxn;
+			void *tenv;
+			void *ttxn;
 			envpair *ep;
 			MDB_txn *rtxn;
 			sscanf(ptr+SOFF("mdb_txn_begin"), "%p, %*p, %u = %p", &tenv, &flags, &ttxn);
@@ -419,7 +426,8 @@ void child()
 		}
 		else if (!strncmp(ptr, SCMP("mdb_cursor_open")))
 		{
-			void *ttxn, *tcrs;
+			void *ttxn;
+			void *tcrs;
 			txnpair *tp;
 			MDB_cursor *rcrs;
 			unsigned int tdbi;
@@ -443,7 +451,7 @@ void child()
 			sscanf(ptr+SOFF("mdb_cursor_put"), "%p, ", &tcrs);
 			cp = findcrs(tcrs);
 			ptr = strchr(ptr+SOFF("mdb_cursor_put"), ',');
-			sscanf(ptr+1, "%"MDB_SCNy(u)",", &key.mv_size);
+			sscanf(ptr+1, "%" MDB_SCNy(u)",", &key.mv_size);
 			if (key.mv_size)
 			{
 				ptr = strchr(ptr, '[');
@@ -486,7 +494,8 @@ void child()
 		{
 			void *ttxn;
 			txnpair *tp;
-			unsigned int tdbi, flags;
+			unsigned int tdbi;
+			unsigned int flags;
 			int len;
 			sscanf(ptr+SOFF("mdb_put"),"%p, %u, %"MDB_SCNy(u), &ttxn, &tdbi, &key.mv_size);
 			tp = findtxn(ttxn);
@@ -552,7 +561,8 @@ void child()
 
 static pidpair *addpid(int tpid)
 {
-	int fdout[2], fdin[2];
+	int fdout[2];
+	int fdin[2];
 	pid_t pid;
 	assert(npids < MAXPIDS);
 	pids[npids].tpid = tpid;
@@ -614,7 +624,8 @@ static void delpid(int tpid)
 
 static void reaper(int sig)
 {
-	int status, i;
+	int status;
+	int i;
 	pid_t pid = waitpid(-1, &status, 0);
 	if (pid > 0)
 	{
@@ -639,8 +650,10 @@ int main(int argc,char * argv[])
 	while (fgets(inbuf, sizeof(inbuf), stdin))
 	{
 		pidpair *pp;
-		int tpid, len;
-		char c, *ptr;
+		int tpid;
+		int len;
+		char c;
+		char *ptr;
 		lcount++;
 
 		if (inbuf[0] == '#' && !strncmp(inbuf+1, SCMP(" killed")))

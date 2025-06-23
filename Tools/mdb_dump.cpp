@@ -69,7 +69,8 @@ static void hex(unsigned char c)
 
 static void text(MDB_val* v)
 {
-    unsigned char *c, *end;
+    unsigned char *c;
+    unsigned char *end;
 
     putchar(' ');
     c = (unsigned char*)v->mv_data;
@@ -94,7 +95,8 @@ static void text(MDB_val* v)
 
 static void byte2(MDB_val* v)
 {
-    unsigned char *c, *end;
+    unsigned char *c;
+    unsigned char *end;
 
     putchar(' ');
     c = (unsigned char*)v->mv_data;
@@ -111,10 +113,12 @@ static int dumpit(MDB_txn* txn, MDB_dbi dbi, char* name)
 {
     MDB_cursor* mc;
     MDB_stat ms;
-    MDB_val key, data;
+    MDB_val key;
+    MDB_val data;
     MDB_envinfo info;
     unsigned int flags;
-    int rc, i;
+    int rc;
+    int i;
 
     rc = mdb_dbi_flags(txn, dbi, &flags);
     if (rc)
@@ -185,7 +189,10 @@ static void usage(char* prog)
 
 int main(int argc, char* argv[])
 {
-    int alldbs = 0, envflags = 0, list = 0, mode = 0;
+    int alldbs = 0;
+    int envflags = 0;
+    int list = 0;
+    int mode = 0;
     int i;  // outer argv index
     MDB_env* env;
     MDB_txn* txn;

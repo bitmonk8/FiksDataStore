@@ -45,8 +45,10 @@ void mdb_cursor_chk(MDB_cursor* mc)
 // If no entry larger or equal to the key is found, returns NULL.
 MDB_node* mdb_node_search(MDB_cursor* mc, MDB_val* key, int* exactp)
 {
-    unsigned int i = 0, nkeys;
-    int low, high;
+    unsigned int i = 0;
+    unsigned int nkeys;
+    int low;
+    int high;
     int rc = 0;
     MDB_page* mp = mc->mc_pg[mc->mc_top];
     MDB_node* node = NULL;
@@ -655,7 +657,8 @@ set1:
         }
         else
         {
-            int ex2, *ex2p;
+            int ex2;
+            int *ex2p;
             if (op == MDB_GET_BOTH)
             {
                 ex2p = &ex2;
@@ -1075,14 +1078,24 @@ int mdb_cursor_put_impl(MDB_cursor* mc, MDB_val* key, MDB_val* data, unsigned in
 {
     MDB_env* env;
     MDB_node* leaf = NULL;
-    MDB_page *fp, *mp, *sub_root = NULL;
+    MDB_page *fp;
+    MDB_page *mp;
+    MDB_page *sub_root = NULL;
     uint16_t fp_flags;
-    MDB_val xdata, *rdata, dkey, olddata;
+    MDB_val xdata;
+    MDB_val *rdata;
+    MDB_val dkey;
+    MDB_val olddata;
     MDB_db dummy;
-    int do_sub = 0, insert_key, insert_data;
-    unsigned int mcount = 0, dcount = 0, nospill;
+    int do_sub = 0;
+    int insert_key;
+    int insert_data;
+    unsigned int mcount = 0;
+    unsigned int dcount = 0;
+    unsigned int nospill;
     size_t nsize;
-    int rc, rc2;
+    int rc;
+    int rc2;
     unsigned int nflags;
     DKBUF;
 
@@ -1443,7 +1456,9 @@ int mdb_cursor_put_impl(MDB_cursor* mc, MDB_val* key, MDB_val* data, unsigned in
         {
             MDB_page* omp;
             pgno_t pg;
-            int level, ovpages, dpages = OVPAGES(data->mv_size, env->me_psize);
+            int level;
+            int ovpages;
+            int dpages = OVPAGES(data->mv_size, env->me_psize);
 
             memcpy(&pg, olddata.mv_data, sizeof(pg));
             rc2 = mdb_page_get(mc, pg, &omp, &level);
@@ -1469,7 +1484,8 @@ int mdb_cursor_put_impl(MDB_cursor* mc, MDB_val* key, MDB_val* data, unsigned in
                     // is smaller than the overflow threshold.
                     if (level > 1)
                     {
-                        size_t sz = (size_t)env->me_psize * ovpages, off;
+                        size_t sz = (size_t)env->me_psize * ovpages;
+                        size_t off;
                         MDB_page* np = mdb_page_malloc(mc->mc_txn, ovpages);
                         MDB_ID2 id2;
                         if (!np)
@@ -1548,7 +1564,8 @@ new_sub:
         if (rc == 0)
         {
             // Adjust other cursors pointing to mp
-            MDB_cursor *m2, *m3;
+            MDB_cursor *m2;
+            MDB_cursor *m3;
             MDB_dbi dbi = mc->mc_dbi;
             unsigned i = mc->mc_top;
             MDB_page* mp = mc->mc_pg[i];
@@ -1578,7 +1595,8 @@ new_sub:
         // DB are all zero size.
         if (do_sub)
         {
-            int xflags, new_dupdata;
+            int xflags;
+            int new_dupdata;
             mdb_size_t ecount;
         put_sub:
             xdata.mv_size = 0;
@@ -2133,7 +2151,8 @@ int mdb_cursor_del0(MDB_cursor* mc)
     MDB_page* mp;
     indx_t ki;
     unsigned int nkeys;
-    MDB_cursor *m2, *m3;
+    MDB_cursor *m2;
+    MDB_cursor *m3;
     MDB_dbi dbi = mc->mc_dbi;
 
     ki = mc->mc_ki[mc->mc_top];
@@ -2261,8 +2280,13 @@ int mdb_update_key(MDB_cursor* mc, MDB_val* key)
     MDB_node* node;
     char* base;
     size_t len;
-    int delta, ksize, oksize;
-    indx_t ptr, i, numkeys, indx;
+    int delta;
+    int ksize;
+    int oksize;
+    indx_t ptr;
+    indx_t i;
+    indx_t numkeys;
+    indx_t indx;
     DKBUF;
 
     indx = mc->mc_ki[mc->mc_top];

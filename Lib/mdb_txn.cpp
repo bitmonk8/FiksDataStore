@@ -22,8 +22,11 @@ int mdb_txn_renew0(MDB_txn* txn)
     MDB_env* env = txn->mt_env;
     MDB_txninfo* ti = env->me_txns;
     MDB_meta* meta{nullptr};
-    unsigned int i{}, nr{}, flags = txn->mt_flags;
-    int rc{}, new_notls{0};
+    unsigned int i{};
+    unsigned int nr{};
+    unsigned int flags = txn->mt_flags;
+    int rc{};
+    int new_notls{0};
 
     flags &= MDB_TXN_RDONLY;
     if (flags != 0)
@@ -203,7 +206,8 @@ int mdb_txn_renew(MDB_txn* txn)
 // Back up parent txn's cursors, then grab the originals for tracking
 static int mdb_cursor_shadow(MDB_txn* src, MDB_txn* dst)
 {
-    MDB_cursor *mc{nullptr}, *bk{nullptr};
+    MDB_cursor *mc{nullptr};
+    MDB_cursor *bk{nullptr};
     MDB_xcursor* mx{nullptr};
     size_t size{};
     int i{};
@@ -247,7 +251,9 @@ int mdb_txn_begin(MDB_env* env, MDB_txn* parent, unsigned int flags, MDB_txn** r
 {
     MDB_txn* txn{nullptr};
     MDB_ntxn* ntxn{nullptr};
-    int rc{}, size{}, tsize{};
+    int rc{};
+    int size{};
+    int tsize{};
 
     flags &= MDB_TXN_BEGIN_FLAGS;
     flags |= env->me_flags & MDB_WRITEMAP;
@@ -417,7 +423,10 @@ static void mdb_dbis_update(MDB_txn* txn, int keep)
 //  0 on success, non-zero on failure.
 static void mdb_cursors_close(MDB_txn* txn, unsigned merge)
 {
-    MDB_cursor **cursors = txn->mt_cursors, *mc, *next, *bk;
+    MDB_cursor **cursors = txn->mt_cursors;
+    MDB_cursor *mc;
+    MDB_cursor *next;
+    MDB_cursor *bk;
     MDB_xcursor* mx;
     int i;
 
@@ -463,7 +472,8 @@ static void mdb_dlist_free(MDB_txn* txn)
 {
     MDB_env* env = txn->mt_env;
     MDB_ID2L dl = txn->mt_u.dirty_list;
-    unsigned i{}, n = dl[0].mid;
+    unsigned i{};
+    unsigned n = dl[0].mid;
 
     for (i = 1; i <= n; i++)
     {
@@ -597,10 +607,18 @@ int mdb_freelist_save(MDB_txn* txn)
     // Page numbers cannot disappear from txn->mt_free_pgs[].
     MDB_cursor mc{};
     MDB_env* env = txn->mt_env;
-    int rc{}, maxfree_1pg = env->me_maxfree_1pg, more{1};
-    txnid_t pglast{0}, head_id{0};
-    pgno_t freecnt{0}, *free_pgs{nullptr}, *mop{nullptr};
-    ssize_t head_room{0}, total_room{0}, mop_len{}, clean_limit{};
+    int rc{};
+    int maxfree_1pg = env->me_maxfree_1pg;
+    int more{1};
+    txnid_t pglast{0};
+    txnid_t head_id{0};
+    pgno_t freecnt{0};
+    pgno_t *free_pgs{nullptr};
+    pgno_t *mop{nullptr};
+    ssize_t head_room{0};
+    ssize_t total_room{0};
+    ssize_t mop_len{};
+    ssize_t clean_limit{};
 
     mdb_cursor_init(&mc, txn, FREE_DBI, NULL);
 
@@ -674,7 +692,8 @@ int mdb_freelist_save(MDB_txn* txn)
     for (;;)
     {
         // Come back here after each Put() in case freelist changed
-        MDB_val key{}, data{};
+        MDB_val key{};
+        MDB_val data{};
         pgno_t* pgs{nullptr};
         ssize_t j{};
 
@@ -804,7 +823,8 @@ int mdb_freelist_save(MDB_txn* txn)
     rc = MDB_SUCCESS;
     if (mop_len)
     {
-        MDB_val key{}, data{};
+        MDB_val key{};
+        MDB_val data{};
 
         mop += mop_len;
         rc = mdb_cursor_first(&mc, &key, &data);
@@ -837,7 +857,8 @@ int mdb_freelist_save(MDB_txn* txn)
 int mdb_txn_commit_impl(MDB_txn* txn)
 {
     int rc{};
-    unsigned int i{}, end_mode{};
+    unsigned int i{};
+    unsigned int end_mode{};
     MDB_env* env{nullptr};
 
     if (txn == NULL)
@@ -873,9 +894,13 @@ int mdb_txn_commit_impl(MDB_txn* txn)
     {
         MDB_txn* parent = txn->mt_parent;
         MDB_page** lp{nullptr};
-        MDB_ID2L dst{nullptr}, src{nullptr};
+        MDB_ID2L dst{nullptr};
+        MDB_ID2L src{nullptr};
         MDB_IDL pspill{nullptr};
-        unsigned x{}, y{}, len{}, ps_len{};
+        unsigned x{};
+        unsigned y{};
+        unsigned len{};
+        unsigned ps_len{};
 
         // Append our free list to parent's
         rc = mdb_midl_append_list(&parent->mt_free_pgs, txn->mt_free_pgs);

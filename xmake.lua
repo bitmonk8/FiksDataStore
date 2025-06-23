@@ -250,3 +250,58 @@ target("format")
         print("Code formatting completed successfully!")
         print("Formatted files in directories: " .. table.concat(source_dirs, ", "))
     end)
+
+-- Lint target for code linting with clang-tidy
+target("lint")
+    set_kind("phony")
+    on_run(function (target)
+        -- Find all .cpp files in the specified directories (focus on source files first)
+        local source_dirs = {"Lib", "Tests", "Tools"}
+        local file_patterns = {"*.cpp"}
+        local files = {}
+        
+        for _, dir in ipairs(source_dirs) do
+            if os.isdir(dir) then
+                for _, pattern in ipairs(file_patterns) do
+                    local found_files = os.files(path.join(dir, pattern))
+                    for _, file in ipairs(found_files) do
+                        table.insert(files, file)
+                    end
+                end
+            end
+        end
+        
+        if #files == 0 then
+            print("No source files found to lint")
+            return
+        end
+        
+        print("Running clang-tidy with --fix on " .. #files .. " source files...")
+        print("Applying readability-isolate-declaration fixes and other configured checks...")
+        
+        local processed_count = 0
+        local error_count = 0
+        
+        -- Run clang-tidy with --fix and --fix-errors on all found files
+        for _, file in ipairs(files) do
+            print("Processing: " .. file)
+            local ok, errors = os.iorunv("clang-tidy", {"--fix", "--fix-errors", file})
+            if ok then
+                processed_count = processed_count + 1
+                print("  ✓ Successfully processed " .. file)
+            else
+                error_count = error_count + 1
+                print("  ✗ Error processing " .. file .. ": " .. (errors or "unknown error"))
+                -- Continue processing other files instead of exiting
+            end
+        end
+        
+        print("\nCode linting completed!")
+        print("Successfully processed: " .. processed_count .. " files")
+        if error_count > 0 then
+            print("Files with errors: " .. error_count)
+        end
+        print("Processed files in directories: " .. table.concat(source_dirs, ", "))
+        print("Applied automatic fixes where possible using project's .clang-tidy configuration")
+        print("Focus: readability-isolate-declaration and other configured checks")
+    end)

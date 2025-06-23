@@ -73,14 +73,16 @@ static int parse_cmdline(int argc, char** argv, int* envflags, int* do_delete, c
 
 int main(int argc, char* argv[])
 {
-    int i, rc;
+    int i;
+    int rc;
     MDB_env* env;
     MDB_txn* txn;
     MDB_dbi dbi;
     char* prog = argv[0];
     char* envname;
     char* subname = NULL;
-    int envflags = 0, _delete = 0;
+    int envflags = 0;
+    int _delete = 0;
     int arg_index = 0;
 
     if (argc < 2)
