@@ -572,13 +572,13 @@ void mdb_txn_reset(MDB_txn* txn)
     mdb_txn_end(txn, MDB_END_RESET);
 }
 
-void _mdb_txn_abort(MDB_txn* txn)
+void mdb_txn_abort_impl(MDB_txn* txn)
 {
     if (txn == NULL)
         return;
 
     if (txn->mt_child)
-        _mdb_txn_abort(txn->mt_child);
+        mdb_txn_abort_impl(txn->mt_child);
 
     mdb_txn_end(txn, MDB_END_ABORT | MDB_END_SLOT | MDB_END_FREE);
 }
@@ -586,7 +586,7 @@ void _mdb_txn_abort(MDB_txn* txn)
 void mdb_txn_abort(MDB_txn* txn)
 {
     MDB_TRACE(("%p", txn));
-    _mdb_txn_abort(txn);
+    mdb_txn_abort_impl(txn);
 }
 
 // Save the freelist as of this transaction to the freeDB.
@@ -689,7 +689,7 @@ int mdb_freelist_save(MDB_txn* txn)
             pglast = head_id = *(txnid_t*)key.mv_data;
             total_room = head_room = 0;
             mdb_tassert(txn, pglast <= env->me_pglast);
-            rc = _mdb_cursor_del(&mc, 0);
+            rc = mdb_cursor_del_impl(&mc, 0);
             if (rc)
                 return rc;
         }
@@ -712,7 +712,7 @@ int mdb_freelist_save(MDB_txn* txn)
             {
                 freecnt = free_pgs[0];
                 data.mv_size = MDB_IDL_SIZEOF(free_pgs);
-                rc = _mdb_cursor_put(&mc, &key, &data, MDB_RESERVE);
+                rc = mdb_cursor_put_impl(&mc, &key, &data, MDB_RESERVE);
                 if (rc)
                     return rc;
                 // Retry if mt_free_pgs[] grew during the Put()
@@ -765,7 +765,7 @@ int mdb_freelist_save(MDB_txn* txn)
         key.mv_size = sizeof(head_id);
         key.mv_data = &head_id;
         data.mv_size = (head_room + 1) * sizeof(pgno_t);
-        rc = _mdb_cursor_put(&mc, &key, &data, MDB_RESERVE);
+        rc = mdb_cursor_put_impl(&mc, &key, &data, MDB_RESERVE);
         if (rc)
             return rc;
         // IDL is initially empty, zero out at least the length
@@ -825,7 +825,7 @@ int mdb_freelist_save(MDB_txn* txn)
             data.mv_data = mop -= len;
             save = mop[0];
             mop[0] = len;
-            rc = _mdb_cursor_put(&mc, &key, &data, MDB_CURRENT);
+            rc = mdb_cursor_put_impl(&mc, &key, &data, MDB_CURRENT);
             mop[0] = save;
             mop_len -= len;
             if (rc || !mop_len)
@@ -913,25 +913,25 @@ int mdb_txn_commit_impl(MDB_txn* txn)
             ps_len = pspill[0];
             if (ps_len)
             {
-            x = y = ps_len;
-            pspill[0] = (pgno_t)-1;
-            // Mark our dirty pages as deleted in parent spill list
-            for (i = 0, len = src[0].mid; ++i <= len;)
-            {
-                MDB_ID pn = src[i].mid << 1;
-                while (pn > pspill[x])
-                    x--;
-                if (pn == pspill[x])
+                x = y = ps_len;
+                pspill[0] = (pgno_t)-1;
+                // Mark our dirty pages as deleted in parent spill list
+                for (i = 0, len = src[0].mid; ++i <= len;)
                 {
-                    pspill[x] = 1;
-                    y = --x;
+                    MDB_ID pn = src[i].mid << 1;
+                    while (pn > pspill[x])
+                        x--;
+                    if (pn == pspill[x])
+                    {
+                        pspill[x] = 1;
+                        y = --x;
+                    }
                 }
-            }
-            // Squash deleted pagenums if we deleted any
-            for (x = y; ++x <= ps_len;)
-                if (!(pspill[x] & 1))
-                    pspill[++y] = pspill[x];
-            pspill[0] = y;
+                // Squash deleted pagenums if we deleted any
+                for (x = y; ++x <= ps_len;)
+                    if (!(pspill[x] & 1))
+                        pspill[++y] = pspill[x];
+                pspill[0] = y;
             }
         }
 
@@ -1061,7 +1061,7 @@ int mdb_txn_commit_impl(MDB_txn* txn)
                     goto fail;
                 }
                 data.mv_data = &txn->mt_dbs[i];
-                rc = _mdb_cursor_put(&mc, &txn->mt_dbxs[i].md_name, &data, F_SUBDATA);
+                rc = mdb_cursor_put_impl(&mc, &txn->mt_dbxs[i].md_name, &data, F_SUBDATA);
                 if (rc)
                     goto fail;
             }
@@ -1110,7 +1110,7 @@ done:
     return MDB_SUCCESS;
 
 fail:
-    _mdb_txn_abort(txn);
+    mdb_txn_abort_impl(txn);
     return rc;
 }
 

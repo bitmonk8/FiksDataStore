@@ -847,8 +847,10 @@ int mdb_page_alloc(MDB_cursor* mc, int num, MDB_page** mp)
     {
         void* p;
         p = (MDB_page*)(env->me_map + env->me_psize * pgno);
-        p = VirtualAlloc(
-            p, static_cast<SIZE_T>(env->me_psize) * num, MEM_COMMIT, (env->me_flags & MDB_WRITEMAP) ? PAGE_READWRITE : PAGE_READONLY);
+        p = VirtualAlloc(p,
+                         static_cast<SIZE_T>(env->me_psize) * num,
+                         MEM_COMMIT,
+                         (env->me_flags & MDB_WRITEMAP) ? PAGE_READWRITE : PAGE_READONLY);
         if (!p)
         {
             DPUTS("VirtualAlloc failed");
@@ -916,7 +918,8 @@ void mdb_page_copy(MDB_page* dst, MDB_page* src, unsigned int psize)
         upper = (upper + PAGEBASE) & -Align;
         memcpy(dst, src, (lower + PAGEBASE + (Align - 1)) & -Align);
         memcpy(reinterpret_cast<pgno_t*>(reinterpret_cast<char*>(dst) + upper),
-               reinterpret_cast<pgno_t*>(reinterpret_cast<char*>(src) + upper), psize - upper);
+               reinterpret_cast<pgno_t*>(reinterpret_cast<char*>(src) + upper),
+               psize - upper);
     }
     else
     {
@@ -1410,12 +1413,12 @@ int mdb_ovpage_free(MDB_cursor* mc, MDB_page* mp)
     // range in ancestor txns' dirty and spilled lists.
     //
     bool spill_condition = false;
-    if (sl) {
+    if (sl)
+    {
         x = mdb_midl_search(sl, pn);
         spill_condition = x <= sl[0] && sl[x] == pn;
     }
-    if (env->me_pghead && !txn->mt_parent &&
-        ((mp->mp_flags & P_DIRTY) || (sl && spill_condition)))
+    if (env->me_pghead && !txn->mt_parent && ((mp->mp_flags & P_DIRTY) || (sl && spill_condition)))
     {
         unsigned i, j;
         pgno_t* mop;
@@ -2595,7 +2598,9 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
                 ins = LEAF2KEY(mp, mc->mc_ki[mc->mc_top], static_cast<size_t>(ksize));
                 memcpy(rp->mp_ptrs, split, rsize);
                 sepkey.mv_data = rp->mp_ptrs;
-                memmove(ins + ksize, ins, static_cast<size_t>(split_indx - mc->mc_ki[mc->mc_top]) * static_cast<size_t>(ksize));
+                memmove(ins + ksize,
+                        ins,
+                        static_cast<size_t>(split_indx - mc->mc_ki[mc->mc_top]) * static_cast<size_t>(ksize));
                 memcpy(ins, newkey->mv_data, ksize);
                 mp->mp_lower += sizeof(indx_t);
                 mp->mp_upper -= ksize - sizeof(indx_t);

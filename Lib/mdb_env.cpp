@@ -54,7 +54,7 @@ typedef wchar_t mdb_nchar_t;
 #define MDB_NAME(str) L##str
 // Suppress deprecation warning for wcscpy - we know the buffer sizes
 #pragma warning(push)
-#pragma warning(disable: 4996)
+#pragma warning(disable : 4996)
 #define mdb_name_cpy wcscpy
 #pragma warning(pop)
 #else
@@ -298,12 +298,13 @@ enum mdb_fopen_type
     MDB_O_LOCKS
 #else
     // A comment in mdb_fopen() explains some O_* flag choices.
-    MDB_O_RDONLY = O_RDONLY,                                 // for RDONLY me_fd
-    MDB_O_RDWR = O_RDWR | O_CREAT,                           // for me_fd
-    MDB_O_META = O_WRONLY | MDB_DSYNC | MDB_CLOEXEC,         // for me_mfd
-    MDB_O_COPY = O_WRONLY | O_CREAT | O_EXCL | MDB_CLOEXEC,  // for #mdb_env_copy()
-    // Bitmask for open() flags in enum #mdb_fopen_type.  The other bits
-    // distinguish otherwise-equal MDB_O_* constants from each other.
+    MDB_O_RDONLY = O_RDONLY,                          // for RDONLY me_fd
+    MDB_O_RDWR = O_RDWR | O_CREAT,                    // for me_fd
+    MDB_O_META = O_WRONLY | MDB_DSYNC | MDB_CLOEXEC,  // for me_mfd
+    MDB_O_COPY =
+        O_WRONLY | O_CREAT | O_EXCL | MDB_CLOEXEC,  // for #mdb_env_copy()
+                                                    // Bitmask for open() flags in enum #mdb_fopen_type.  The other bits
+                                                    // distinguish otherwise-equal MDB_O_* constants from each other.
     MDB_O_MASK = MDB_O_RDWR | MDB_CLOEXEC | MDB_O_RDONLY | MDB_O_META | MDB_O_COPY,
     MDB_O_LOCKS = MDB_O_RDWR | MDB_CLOEXEC | ((MDB_O_MASK + 1) & ~MDB_O_MASK)  // for me_lfd
 #endif
@@ -331,7 +332,7 @@ static int ESECT mdb_fopen(const MDB_env* env, MDB_name* fname, enum mdb_fopen_t
     {
 #ifdef _WIN32
 #pragma warning(push)
-#pragma warning(disable: 4996) // Suppress deprecation warning for wcscpy
+#pragma warning(disable : 4996)  // Suppress deprecation warning for wcscpy
 #endif
         mdb_name_cpy(fname->mn_val + fname->mn_len,
                      mdb_suffixes[which == MDB_O_LOCKS][F_ISSET(env->me_flags, MDB_NOSUBDIR)]);
@@ -569,8 +570,8 @@ int ESECT mdb_env_init_meta(MDB_env* env, MDB_meta* meta)
 #define DO_PWRITE(rc, fd, ptr, size, len, pos)                                                                         \
     do                                                                                                                 \
     {                                                                                                                  \
-        ov.Offset = (pos);                                                                                               \
-        (rc) = WriteFile((fd), (ptr), (size), &(len), &ov);                                                                      \
+        ov.Offset = (pos);                                                                                             \
+        (rc) = WriteFile((fd), (ptr), (size), &(len), &ov);                                                            \
     } while (0)
 #else
     int len;
@@ -959,9 +960,9 @@ int ESECT mdb_env_open2(MDB_env* env, int prev)
     OSVERSIONINFO osvi;
     ZeroMemory(&osvi, sizeof(OSVERSIONINFO));
     osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-    
+
 #pragma warning(push)
-#pragma warning(disable: 4996) // Suppress deprecation warning
+#pragma warning(disable : 4996)  // Suppress deprecation warning
     if (GetVersionEx(&osvi) && osvi.dwMajorVersion > 5)
 #pragma warning(pop)
         env->me_pidquery = MDB_PROCESS_QUERY_LIMITED_INFORMATION;
@@ -1206,7 +1207,7 @@ void ESECT mdb_env_mname_init(MDB_env* env)
 {
     char* nm = env->me_mutexname;
 #pragma warning(push)
-#pragma warning(disable: 4996) // Suppress deprecation warning for strcpy
+#pragma warning(disable : 4996)  // Suppress deprecation warning for strcpy
     strcpy(nm, MUTEXNAME_PREFIX);
 #pragma warning(pop)
     mdb_pack85(env->me_txns->mti_mutexid, nm + sizeof(MUTEXNAME_PREFIX));
@@ -2201,7 +2202,7 @@ finish:
         my.mc_error = rc;
     mdb_env_cthr_toggle(&my, 1 | MDB_EOF);
     rc = THREAD_FINISH(thr);
-    _mdb_txn_abort(txn);
+    mdb_txn_abort_impl(txn);
 
 done:
 #ifdef _WIN32
@@ -2352,7 +2353,7 @@ int ESECT mdb_env_copyfd0(MDB_env* env, HANDLE fd)
     }
 
 leave:
-    _mdb_txn_abort(txn);
+    mdb_txn_abort_impl(txn);
     return rc;
 }
 

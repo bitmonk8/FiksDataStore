@@ -80,12 +80,12 @@ const char* mdb_strerror(int err)
     case EBUSY:   // 16, CURRENT_DIRECTORY
     case EINVAL:  // 22, BAD_COMMAND
     case ENOSPC:  // 28, OUT_OF_PAPER
-        {
-            static char errbuf[256];
-            if (strerror_s(errbuf, sizeof(errbuf), err) == 0)
-                return errbuf;
-            return "Unknown error";
-        }
+    {
+        static char errbuf[256];
+        if (strerror_s(errbuf, sizeof(errbuf), err) == 0)
+            return errbuf;
+        return "Unknown error";
+    }
     default:;
     }
     buf[0] = 0;

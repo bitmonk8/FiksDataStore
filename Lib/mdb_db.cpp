@@ -126,7 +126,7 @@ int mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* db
         memset(&dummy, 0, sizeof(dummy));
         dummy.md_root = P_INVALID;
         dummy.md_flags = flags & PERSISTENT_FLAGS;
-        WITH_CURSOR_TRACKING(mc, rc = _mdb_cursor_put(&mc, &key, &data, F_SUBDATA));
+        WITH_CURSOR_TRACKING(mc, rc = mdb_cursor_put_impl(&mc, &key, &data, F_SUBDATA));
         dbflag |= DB_DIRTY;
     }
 
@@ -332,7 +332,7 @@ static int mdb_del0(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data, unsi
         // cursor to be consistent until the end of the rebalance.
         mc.mc_next = txn->mt_cursors[dbi];
         txn->mt_cursors[dbi] = &mc;
-        rc = _mdb_cursor_del(&mc, flags);
+        rc = mdb_cursor_del_impl(&mc, flags);
         txn->mt_cursors[dbi] = mc.mc_next;
     }
     return rc;
@@ -450,7 +450,7 @@ int mdb_put(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data, unsigned int
     mdb_cursor_init(&mc, txn, dbi, &mx);
     mc.mc_next = txn->mt_cursors[dbi];
     txn->mt_cursors[dbi] = &mc;
-    rc = _mdb_cursor_put(&mc, key, data, flags);
+    rc = mdb_cursor_put_impl(&mc, key, data, flags);
     txn->mt_cursors[dbi] = mc.mc_next;
     return rc;
 }

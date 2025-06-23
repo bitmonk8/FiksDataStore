@@ -1071,7 +1071,7 @@ int mdb_cursor_touch(MDB_cursor* mc)
 // Internal error codes, not exposed outside liblmdb
 #define MDB_NO_ROOT (MDB_LAST_ERRCODE + 10)
 
-int _mdb_cursor_put(MDB_cursor* mc, MDB_val* key, MDB_val* data, unsigned int flags)
+int mdb_cursor_put_impl(MDB_cursor* mc, MDB_val* key, MDB_val* data, unsigned int flags)
 {
     MDB_env* env;
     MDB_node* leaf = NULL;
@@ -1413,7 +1413,8 @@ int _mdb_cursor_put(MDB_cursor* mc, MDB_val* key, MDB_val* data, unsigned int fl
                 MP_UPPER(mp) = MP_UPPER(fp) + offset;
                 if (fp_flags & P_LEAF2)
                 {
-                    memcpy(METADATA(mp), METADATA(fp), static_cast<size_t>(NUMKEYS(fp)) * static_cast<size_t>(fp->mp_pad));
+                    memcpy(
+                        METADATA(mp), METADATA(fp), static_cast<size_t>(NUMKEYS(fp)) * static_cast<size_t>(fp->mp_pad));
                 }
                 else
                 {
@@ -1598,7 +1599,7 @@ new_sub:
             // converted, write the original data first
             if (dkey.mv_size)
             {
-                rc = _mdb_cursor_put(&mc->mc_xcursor->mx_cursor, &dkey, &xdata, xflags);
+                rc = mdb_cursor_put_impl(&mc->mc_xcursor->mx_cursor, &dkey, &xdata, xflags);
                 if (rc)
                     goto bad_sub;
                 // we've done our job
@@ -1634,7 +1635,7 @@ new_sub:
             ecount = mc->mc_xcursor->mx_db.md_entries;
             if (flags & MDB_APPENDDUP)
                 xflags |= MDB_APPEND;
-            rc = _mdb_cursor_put(&mc->mc_xcursor->mx_cursor, data, &xdata, xflags);
+            rc = mdb_cursor_put_impl(&mc->mc_xcursor->mx_cursor, data, &xdata, xflags);
             if (flags & F_SUBDATA)
             {
                 void* db = NODEDATA(leaf);
@@ -1682,7 +1683,7 @@ int mdb_cursor_put(MDB_cursor* mc, MDB_val* key, MDB_val* data, unsigned int fla
 {
     DKBUF;
     DDBUF;
-    int rc = _mdb_cursor_put(mc, key, data, flags);
+    int rc = mdb_cursor_put_impl(mc, key, data, flags);
     MDB_TRACE(("%p, %" Z "u[%s], %" Z "u%s, %u",
                mc,
                key ? key->mv_size : 0,
@@ -1693,7 +1694,7 @@ int mdb_cursor_put(MDB_cursor* mc, MDB_val* key, MDB_val* data, unsigned int fla
     return rc;
 }
 
-int _mdb_cursor_del(MDB_cursor* mc, unsigned int flags)
+int mdb_cursor_del_impl(MDB_cursor* mc, unsigned int flags)
 {
     MDB_node* leaf;
     MDB_page* mp;
@@ -1708,7 +1709,8 @@ int _mdb_cursor_del(MDB_cursor* mc, unsigned int flags)
     if (mc->mc_ki[mc->mc_top] >= NUMKEYS(mc->mc_pg[mc->mc_top]))
         return MDB_NOTFOUND;
 
-    if (!(flags & MDB_NOSPILL)) {
+    if (!(flags & MDB_NOSPILL))
+    {
         rc = mdb_page_spill(mc, NULL, NULL);
         if (rc)
             return rc;
@@ -1737,9 +1739,10 @@ int _mdb_cursor_del(MDB_cursor* mc, unsigned int flags)
         {
             if (!F_ISSET(leaf->mn_flags, F_SUBDATA))
             {
-                mc->mc_xcursor->mx_cursor.mc_pg[0] = reinterpret_cast<MDB_page*>(reinterpret_cast<char*>(leaf->mn_data) + leaf->mn_ksize);
+                mc->mc_xcursor->mx_cursor.mc_pg[0] =
+                    reinterpret_cast<MDB_page*>(reinterpret_cast<char*>(leaf->mn_data) + leaf->mn_ksize);
             }
-            rc = _mdb_cursor_del(&mc->mc_xcursor->mx_cursor, MDB_NOSPILL);
+            rc = mdb_cursor_del_impl(&mc->mc_xcursor->mx_cursor, MDB_NOSPILL);
             if (rc)
                 return rc;
             // If sub-DB still has entries, we're done
@@ -1757,7 +1760,8 @@ int _mdb_cursor_del(MDB_cursor* mc, unsigned int flags)
                     // shrink fake page
                     mdb_node_shrink(mp, mc->mc_ki[mc->mc_top]);
                     leaf = NODEPTR(mp, mc->mc_ki[mc->mc_top]);
-                    mc->mc_xcursor->mx_cursor.mc_pg[0] = reinterpret_cast<MDB_page*>(reinterpret_cast<char*>(leaf->mn_data) + leaf->mn_ksize);
+                    mc->mc_xcursor->mx_cursor.mc_pg[0] =
+                        reinterpret_cast<MDB_page*>(reinterpret_cast<char*>(leaf->mn_data) + leaf->mn_ksize);
                     // fix other sub-DB cursors pointed at fake pages on this page
                     for (m2 = mc->mc_txn->mt_cursors[mc->mc_dbi]; m2; m2 = m2->mc_next)
                     {
@@ -1804,7 +1808,8 @@ int _mdb_cursor_del(MDB_cursor* mc, unsigned int flags)
 
         memcpy(&pg, NODEDATA(leaf), sizeof(pg));
         rc = mdb_page_get(mc, pg, &omp, NULL);
-        if (rc == 0) {
+        if (rc == 0)
+        {
             rc = mdb_ovpage_free(mc, omp);
         }
         if (rc)
@@ -1823,7 +1828,7 @@ fail:
 int mdb_cursor_del(MDB_cursor* mc, unsigned int flags)
 {
     MDB_TRACE(("%p, %u", mc, flags));
-    return _mdb_cursor_del(mc, flags);
+    return mdb_cursor_del_impl(mc, flags);
 }
 
 // Initial setup of a sorted-dups cursor.
@@ -2220,7 +2225,8 @@ int mdb_cursor_del0(MDB_cursor* mc)
                         if (m3->mc_xcursor->mx_cursor.mc_flags & C_INITIALIZED)
                         {
                             if (!(node->mn_flags & F_SUBDATA))
-                                m3->mc_xcursor->mx_cursor.mc_pg[0] = reinterpret_cast<MDB_page*>(reinterpret_cast<char*>(node->mn_data) + node->mn_ksize);
+                                m3->mc_xcursor->mx_cursor.mc_pg[0] = reinterpret_cast<MDB_page*>(
+                                    reinterpret_cast<char*>(node->mn_data) + node->mn_ksize);
                         }
                         else
                         {

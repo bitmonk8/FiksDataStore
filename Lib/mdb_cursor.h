@@ -107,6 +107,10 @@ int	mdb_cursor_push(MDB_cursor *mc, MDB_page *mp);
 int	mdb_cursor_del(MDB_cursor *mc, unsigned int flags);
 int	mdb_cursor_put(MDB_cursor *mc, MDB_val *key, MDB_val *data, unsigned int flags);
 
+// Internal implementation functions
+int	mdb_cursor_del_impl(MDB_cursor *mc, unsigned int flags);
+int	mdb_cursor_put_impl(MDB_cursor *mc, MDB_val *key, MDB_val *data, unsigned int flags);
+
 int	mdb_cursor_del0(MDB_cursor *mc);
 int	mdb_cursor_sibling(MDB_cursor *mc, int move_right);
 int	mdb_cursor_next(MDB_cursor *mc, MDB_val *key, MDB_val *data, MDB_cursor_op op);
