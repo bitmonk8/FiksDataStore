@@ -134,7 +134,11 @@ static void readhdr(void)
             ptr = (char*)memchr(dbuf.mv_data, '\n', dbuf.mv_size);
             if (ptr)
                 *ptr = '\0';
+#ifdef _WIN32
+            i = sscanf_s((char*)dbuf.mv_data + STRLENOF("mapaddr="), "%p", &info.me_mapaddr);
+#else
             i = sscanf((char*)dbuf.mv_data + STRLENOF("mapaddr="), "%p", &info.me_mapaddr);
+#endif
             if (i != 1)
             {
                 fprintf(stderr,
@@ -151,7 +155,11 @@ static void readhdr(void)
             ptr = (char*)memchr(dbuf.mv_data, '\n', dbuf.mv_size);
             if (ptr)
                 *ptr = '\0';
+#ifdef _WIN32
+            i = sscanf_s((char*)dbuf.mv_data + STRLENOF("mapsize="), "%" MDB_SCNy(u), &info.me_mapsize);
+#else
             i = sscanf((char*)dbuf.mv_data + STRLENOF("mapsize="), "%" MDB_SCNy(u), &info.me_mapsize);
+#endif
             if (i != 1)
             {
                 fprintf(stderr,
@@ -168,7 +176,11 @@ static void readhdr(void)
             ptr = (char*)memchr(dbuf.mv_data, '\n', dbuf.mv_size);
             if (ptr)
                 *ptr = '\0';
+#ifdef _WIN32
+            i = sscanf_s((char*)dbuf.mv_data + STRLENOF("maxreaders="), "%u", &info.me_maxreaders);
+#else
             i = sscanf((char*)dbuf.mv_data + STRLENOF("maxreaders="), "%u", &info.me_maxreaders);
+#endif
             if (i != 1)
             {
                 fprintf(stderr,
@@ -275,13 +287,14 @@ static int readline(MDB_val* out, MDB_val* buf)
     // Is buffer too short?
     while (c1[len - 1] != '\n')
     {
-        buf->mv_data = realloc(buf->mv_data, buf->mv_size * 2);
-        if (!buf->mv_data)
+        void* new_data = realloc(buf->mv_data, buf->mv_size * 2);
+        if (!new_data)
         {
             Eof = 1;
             fprintf(stderr, "%s: line %" Yu ": out of memory, line too long\n", prog, lineno);
             return EOF;
         }
+        buf->mv_data = new_data;
         c1 = (unsigned char*)buf->mv_data;
         c1 += l2;
         if (fgets((char*)c1, (int)buf->mv_size + 1, stdin) == NULL)
@@ -405,11 +418,23 @@ int main(int argc, char* argv[])
             if (++idx == argc)  // need the file name
                 usage();
             const char* fname = argv[idx];
+#ifdef _WIN32
+            FILE* new_stdin;
+            errno_t err = freopen_s(&new_stdin, fname, "r", stdin);
+            if (err != 0)
+            {
+                char error_msg[256];
+                strerror_s(error_msg, sizeof(error_msg), errno);
+                fprintf(stderr, "%s: %s: reopen: %s\n", prog, fname, error_msg);
+                return EXIT_FAILURE;
+            }
+#else
             if (freopen(fname, "r", stdin) == NULL)
             {
                 fprintf(stderr, "%s: %s: reopen: %s\n", prog, fname, strerror(errno));
                 return EXIT_FAILURE;
             }
+#endif
         }
         else if (strcmp(arg, "-n") == 0)
         {

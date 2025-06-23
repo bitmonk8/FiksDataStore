@@ -27,7 +27,7 @@
 #endif
 
 #define E(expr) CHECK((rc = (expr)) == MDB_SUCCESS, #expr)
-#define RES(err, expr) ((rc = (expr)) == (err) || (CHECK(!rc, #expr), 0))
+#define RES(err, expr) ([&]() { rc = (expr); return (rc == (err) || (CHECK(!rc, #expr), 0)); }())
 #define CHECK(test, msg)                                                                                               \
     ((test) ? (void)0                                                                                                  \
             : ((void)fprintf(stderr, "TEST FAILED: %s:%d: %s: %s\n", __FILE__, __LINE__, msg, mdb_strerror(rc)),       \

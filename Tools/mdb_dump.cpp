@@ -258,11 +258,23 @@ int main(int argc, char* argv[])
 
                 if (opt == 'f')
                 {
+#ifdef _WIN32
+                    FILE* new_stdout;
+                    errno_t err = freopen_s(&new_stdout, optarg, "w", stdout);
+                    if (err != 0)
+                    {
+                        char error_msg[256];
+                        strerror_s(error_msg, sizeof(error_msg), errno);
+                        fprintf(stderr, "%s: %s: reopen: %s\n", prog, optarg, error_msg);
+                        exit(EXIT_FAILURE);
+                    }
+#else
                     if (freopen(optarg, "w", stdout) == NULL)
                     {
                         fprintf(stderr, "%s: %s: reopen: %s\n", prog, optarg, strerror(errno));
                         exit(EXIT_FAILURE);
                     }
+#endif
                 }
                 else
                 {  // opt == 's'

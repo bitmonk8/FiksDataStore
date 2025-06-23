@@ -37,18 +37,18 @@ struct MDB_page2 {
 	indx_t		mp2_ptrs[0];
 };
 
-#define MP_PGNO(p)	(((MDB_page2 *)(void *)(p))->mp2_p)
-#define MP_PAD(p)	(((MDB_page2 *)(void *)(p))->mp2_pad)
-#define MP_FLAGS(p)	(((MDB_page2 *)(void *)(p))->mp2_flags)
-#define MP_LOWER(p)	(((MDB_page2 *)(void *)(p))->mp2_lower)
-#define MP_UPPER(p)	(((MDB_page2 *)(void *)(p))->mp2_upper)
-#define MP_PTRS(p)	(((MDB_page2 *)(void *)(p))->mp2_ptrs)
+#define MP_PGNO(p)	(reinterpret_cast<MDB_page2*>(p)->mp2_p)
+#define MP_PAD(p)	(reinterpret_cast<MDB_page2*>(p)->mp2_pad)
+#define MP_FLAGS(p)	(reinterpret_cast<MDB_page2*>(p)->mp2_flags)
+#define MP_LOWER(p)	(reinterpret_cast<MDB_page2*>(p)->mp2_lower)
+#define MP_UPPER(p)	(reinterpret_cast<MDB_page2*>(p)->mp2_upper)
+#define MP_PTRS(p)	(reinterpret_cast<MDB_page2*>(p)->mp2_ptrs)
 
 	// Size of the page header, excluding dynamic data at the end
 #define PAGEHDRSZ	 ((unsigned) offsetof(MDB_page, mp_ptrs))
 
 	// Address of first usable data byte in a page, after the header
-#define METADATA(p)	 ((void *)((char *)(p) + PAGEHDRSZ))
+#define METADATA(p)	 (reinterpret_cast<void*>(reinterpret_cast<char*>(p) + PAGEHDRSZ))
 
 	// ITS#7713, change PAGEBASE to handle 65536 byte pages
 #define	PAGEBASE	0
@@ -101,7 +101,7 @@ struct MDB_page2 {
 	// The address of a key in a LEAF2 page.
 	// LEAF2 pages are used for MDB_DUPFIXED sorted-duplicate sub-DBs.
 	// There are no node headers, keys are stored contiguously.
-#define LEAF2KEY(p, i, ks)	((char *)(p) + PAGEHDRSZ + ((i)*(ks)))
+#define LEAF2KEY(p, i, ks)	(reinterpret_cast<char*>(p) + PAGEHDRSZ + ((i)*(ks)))
 
 	// The amount of space remaining in the page
 #define SIZELEFT(p)	 (indx_t)(MP_UPPER(p) - MP_LOWER(p))
@@ -172,13 +172,13 @@ struct MDB_node
 #define LEAFSIZE(k, d)	 (NODESIZE + (k)->mv_size + (d)->mv_size)
 
 	// Address of node i in page p
-#define NODEPTR(p, i)	 ((MDB_node *)((char *)(p) + MP_PTRS(p)[i] + PAGEBASE))
+#define NODEPTR(p, i)	 (reinterpret_cast<MDB_node*>(reinterpret_cast<char*>(p) + MP_PTRS(p)[i] + PAGEBASE))
 
 	// Address of the key for the node
-#define NODEKEY(node)	 (void *)((node)->mn_data)
+#define NODEKEY(node)	 (reinterpret_cast<void*>((node)->mn_data))
 
 	// Address of the data for a node
-#define NODEDATA(node)	 (void *)((char *)(node)->mn_data + (node)->mn_ksize)
+#define NODEDATA(node)	 (reinterpret_cast<void*>(reinterpret_cast<char*>((node)->mn_data) + (node)->mn_ksize))
 
 	// Get the page number pointed to by a branch node
 #define NODEPGNO(node) \
