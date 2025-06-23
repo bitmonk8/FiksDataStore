@@ -205,3 +205,48 @@ target("mdb_stat")
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
+
+-- Format target for code formatting with clang-format
+target("format")
+    set_kind("phony")
+    on_run(function (target)
+        -- Find all .h and .cpp files in the specified directories
+        local source_dirs = {"Lib", "Tests", "Tools"}
+        local file_patterns = {"*.h", "*.cpp"}
+        local files = {}
+        
+        for _, dir in ipairs(source_dirs) do
+            if os.isdir(dir) then
+                for _, pattern in ipairs(file_patterns) do
+                    local found_files = os.files(path.join(dir, pattern))
+                    for _, file in ipairs(found_files) do
+                        table.insert(files, file)
+                    end
+                end
+            end
+        end
+        
+        if #files == 0 then
+            print("No source files found to format")
+            return
+        end
+        
+        print("Formatting " .. #files .. " source files...")
+        
+        -- Run clang-format on all found files
+        local clang_format_cmd = "clang-format -i"
+        for _, file in ipairs(files) do
+            clang_format_cmd = clang_format_cmd .. " " .. file
+        end
+        
+        -- Execute the formatting command
+        local ok, errors = os.iorunv("clang-format", table.join({"-i"}, files))
+        if not ok then
+            print("Error running clang-format: " .. (errors or "unknown error"))
+            print("Make sure clang-format is installed and available in PATH")
+            os.exit(1)
+        end
+        
+        print("Code formatting completed successfully!")
+        print("Formatted files in directories: " .. table.concat(source_dirs, ", "))
+    end)
