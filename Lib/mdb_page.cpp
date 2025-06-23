@@ -38,7 +38,8 @@ MDB_page* mdb_page_malloc(MDB_txn* txn, unsigned num)
         sz *= num;
         off = sz - psize;
     }
-    if ((ret = (MDB_page*)malloc(sz)) != NULL)
+    ret = (MDB_page*)malloc(sz);
+    if (ret != NULL)
     {
         VGMEMP_ALLOC(env, ret, sz);
         if (!(env->me_flags & MDB_NOMEMINIT))
@@ -207,7 +208,8 @@ mark_done:
                 pgno_t pgno = txn->mt_dbs[i].md_root;
                 if (pgno == P_INVALID)
                     continue;
-                if ((rc = mdb_page_get(m0, pgno, &dp, &level)) != MDB_SUCCESS)
+                rc = mdb_page_get(m0, pgno, &dp, &level);
+                if (rc != MDB_SUCCESS)
                     break;
                 if ((dp->mp_flags & Mask) == pflags && level <= 1)
                     dp->mp_flags ^= P_KEEP;
@@ -552,7 +554,8 @@ int mdb_page_spill(MDB_cursor* m0, MDB_val* key, MDB_val* data)
     }
 
     /* Preserve pages which may soon be dirtied again */
-    if ((rc = mdb_pages_xkeep(m0, P_DIRTY, 1)) != MDB_SUCCESS)
+    rc = mdb_pages_xkeep(m0, P_DIRTY, 1);
+    if (rc != MDB_SUCCESS)
         goto done;
 
     /* Less aggressive spill - we originally spilled the entire dirty list,
@@ -594,14 +597,16 @@ int mdb_page_spill(MDB_cursor* m0, MDB_val* key, MDB_val* data)
             if (tx2)
                 continue;
         }
-        if ((rc = mdb_midl_append(&txn->mt_spill_pgs, pn)))
+        rc = mdb_midl_append(&txn->mt_spill_pgs, pn);
+        if (rc)
             goto done;
         need--;
     }
     mdb_midl_sort(txn->mt_spill_pgs);
 
     /* Flush the spilled part of dirty list */
-    if ((rc = mdb_page_flush(txn, i)) != MDB_SUCCESS)
+    rc = mdb_page_flush(txn, i);
+    if (rc != MDB_SUCCESS)
         goto done;
 
     /* Reset any dirty pages we kept that page_flush didn't see */
@@ -794,14 +799,17 @@ int mdb_page_alloc(MDB_cursor* mc, int num, MDB_page** mp)
         }
         np = m2.mc_pg[m2.mc_top];
         leaf = NODEPTR(np, m2.mc_ki[m2.mc_top]);
-        if ((rc = mdb_node_read(&m2, leaf, &data)) != MDB_SUCCESS)
+        rc = mdb_node_read(&m2, leaf, &data);
+        if (rc != MDB_SUCCESS)
             goto fail;
 
         idl = (MDB_ID*)data.mv_data;
         i = idl[0];
         if (!mop)
         {
-            if (!(env->me_pghead = mop = mdb_midl_alloc(i)))
+            mop = mdb_midl_alloc(i);
+            env->me_pghead = mop;
+            if (!mop)
             {
                 rc = ENOMEM;
                 goto fail;
@@ -809,7 +817,8 @@ int mdb_page_alloc(MDB_cursor* mc, int num, MDB_page** mp)
         }
         else
         {
-            if ((rc = mdb_midl_need(&env->me_pghead, i)) != 0)
+            rc = mdb_midl_need(&env->me_pghead, i);
+            if (rc != 0)
                 goto fail;
             mop = env->me_pghead;
         }
@@ -839,7 +848,7 @@ int mdb_page_alloc(MDB_cursor* mc, int num, MDB_page** mp)
         void* p;
         p = (MDB_page*)(env->me_map + env->me_psize * pgno);
         p = VirtualAlloc(
-            p, env->me_psize * num, MEM_COMMIT, (env->me_flags & MDB_WRITEMAP) ? PAGE_READWRITE : PAGE_READONLY);
+            p, static_cast<SIZE_T>(env->me_psize) * num, MEM_COMMIT, (env->me_flags & MDB_WRITEMAP) ? PAGE_READWRITE : PAGE_READONLY);
         if (!p)
         {
             DPUTS("VirtualAlloc failed");
@@ -856,7 +865,8 @@ search_done:
     }
     else
     {
-        if (!(np = mdb_page_malloc(txn, num)))
+        np = mdb_page_malloc(txn, num);
+        if (!np)
         {
             rc = ENOMEM;
             goto fail;
@@ -900,7 +910,8 @@ void mdb_page_copy(MDB_page* dst, MDB_page* src, unsigned int psize)
     /* If page isn't full, just copy the used portion. Adjust
      * alignment so memcpy may copy words instead of bytes.
      */
-    if ((unused &= -Align) && !IS_LEAF2(src))
+    unused &= -Align;
+    if (unused && !IS_LEAF2(src))
     {
         upper = (upper + PAGEBASE) & -Align;
         memcpy(dst, src, (lower + PAGEBASE + (Align - 1)) & -Align);
@@ -952,7 +963,7 @@ int mdb_page_unspill(MDB_txn* txn, MDB_page* mp, MDB_page** ret)
                 if (!np)
                     return ENOMEM;
                 if (num > 1)
-                    memcpy(np, mp, num * env->me_psize);
+                    memcpy(np, mp, static_cast<size_t>(num) * env->me_psize);
                 else
                     mdb_page_copy(np, mp, env->me_psize);
             }
@@ -1003,7 +1014,10 @@ int mdb_page_touch(MDB_cursor* mc)
             if (np)
                 goto done;
         }
-        if ((rc = mdb_midl_need(&txn->mt_free_pgs, 1)) || (rc = mdb_page_alloc(mc, 1, &np)))
+        rc = mdb_midl_need(&txn->mt_free_pgs, 1);
+        if (!rc)
+            rc = mdb_page_alloc(mc, 1, &np);
+        if (rc)
             goto fail;
         pgno = np->mp_pgno;
         DPRINTF(("touched db %d page %" Yu " -> %" Yu, DDBI(mc), mp->mp_pgno, pgno));
@@ -2467,7 +2481,8 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
              nkeys));
 
     /* Create a right sibling. */
-    if ((rc = mdb_page_new(mc, mp->mp_flags, 1, &rp)))
+    rc = mdb_page_new(mc, mp->mp_flags, 1, &rp);
+    if (rc)
         return rc;
     rp->mp_pad = mp->mp_pad;
     DPRINTF(("new right sibling: page %" Yu, rp->mp_pgno));
@@ -2479,7 +2494,8 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
      */
     if (mc->mc_top < 1)
     {
-        if ((rc = mdb_page_new(mc, P_BRANCH, 1, &pp)))
+        rc = mdb_page_new(mc, P_BRANCH, 1, &pp);
+        if (rc)
             goto done;
         /* shift current top to make room for new parent */
         for (i = mc->mc_snum; i > 0; i--)
@@ -2494,7 +2510,8 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
         new_root = mc->mc_db->md_depth++;
 
         /* Add left (implicit) pointer. */
-        if ((rc = mdb_node_add(mc, 0, NULL, NULL, mp->mp_pgno, 0)) != MDB_SUCCESS)
+        rc = mdb_node_add(mc, 0, NULL, NULL, mp->mp_pgno, 0);
+        if (rc != MDB_SUCCESS)
         {
             /* undo the pre-push */
             mc->mc_pg[0] = mc->mc_pg[1];
@@ -2537,7 +2554,7 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
             /* Move half of the keys to the right sibling */
             x = mc->mc_ki[mc->mc_top] - split_indx;
             ksize = mc->mc_db->md_pad;
-            split = LEAF2KEY(mp, split_indx, ksize);
+            split = LEAF2KEY(mp, split_indx, static_cast<size_t>(ksize));
             rsize = (nkeys - split_indx) * ksize;
             lsize = (nkeys - split_indx) * sizeof(indx_t);
             mp->mp_lower -= lsize;
@@ -2555,10 +2572,10 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
             }
             if (x < 0)
             {
-                ins = LEAF2KEY(mp, mc->mc_ki[mc->mc_top], ksize);
+                ins = LEAF2KEY(mp, mc->mc_ki[mc->mc_top], static_cast<size_t>(ksize));
                 memcpy(rp->mp_ptrs, split, rsize);
                 sepkey.mv_data = rp->mp_ptrs;
-                memmove(ins + ksize, ins, (split_indx - mc->mc_ki[mc->mc_top]) * ksize);
+                memmove(ins + ksize, ins, static_cast<size_t>(split_indx - mc->mc_ki[mc->mc_top]) * ksize);
                 memcpy(ins, newkey->mv_data, ksize);
                 mp->mp_lower += sizeof(indx_t);
                 mp->mp_upper -= ksize - sizeof(indx_t);
@@ -2566,10 +2583,10 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
             else
             {
                 if (x)
-                    memcpy(rp->mp_ptrs, split, x * ksize);
-                ins = LEAF2KEY(rp, x, ksize);
+                    memcpy(rp->mp_ptrs, split, static_cast<size_t>(x) * ksize);
+                ins = LEAF2KEY(rp, x, static_cast<size_t>(ksize));
                 memcpy(ins, newkey->mv_data, ksize);
-                memcpy(ins + ksize, split + x * ksize, rsize - x * ksize);
+                memcpy(ins + ksize, split + static_cast<size_t>(x) * ksize, rsize - static_cast<size_t>(x) * ksize);
                 rp->mp_lower += sizeof(indx_t);
                 rp->mp_upper -= ksize - sizeof(indx_t);
                 mc->mc_ki[mc->mc_top] = x;

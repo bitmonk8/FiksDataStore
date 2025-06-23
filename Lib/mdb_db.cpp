@@ -114,7 +114,8 @@ int mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* db
     }
 
     // Done here so we cannot fail after creating a new DB
-    if ((namedup = mdb_strdup(name)) == NULL)
+    namedup = mdb_strdup(name);
+    if (namedup == NULL)
         return ENOMEM;
 
     if (rc)
@@ -248,7 +249,8 @@ int mdb_drop0(MDB_cursor* mc, int subs)
             }
             else
             {
-                if ((rc = mdb_midl_need(&txn->mt_free_pgs, n)) != 0)
+                rc = mdb_midl_need(&txn->mt_free_pgs, n);
+                if (rc != 0)
                     goto done;
                 for (i = 0; i < n; i++)
                 {

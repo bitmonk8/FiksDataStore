@@ -189,7 +189,9 @@ int ESECT mdb_mutex_failed(MDB_env* env, mdb_mutexref_t mutex, int rc)
         rc2 = mdb_reader_check0(env, rlocked, NULL);
         if (rc2 == 0)
             rc2 = mdb_mutex_consistent(mutex);
-        if (rc || (rc = rc2))
+        if (rc == 0)
+            rc = rc2;
+        if (rc)
         {
             DPRINTF(("LOCK_MUTEX recovery failed, %s", mdb_strerror(rc)));
             UNLOCK_MUTEX(mutex);
@@ -234,9 +236,11 @@ int ESECT mdb_reader_check0(MDB_env* env, int rlocked, int* dead)
                     j = i;
                     if (rmutex)
                     {
-                        if ((rc = LOCK_MUTEX0(rmutex)) != 0)
+                        rc = LOCK_MUTEX0(rmutex);
+                        if (rc != 0)
                         {
-                            if ((rc = mdb_mutex_failed(env, rmutex, rc)))
+                            rc = mdb_mutex_failed(env, rmutex, rc);
+                            if (rc)
                                 break;
                             rdrs = 0;  // the above checked all readers
                         }

@@ -14,7 +14,7 @@
 // Tests for sorted duplicate DBs
 //
 #ifdef _MSC_VER
-#define _CRT_SECURE_NO_WARNINGS
+#define CRT_SECURE_NO_WARNINGS
 #endif
 
 #include "lmdb.h"
@@ -33,7 +33,7 @@
 #endif
 
 #define E(expr) CHECK((rc = (expr)) == MDB_SUCCESS, #expr)
-#define RES(err, expr) ((rc = expr) == (err) || (CHECK(!rc, #expr), 0))
+#define RES(err, expr) ((rc = (expr)) == (err) || (CHECK(!rc, #expr), 0))
 #define CHECK(test, msg)                                                                                               \
     ((test) ? (void)0                                                                                                  \
             : ((void)fprintf(stderr, "TEST FAILED: %s:%d: %s: %s\n", __FILE__, __LINE__, msg, mdb_strerror(rc)),       \

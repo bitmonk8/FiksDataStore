@@ -124,10 +124,16 @@ void mdb_midl_free(MDB_IDL ids)
 void mdb_midl_shrink(MDB_IDL* idp)
 {
     MDB_IDL ids = *idp;
-    if (*(--ids) > MDB_IDL_UM_MAX && (ids = (MDB_IDL)realloc(ids, (MDB_IDL_UM_MAX + 2) * sizeof(MDB_ID))))
+    --ids;
+    if (*ids > MDB_IDL_UM_MAX)
     {
-        *ids++ = MDB_IDL_UM_MAX;
-        *idp = ids;
+        MDB_IDL new_ids = (MDB_IDL)realloc(ids, (MDB_IDL_UM_MAX + 2) * sizeof(MDB_ID));
+        if (new_ids)
+        {
+            ids = new_ids;
+            *ids++ = MDB_IDL_UM_MAX;
+            *idp = ids;
+        }
     }
 }
 
@@ -135,9 +141,10 @@ static int mdb_midl_grow(MDB_IDL* idp, int num)
 {
     MDB_IDL idn = *idp - 1;
     /* grow it */
-    idn = (MDB_IDL)realloc(idn, (*idn + num + 2) * sizeof(MDB_ID));
-    if (!idn)
+    MDB_IDL new_idn = (MDB_IDL)realloc(idn, (*idn + num + 2) * sizeof(MDB_ID));
+    if (!new_idn)
         return ENOMEM;
+    idn = new_idn;
     *idn++ += num;
     *idp = idn;
     return 0;
@@ -150,7 +157,8 @@ int mdb_midl_need(MDB_IDL* idp, unsigned num)
     if (num > ids[-1])
     {
         num = (num + num / 4 + (256 + 2)) & -256;
-        if (!(ids = (MDB_IDL)realloc(ids - 1, num * sizeof(MDB_ID))))
+        ids = (MDB_IDL)realloc(ids - 1, num * sizeof(MDB_ID));
+        if (!ids)
             return ENOMEM;
         *ids++ = num - 2;
         *idp = ids;

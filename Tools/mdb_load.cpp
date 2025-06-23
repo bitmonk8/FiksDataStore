@@ -12,7 +12,7 @@
 // <http://www.OpenLDAP.org/license.html>.
 //
 #ifdef _MSC_VER
-#define _CRT_SECURE_NO_WARNINGS
+#define CRT_SECURE_NO_WARNINGS
 #endif
 
 #include "lmdb.h"
@@ -97,7 +97,7 @@ static void readhdr(void)
         {
             if (!strncmp((char*)dbuf.mv_data + STRLENOF("FORMAT="), "print", STRLENOF("print")))
                 mode |= PRINT;
-            else if (strncmp((char*)dbuf.mv_data + STRLENOF("FORMAT="), "bytevalue", STRLENOF("bytevalue")))
+            else if (strncmp((char*)dbuf.mv_data + STRLENOF("FORMAT="), "bytevalue", STRLENOF("bytevalue")) != 0)
             {
                 fprintf(stderr,
                         "%s: line %" Yu ": unsupported FORMAT %s\n",
@@ -118,7 +118,7 @@ static void readhdr(void)
         }
         else if (!strncmp((char*)dbuf.mv_data, "type=", STRLENOF("type=")))
         {
-            if (strncmp((char*)dbuf.mv_data + STRLENOF("type="), "btree", STRLENOF("btree")))
+            if (strncmp((char*)dbuf.mv_data + STRLENOF("type="), "btree", STRLENOF("btree")) != 0)
             {
                 fprintf(stderr,
                         "%s: line %" Yu ": unsupported type %s\n",

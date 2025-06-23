@@ -250,8 +250,12 @@ int main(int argc, char* argv[])
                     for (--j; j >= 0;)
                     {
                         pg = iptr[j];
-                        for (span = 1; --j >= 0 && iptr[j] == pg + span; span++)
-                            ;
+                        for (span = 1; j > 0; span++)
+                        {
+                            --j;
+                            if (iptr[j] != pg + span)
+                                break;
+                        }
                         printf(span > 1 ? "     %9" Yu "[%" Z "d]\n" : "     %9" Yu "\n", pg, span);
                     }
                 }

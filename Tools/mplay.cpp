@@ -22,12 +22,14 @@
 #include <ctype.h>
 #include <assert.h>
 #include <sys/types.h>
+#ifndef _WIN32
 #include <sys/wait.h>
+#endif
 
 #include "lmdb.h"
 
 #define E(expr) CHECK((rc = (expr)) == MDB_SUCCESS, #expr)
-#define RES(err, expr) ((rc = expr) == (err) || (CHECK(!rc, #expr), 0))
+#define RES(err, expr) ((rc = (expr)) == (err) || (CHECK(!rc, #expr), 0))
 #define CHECK(test, msg) ((test) ? (void)0 : ((void)fprintf(stderr, \
 	"%s:%d: %s: %s\n", __FILE__, __LINE__, msg, mdb_strerror(rc)), abort()))
 
@@ -321,7 +323,7 @@ void child()
 			void *tenv;
 			envpair *ep;
 			mdb_size_t mapsize;
-			sscanf(ptr+SOFF("mdb_env_set_mapsize"), "%p, %"MDB_SCNy(u), &tenv, &mapsize);
+			sscanf(ptr+SOFF("mdb_env_set_mapsize"), "%p, %" MDB_SCNy(u), &tenv, &mapsize);
 			ep = findenv(tenv);
 			E(mdb_env_set_mapsize(ep->renv, mapsize));
 		}
@@ -556,7 +558,8 @@ static pidpair *addpid(int tpid)
 	pids[npids].tpid = tpid;
 	pipe(fdout);
 	pipe(fdin);
-	if ((pid = fork()) == 0)
+	pid = fork();
+	if (pid == 0)
 	{
 		// child
 		fclose(stdin);

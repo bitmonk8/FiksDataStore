@@ -52,7 +52,11 @@ static void mdb_env_reader_dest(void* ptr);
 #ifdef _WIN32
 typedef wchar_t mdb_nchar_t;
 #define MDB_NAME(str) L##str
+// Suppress deprecation warning for wcscpy - we know the buffer sizes
+#pragma warning(push)
+#pragma warning(disable: 4996)
 #define mdb_name_cpy wcscpy
+#pragma warning(pop)
 #else
 // Character type for file names: char on Unix, wchar_t on Windows
 typedef char mdb_nchar_t;
@@ -89,8 +93,9 @@ void NTAPI mdb_tls_callback(PVOID module, DWORD reason, PVOID ptr)
     switch (reason)
     {
     case DLL_PROCESS_ATTACH:
-        break;
     case DLL_THREAD_ATTACH:
+    case DLL_PROCESS_DETACH:
+        // No action needed for these cases
         break;
     case DLL_THREAD_DETACH:
         for (i = 0; i < mdb_tls_nkeys; i++)
@@ -102,7 +107,8 @@ void NTAPI mdb_tls_callback(PVOID module, DWORD reason, PVOID ptr)
             }
         }
         break;
-    case DLL_PROCESS_DETACH:
+    default:
+        // Handle any unexpected values
         break;
     }
 }
@@ -123,7 +129,7 @@ typedef NTSTATUS(WINAPI NtCreateSectionFunc)(OUT PHANDLE sh,
                                              IN ULONG aa,
                                              IN HANDLE fh OPTIONAL);
 
-typedef enum _SECTION_INHERIT
+typedef enum SECTION_INHERIT_ENUM
 {
     ViewShare = 1,
     ViewUnmap = 2
@@ -322,8 +328,17 @@ static int ESECT mdb_fopen(const MDB_env* env, MDB_name* fname, enum mdb_fopen_t
 #endif
 
     if (fname->mn_alloced)  // modifiable copy
+    {
+#ifdef _WIN32
+#pragma warning(push)
+#pragma warning(disable: 4996) // Suppress deprecation warning for wcscpy
+#endif
         mdb_name_cpy(fname->mn_val + fname->mn_len,
                      mdb_suffixes[which == MDB_O_LOCKS][F_ISSET(env->me_flags, MDB_NOSUBDIR)]);
+#ifdef _WIN32
+#pragma warning(pop)
+#endif
+    }
 
     // The directory must already exist.  Usually the file need not.
     // MDB_O_META requires the file because we already created it using
@@ -419,16 +434,22 @@ int mdb_env_sync0(MDB_env* env, int force, pgno_t numpgs)
         {
             int flags = ((env->me_flags & MDB_MAPASYNC) && !force) ? MS_ASYNC : MS_SYNC;
             if (MDB_MSYNC(env->me_map, env->me_psize * numpgs, flags))
+            {
                 rc = ErrCode();
+            }
 #if defined(_WIN32) || defined(__APPLE__)
             else if (flags == MS_SYNC && MDB_FDATASYNC(env->me_fd))
+            {
                 rc = ErrCode();
+            }
 #endif
         }
         else
         {
             if (MDB_FDATASYNC(env->me_fd))
+            {
                 rc = ErrCode();
+            }
         }
     }
     return rc;
@@ -553,8 +574,8 @@ int ESECT mdb_env_init_meta(MDB_env* env, MDB_meta* meta)
 #define DO_PWRITE(rc, fd, ptr, size, len, pos)                                                                         \
     do                                                                                                                 \
     {                                                                                                                  \
-        ov.Offset = pos;                                                                                               \
-        rc = WriteFile(fd, ptr, size, &len, &ov);                                                                      \
+        ov.Offset = (pos);                                                                                               \
+        (rc) = WriteFile((fd), (ptr), (size), &(len), &ov);                                                                      \
     } while (0)
 #else
     int len;
@@ -939,8 +960,15 @@ int ESECT mdb_env_open2(MDB_env* env, int prev)
 
 #ifdef _WIN32
     // See if we should use QueryLimited
-    rc = GetVersion();
-    if ((rc & 0xff) > 5)
+    // Use GetVersionEx instead of deprecated GetVersion
+    OSVERSIONINFO osvi;
+    ZeroMemory(&osvi, sizeof(OSVERSIONINFO));
+    osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+    
+#pragma warning(push)
+#pragma warning(disable: 4996) // Suppress deprecation warning
+    if (GetVersionEx(&osvi) && osvi.dwMajorVersion > 5)
+#pragma warning(pop)
         env->me_pidquery = MDB_PROCESS_QUERY_LIMITED_INFORMATION;
     else
         env->me_pidquery = PROCESS_QUERY_INFORMATION;
@@ -963,7 +991,8 @@ int ESECT mdb_env_open2(MDB_env* env, int prev)
     env->ovs = 0;
 #endif  // _WIN32
 
-    if ((i = mdb_env_read_header(env, prev, &meta)) != 0)
+    i = mdb_env_read_header(env, prev, &meta);
+    if (i != 0)
     {
         if (i != ENOENT)
             return i;
@@ -1181,7 +1210,10 @@ int ESECT mdb_env_excl_lock(MDB_env* env, int* excl)
 void ESECT mdb_env_mname_init(MDB_env* env)
 {
     char* nm = env->me_mutexname;
+#pragma warning(push)
+#pragma warning(disable: 4996) // Suppress deprecation warning for strcpy
     strcpy(nm, MUTEXNAME_PREFIX);
+#pragma warning(pop)
     mdb_pack85(env->me_txns->mti_mutexid, nm + sizeof(MUTEXNAME_PREFIX));
 }
 
@@ -1240,7 +1272,8 @@ int ESECT mdb_env_setup_locks(MDB_env* env, MDB_name* fname, int mode, int* excl
 
     // Try to get exclusive lock. If we succeed, then
     // nobody is using the lock region and we should initialize it.
-    if ((rc = mdb_env_excl_lock(env, excl)))
+    rc = mdb_env_excl_lock(env, excl);
+    if (rc)
         goto fail;
 
 #ifdef _WIN32
@@ -1495,8 +1528,9 @@ int ESECT mdb_env_open(MDB_env* env, const char* path, unsigned int flags, mdb_m
     }
     else
     {
-        if (!((env->me_free_pgs = mdb_midl_alloc(MDB_IDL_UM_MAX)) &&
-              (env->me_dirty_list = (MDB_ID2L)calloc(MDB_IDL_UM_SIZE, sizeof(MDB_ID2)))))
+        env->me_free_pgs = mdb_midl_alloc(MDB_IDL_UM_MAX);
+        env->me_dirty_list = (MDB_ID2L)calloc(MDB_IDL_UM_SIZE, sizeof(MDB_ID2));
+        if (!(env->me_free_pgs && env->me_dirty_list))
             rc = ENOMEM;
     }
 
@@ -1544,7 +1578,8 @@ int ESECT mdb_env_open(MDB_env* env, const char* path, unsigned int flags, mdb_m
             goto leave;
     }
 
-    if ((rc = mdb_env_open2(env, flags & MDB_PREVSNAPSHOT)) == MDB_SUCCESS)
+    rc = mdb_env_open2(env, flags & MDB_PREVSNAPSHOT);
+    if (rc == MDB_SUCCESS)
     {
         // Synchronous fd for meta writes. Needed even with
         // MDB_NOSYNC/MDB_NOMETASYNC, in case these get reset.
@@ -1566,7 +1601,9 @@ int ESECT mdb_env_open(MDB_env* env, const char* path, unsigned int flags, mdb_m
             MDB_txn* txn;
             int tsize = sizeof(MDB_txn),
                 size = tsize + env->me_maxdbs * (sizeof(MDB_db) + sizeof(MDB_cursor*) + sizeof(unsigned int) + 1);
-            if ((env->me_pbuf = calloc(1, env->me_psize)) && (txn = (MDB_txn*)calloc(1, size)))
+            env->me_pbuf = calloc(1, env->me_psize);
+            txn = (MDB_txn*)calloc(1, size);
+            if (env->me_pbuf && txn)
             {
                 txn->mt_dbs = (MDB_db*)((char*)txn + tsize);
                 txn->mt_cursors = (MDB_cursor**)(txn->mt_dbs + env->me_maxdbs);
@@ -1772,7 +1809,7 @@ THREAD_RET ESECT CALL_CONV mdb_env_copythr(void* arg)
     int toggle = 0, wsize, rc;
 #ifdef _WIN32
     DWORD len;
-#define DO_WRITE(rc, fd, ptr, w2, len) rc = WriteFile(fd, ptr, w2, &len, NULL)
+#define DO_WRITE(rc, fd, ptr, w2, len) (rc) = WriteFile((fd), (ptr), (w2), &(len), NULL)
 #else
     int len;
 #define DO_WRITE(rc, fd, ptr, w2, len)                                                                                 \
@@ -1899,7 +1936,7 @@ int ESECT mdb_env_cwalk(mdb_copy* my, pgno_t* pg, int flags)
         return rc;
 
     // Make cursor pages writable
-    buf = ptr = (char*)malloc(my->mc_env->me_psize * mc.mc_snum);
+    buf = ptr = (char*)malloc(static_cast<size_t>(my->mc_env->me_psize) * mc.mc_snum);
     if (buf == NULL)
         return ENOMEM;
 
@@ -2061,12 +2098,14 @@ int ESECT mdb_env_copyfd1(MDB_env* env, HANDLE fd)
     int rc = MDB_SUCCESS;
 
 #ifdef _WIN32
-    if (!(my.mc_mutex = CreateMutex(NULL, FALSE, NULL)) || !(my.mc_cond = CreateEvent(NULL, FALSE, FALSE, NULL)))
+    my.mc_mutex = CreateMutex(NULL, FALSE, NULL);
+    my.mc_cond = CreateEvent(NULL, FALSE, FALSE, NULL);
+    if (!my.mc_mutex || !my.mc_cond)
     {
         rc = ErrCode();
         goto done;
     }
-    my.mc_wbuf[0] = (char*)_aligned_malloc(MDB_WBUF * 2, env->me_os_psize);
+    my.mc_wbuf[0] = (char*)_aligned_malloc(static_cast<size_t>(MDB_WBUF) * 2, env->me_os_psize);
     if (my.mc_wbuf[0] == NULL)
     {
         // _aligned_malloc() sets errno, but we use Windows error codes
@@ -2094,8 +2133,8 @@ int ESECT mdb_env_copyfd1(MDB_env* env, HANDLE fd)
     }
 #endif
 #endif
-    memset(my.mc_wbuf[0], 0, MDB_WBUF * 2);
-    my.mc_wbuf[1] = my.mc_wbuf[0] + MDB_WBUF;
+    memset(my.mc_wbuf[0], 0, static_cast<size_t>(MDB_WBUF) * 2);
+    my.mc_wbuf[1] = my.mc_wbuf[0] + static_cast<ptrdiff_t>(MDB_WBUF);
     my.mc_next_pgno = NUM_METAS;
     my.mc_env = env;
     my.mc_fd = fd;
@@ -2108,7 +2147,7 @@ int ESECT mdb_env_copyfd1(MDB_env* env, HANDLE fd)
         goto finish;
 
     mp = (MDB_page*)my.mc_wbuf[0];
-    memset(mp, 0, NUM_METAS * env->me_psize);
+    memset(mp, 0, static_cast<size_t>(NUM_METAS) * env->me_psize);
     mp->mp_pgno = 0;
     mp->mp_flags = P_META;
     mm = (MDB_meta*)METADATA(mp);
@@ -2216,7 +2255,7 @@ int ESECT mdb_env_copyfd0(MDB_env* env, HANDLE fd)
     char* ptr;
 #ifdef _WIN32
     DWORD len, w2;
-#define DO_WRITE(rc, fd, ptr, w2, len) rc = WriteFile(fd, ptr, w2, &len, NULL)
+#define DO_WRITE(rc, fd, ptr, w2, len) (rc) = WriteFile((fd), (ptr), (w2), &(len), NULL)
 #else
     ssize_t len;
     size_t w2;
@@ -2238,7 +2277,8 @@ int ESECT mdb_env_copyfd0(MDB_env* env, HANDLE fd)
 
         // Temporarily block writers until we snapshot the meta pages
         wmutex = env->me_wmutex;
-        if (LOCK_MUTEX(rc, env, wmutex))
+        rc = LOCK_MUTEX0(wmutex);
+        if (rc && (env->me_flags & MDB_FATAL_ERROR))
             goto leave;
 
         rc = mdb_txn_renew0(txn);
@@ -2249,7 +2289,7 @@ int ESECT mdb_env_copyfd0(MDB_env* env, HANDLE fd)
         }
     }
 
-    wsize = env->me_psize * NUM_METAS;
+    wsize = static_cast<mdb_size_t>(env->me_psize) * NUM_METAS;
     ptr = env->me_map;
     w2 = wsize;
     while (w2 > 0)
@@ -2283,7 +2323,8 @@ int ESECT mdb_env_copyfd0(MDB_env* env, HANDLE fd)
     w3 = txn->mt_next_pgno * env->me_psize;
     {
         mdb_size_t fsize = 0;
-        if ((rc = mdb_fsize(env->me_fd, &fsize)))
+        rc = mdb_fsize(env->me_fd, &fsize);
+        if (rc)
             goto leave;
         if (w3 > fsize)
             w3 = fsize;
