@@ -654,7 +654,7 @@ int mdb_env_write_meta(MDB_txn* txn)
         if (!(flags & (MDB_NOMETASYNC | MDB_NOSYNC)))
         {
             unsigned meta_size = env->me_psize;
-            rc = (env->me_flags & MDB_MAPASYNC) ? MS_ASYNC : MS_SYNC;
+            int rc = (env->me_flags & MDB_MAPASYNC) ? MS_ASYNC : MS_SYNC;
             ptr = (char*)mp - PAGEHDRSZ;
             // POSIX msync() requires ptr = start of OS page
             r2 = (ptr - env->me_map) & (env->me_os_psize - 1);
