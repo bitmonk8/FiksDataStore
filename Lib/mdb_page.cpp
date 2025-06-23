@@ -915,7 +915,8 @@ void mdb_page_copy(MDB_page* dst, MDB_page* src, unsigned int psize)
     {
         upper = (upper + PAGEBASE) & -Align;
         memcpy(dst, src, (lower + PAGEBASE + (Align - 1)) & -Align);
-        memcpy((pgno_t*)((char*)dst + upper), (pgno_t*)((char*)src + upper), psize - upper);
+        memcpy(reinterpret_cast<pgno_t*>(reinterpret_cast<char*>(dst) + upper),
+               reinterpret_cast<pgno_t*>(reinterpret_cast<char*>(src) + upper), psize - upper);
     }
     else
     {
@@ -1245,17 +1246,20 @@ int mdb_page_search_root(MDB_cursor* mc, MDB_val* key, int flags)
         mdb_cassert(mc, i < NUMKEYS(mp));
         node = NODEPTR(mp, i);
 
-        if ((rc = mdb_page_get(mc, NODEPGNO(node), &mp, NULL)) != 0)
+        rc = mdb_page_get(mc, NODEPGNO(node), &mp, NULL);
+        if (rc != 0)
             return rc;
 
         mc->mc_ki[mc->mc_top] = i;
-        if ((rc = mdb_cursor_push(mc, mp)))
+        rc = mdb_cursor_push(mc, mp);
+        if (rc)
             return rc;
 
     ready:
         if (flags & MDB_PS_MODIFY)
         {
-            if ((rc = mdb_page_touch(mc)) != 0)
+            rc = mdb_page_touch(mc);
+            if (rc != 0)
                 return rc;
             mp = mc->mc_pg[mc->mc_top];
         }
@@ -1287,11 +1291,13 @@ int mdb_page_search_lowest(MDB_cursor* mc)
     MDB_node* node = NODEPTR(mp, 0);
     int rc;
 
-    if ((rc = mdb_page_get(mc, NODEPGNO(node), &mp, NULL)) != 0)
+    rc = mdb_page_get(mc, NODEPGNO(node), &mp, NULL);
+    if (rc != 0)
         return rc;
 
     mc->mc_ki[mc->mc_top] = 0;
-    if ((rc = mdb_cursor_push(mc, mp)))
+    rc = mdb_cursor_push(mc, mp);
+    if (rc)
         return rc;
     return mdb_page_search_root(mc, NULL, MDB_PS_FIRST);
 }
@@ -1361,7 +1367,8 @@ int mdb_page_search(MDB_cursor* mc, MDB_val* key, int flags)
     mdb_cassert(mc, root > 1);
     if (!mc->mc_pg[0] || mc->mc_pg[0]->mp_pgno != root)
     {
-        if ((rc = mdb_page_get(mc, root, &mc->mc_pg[0], NULL)) != 0)
+        rc = mdb_page_get(mc, root, &mc->mc_pg[0], NULL);
+        if (rc != 0)
             return rc;
     }
 
@@ -1372,7 +1379,8 @@ int mdb_page_search(MDB_cursor* mc, MDB_val* key, int flags)
 
     if (flags & MDB_PS_MODIFY)
     {
-        if ((rc = mdb_page_touch(mc)))
+        rc = mdb_page_touch(mc);
+        if (rc)
             return rc;
     }
 
@@ -1401,8 +1409,13 @@ int mdb_ovpage_free(MDB_cursor* mc, MDB_page* mp)
     // Unsupported in nested txns: They would need to hide the page
     // range in ancestor txns' dirty and spilled lists.
     //
+    bool spill_condition = false;
+    if (sl) {
+        x = mdb_midl_search(sl, pn);
+        spill_condition = x <= sl[0] && sl[x] == pn;
+    }
     if (env->me_pghead && !txn->mt_parent &&
-        ((mp->mp_flags & P_DIRTY) || (sl && (x = mdb_midl_search(sl, pn)) <= sl[0] && sl[x] == pn)))
+        ((mp->mp_flags & P_DIRTY) || (sl && spill_condition)))
     {
         unsigned i, j;
         pgno_t* mop;
@@ -1476,7 +1489,8 @@ int mdb_page_new(MDB_cursor* mc, uint32_t flags, int num, MDB_page** mp)
     MDB_page* np;
     int rc;
 
-    if ((rc = mdb_page_alloc(mc, num, &np)))
+    rc = mdb_page_alloc(mc, num, &np);
+    if (rc)
         return rc;
     DPRINTF(("allocated new mpage %" Yu ", page size %u", np->mp_pgno, mc->mc_txn->mt_env->me_psize));
     np->mp_flags = flags | P_DIRTY;
@@ -1588,10 +1602,10 @@ int mdb_node_add(MDB_cursor* mc, indx_t indx, MDB_val* key, MDB_val* data, pgno_
     {
         /* Move higher keys up one slot. */
         int ksize = mc->mc_db->md_pad, dif;
-        char* ptr = LEAF2KEY(mp, indx, ksize);
+        char* ptr = LEAF2KEY(mp, indx, static_cast<size_t>(ksize));
         dif = NUMKEYS(mp) - indx;
         if (dif > 0)
-            memmove(ptr + ksize, ptr, dif * ksize);
+            memmove(ptr + ksize, ptr, static_cast<size_t>(dif) * ksize);
         /* insert new key */
         memcpy(ptr, key->mv_data, ksize);
 
@@ -1623,7 +1637,8 @@ int mdb_node_add(MDB_cursor* mc, indx_t indx, MDB_val* key, MDB_val* data, pgno_
             node_size = EVEN(node_size + sizeof(pgno_t));
             if ((ssize_t)node_size > room)
                 goto full;
-            if ((rc = mdb_page_new(mc, P_OVERFLOW, ovpages, &ofp)))
+            rc = mdb_page_new(mc, P_OVERFLOW, ovpages, &ofp);
+            if (rc)
                 return rc;
             DPRINTF(("allocated overflow page %" Yu, ofp->mp_pgno));
             flags |= F_BIGDATA;
@@ -1716,9 +1731,9 @@ void mdb_node_del(MDB_cursor* mc, int ksize)
     if (IS_LEAF2(mp))
     {
         int x = numkeys - 1 - indx;
-        base = LEAF2KEY(mp, indx, ksize);
+        base = LEAF2KEY(mp, indx, static_cast<size_t>(ksize));
         if (x)
-            memmove(base, base + ksize, x * ksize);
+            memmove(base, base + ksize, static_cast<size_t>(x) * ksize);
         MP_LOWER(mp) -= sizeof(indx_t);
         MP_UPPER(mp) += ksize - sizeof(indx_t);
         return;
@@ -1768,7 +1783,7 @@ void mdb_node_shrink(MDB_page* mp, indx_t indx)
     int i;
 
     node = NODEPTR(mp, indx);
-    sp = (MDB_page*)NODEDATA(node);
+    sp = reinterpret_cast<MDB_page*>(reinterpret_cast<char*>(node->mn_data) + node->mn_ksize);
     delta = SIZELEFT(sp);
     nsize = NODEDSZ(node) - delta;
 
@@ -1781,7 +1796,7 @@ void mdb_node_shrink(MDB_page* mp, indx_t indx)
     }
     else
     {
-        xp = (MDB_page*)((char*)sp + delta); /* destination subpage */
+        xp = reinterpret_cast<MDB_page*>(reinterpret_cast<char*>(sp) + delta); /* destination subpage */
         for (i = NUMKEYS(sp); --i >= 0;)
             MP_PTRS(xp)[i] = MP_PTRS(sp)[i] - delta;
         len = PAGEHDRSZ;
@@ -1791,8 +1806,8 @@ void mdb_node_shrink(MDB_page* mp, indx_t indx)
     SETDSZ(node, nsize);
 
     /* Shift <lower nodes...initial part of subpage> upward */
-    base = (char*)mp + mp->mp_upper + PAGEBASE;
-    memmove(base + delta, base, (char*)sp + len - base);
+    base = reinterpret_cast<char*>(mp) + mp->mp_upper + PAGEBASE;
+    memmove(base + delta, base, reinterpret_cast<char*>(sp) + len - base);
 
     ptr = mp->mp_ptrs[indx];
     for (i = NUMKEYS(mp); --i >= 0;)
@@ -1817,7 +1832,11 @@ int mdb_node_move(MDB_cursor* csrc, MDB_cursor* cdst, int fromleft)
     DKBUF;
 
     /* Mark src and dst as dirty. */
-    if ((rc = mdb_page_touch(csrc)) || (rc = mdb_page_touch(cdst)))
+    rc = mdb_page_touch(csrc);
+    if (rc)
+        return rc;
+    rc = mdb_page_touch(cdst);
+    if (rc)
         return rc;
 
     if (IS_LEAF2(csrc->mc_pg[csrc->mc_top]))
@@ -2088,7 +2107,8 @@ int mdb_page_merge(MDB_cursor* csrc, MDB_cursor* cdst)
     mdb_cassert(csrc, cdst->mc_snum > 1);
 
     /* Mark dst as dirty. */
-    if ((rc = mdb_page_touch(cdst)))
+    rc = mdb_page_touch(cdst);
+    if (rc)
         return rc;
 
     /* get dst page again now that we've touched it. */
@@ -2101,7 +2121,7 @@ int mdb_page_merge(MDB_cursor* csrc, MDB_cursor* cdst)
     {
         key.mv_size = csrc->mc_db->md_pad;
         key.mv_data = METADATA(psrc);
-        for (i = 0; i < NUMKEYS(psrc); i++, j++)
+        for (unsigned int i = 0; i < NUMKEYS(psrc); i++, j++)
         {
             rc = mdb_node_add(cdst, j, &key, NULL, 0, 0);
             if (rc != MDB_SUCCESS)
@@ -2111,7 +2131,7 @@ int mdb_page_merge(MDB_cursor* csrc, MDB_cursor* cdst)
     }
     else
     {
-        for (i = 0; i < NUMKEYS(psrc); i++, j++)
+        for (unsigned int i = 0; i < NUMKEYS(psrc); i++, j++)
         {
             srcnode = NODEPTR(psrc, i);
             if (i == 0 && IS_BRANCH(psrc))
@@ -2555,8 +2575,8 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
             x = mc->mc_ki[mc->mc_top] - split_indx;
             ksize = mc->mc_db->md_pad;
             split = LEAF2KEY(mp, split_indx, static_cast<size_t>(ksize));
-            rsize = (nkeys - split_indx) * ksize;
-            lsize = (nkeys - split_indx) * sizeof(indx_t);
+            rsize = static_cast<unsigned int>(nkeys - split_indx) * static_cast<unsigned int>(ksize);
+            lsize = static_cast<unsigned int>(nkeys - split_indx) * sizeof(indx_t);
             mp->mp_lower -= lsize;
             rp->mp_lower += lsize;
             mp->mp_upper += rsize - lsize;
@@ -2575,7 +2595,7 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
                 ins = LEAF2KEY(mp, mc->mc_ki[mc->mc_top], static_cast<size_t>(ksize));
                 memcpy(rp->mp_ptrs, split, rsize);
                 sepkey.mv_data = rp->mp_ptrs;
-                memmove(ins + ksize, ins, static_cast<size_t>(split_indx - mc->mc_ki[mc->mc_top]) * ksize);
+                memmove(ins + ksize, ins, static_cast<size_t>(split_indx - mc->mc_ki[mc->mc_top]) * static_cast<size_t>(ksize));
                 memcpy(ins, newkey->mv_data, ksize);
                 mp->mp_lower += sizeof(indx_t);
                 mp->mp_upper -= ksize - sizeof(indx_t);
@@ -2669,7 +2689,7 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
                     }
                     else
                     {
-                        node = (MDB_node*)((char*)mp + copy->mp_ptrs[i] + PAGEBASE);
+                        node = reinterpret_cast<MDB_node*>(reinterpret_cast<char*>(mp) + copy->mp_ptrs[i] + PAGEBASE);
                         psize += NODESIZE + NODEKSZ(node) + sizeof(indx_t);
                         if (IS_LEAF(mp))
                         {
@@ -2694,7 +2714,7 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
             }
             else
             {
-                node = (MDB_node*)((char*)mp + copy->mp_ptrs[split_indx] + PAGEBASE);
+                node = reinterpret_cast<MDB_node*>(reinterpret_cast<char*>(mp) + copy->mp_ptrs[split_indx] + PAGEBASE);
                 sepkey.mv_size = node->mn_ksize;
                 sepkey.mv_data = NODEKEY(node);
             }
@@ -2790,7 +2810,7 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
             }
             else
             {
-                node = (MDB_node*)((char*)mp + copy->mp_ptrs[i] + PAGEBASE);
+                node = reinterpret_cast<MDB_node*>(reinterpret_cast<char*>(mp) + copy->mp_ptrs[i] + PAGEBASE);
                 rkey.mv_data = NODEKEY(node);
                 rkey.mv_size = node->mn_ksize;
                 if (IS_LEAF(mp))

@@ -76,7 +76,7 @@ unsigned char mx_dbflag;
 	if (!XCURSOR_INITED(mc) || (mc)->mc_ki[top] >= NUMKEYS(xr_pg)) break; \
 	xr_node = NODEPTR(xr_pg, (mc)->mc_ki[top]); \
 	if ((xr_node->mn_flags & (F_DUPDATA|F_SUBDATA)) == F_DUPDATA) \
-		(mc)->mc_xcursor->mx_cursor.mc_pg[0] = (MDB_page*)(NODEDATA(xr_node)); \
+		(mc)->mc_xcursor->mx_cursor.mc_pg[0] = reinterpret_cast<MDB_page*>(reinterpret_cast<char*>(xr_node->mn_data) + xr_node->mn_ksize); \
 } while (0)
 
 // Perform act while tracking temporary cursor mn

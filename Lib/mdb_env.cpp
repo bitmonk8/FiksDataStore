@@ -433,23 +433,18 @@ int mdb_env_sync0(MDB_env* env, int force, pgno_t numpgs)
         if (env->me_flags & MDB_WRITEMAP)
         {
             int flags = ((env->me_flags & MDB_MAPASYNC) && !force) ? MS_ASYNC : MS_SYNC;
-            if (MDB_MSYNC(env->me_map, env->me_psize * numpgs, flags))
-            {
-                rc = ErrCode();
-            }
+            if (MDB_MSYNC(env->me_map, env->me_psize * numpgs, flags)
 #if defined(_WIN32) || defined(__APPLE__)
-            else if (flags == MS_SYNC && MDB_FDATASYNC(env->me_fd))
-            {
-                rc = ErrCode();
-            }
+                || (flags == MS_SYNC && MDB_FDATASYNC(env->me_fd))
 #endif
-        }
-        else
-        {
-            if (MDB_FDATASYNC(env->me_fd))
+            )
             {
                 rc = ErrCode();
             }
+        }
+        else if (MDB_FDATASYNC(env->me_fd))
+        {
+            rc = ErrCode();
         }
     }
     return rc;
@@ -525,7 +520,7 @@ int ESECT mdb_env_read_header(MDB_env* env, int prev, MDB_meta* meta)
             return MDB_INVALID;
         }
 
-        m = (MDB_meta*)METADATA(p);
+        m = reinterpret_cast<MDB_meta*>(reinterpret_cast<char*>(p) + PAGEHDRSZ);
         if (m->mm_magic != MDB_MAGIC)
         {
             DPUTS("meta has invalid magic");
@@ -598,12 +593,12 @@ int ESECT mdb_env_init_meta(MDB_env* env, MDB_meta* meta)
         return ENOMEM;
     p->mp_pgno = 0;
     p->mp_flags = P_META;
-    *(MDB_meta*)METADATA(p) = *meta;
+    *reinterpret_cast<MDB_meta*>(reinterpret_cast<char*>(p) + PAGEHDRSZ) = *meta;
 
     q = (MDB_page*)((char*)p + psize);
     q->mp_pgno = 1;
     q->mp_flags = P_META;
-    *(MDB_meta*)METADATA(q) = *meta;
+    *reinterpret_cast<MDB_meta*>(reinterpret_cast<char*>(q) + PAGEHDRSZ) = *meta;
 
     DO_PWRITE(rc, env->me_fd, p, psize * NUM_METAS, len, 0);
     if (!rc)
@@ -883,7 +878,7 @@ int ESECT mdb_env_map(MDB_env* env, void* addr)
         return EBUSY;  // TODO: Make a new MDB_* error code?
 
     p = (MDB_page*)env->me_map;
-    env->me_metas[0] = (MDB_meta*)(METADATA(p));
+    env->me_metas[0] = reinterpret_cast<MDB_meta*>(reinterpret_cast<char*>(p) + PAGEHDRSZ);
     env->me_metas[1] = (MDB_meta*)((char*)env->me_metas[0] + env->me_psize);
 
     return MDB_SUCCESS;
@@ -2150,15 +2145,15 @@ int ESECT mdb_env_copyfd1(MDB_env* env, HANDLE fd)
     memset(mp, 0, static_cast<size_t>(NUM_METAS) * env->me_psize);
     mp->mp_pgno = 0;
     mp->mp_flags = P_META;
-    mm = (MDB_meta*)METADATA(mp);
+    mm = reinterpret_cast<MDB_meta*>(reinterpret_cast<char*>(mp) + PAGEHDRSZ);
     mdb_env_init_meta0(env, mm);
     mm->mm_address = env->me_metas[0]->mm_address;
 
     mp = (MDB_page*)(my.mc_wbuf[0] + env->me_psize);
     mp->mp_pgno = 1;
     mp->mp_flags = P_META;
-    *(MDB_meta*)METADATA(mp) = *mm;
-    mm = (MDB_meta*)METADATA(mp);
+    *reinterpret_cast<MDB_meta*>(reinterpret_cast<char*>(mp) + PAGEHDRSZ) = *mm;
+    mm = reinterpret_cast<MDB_meta*>(reinterpret_cast<char*>(mp) + PAGEHDRSZ);
 
     // Set metapage 1 with current main DB
     root = new_root = txn->mt_dbs[MAIN_DBI].md_root;
