@@ -81,7 +81,7 @@ unsigned char mx_dbflag;
 
 // Perform act while tracking temporary cursor mn
 #define WITH_CURSOR_TRACKING(mn, act) do { \
-	MDB_cursor dummy, *tracked, **tp = &(mn).mc_txn->mt_cursors[mn.mc_dbi]; \
+	MDB_cursor dummy, *tracked, **tp = &(mn).mc_txn->mt_cursors[(mn).mc_dbi]; \
 	if ((mn).mc_flags & C_SUB) { \
 		dummy.mc_flags =  C_INITIALIZED; \
 		dummy.mc_xcursor = (MDB_xcursor *)&(mn);	\
@@ -104,8 +104,8 @@ void mdb_cursor_copy(const MDB_cursor *csrc, MDB_cursor *cdst);
 void mdb_cursor_pop(MDB_cursor *mc);
 int	mdb_cursor_push(MDB_cursor *mc, MDB_page *mp);
 
-int	_mdb_cursor_del(MDB_cursor *mc, unsigned int flags);
-int	_mdb_cursor_put(MDB_cursor *mc, MDB_val *key, MDB_val *data, unsigned int flags);
+int	mdb_cursor_del(MDB_cursor *mc, unsigned int flags);
+int	mdb_cursor_put(MDB_cursor *mc, MDB_val *key, MDB_val *data, unsigned int flags);
 
 int	mdb_cursor_del0(MDB_cursor *mc);
 int	mdb_cursor_sibling(MDB_cursor *mc, int move_right);

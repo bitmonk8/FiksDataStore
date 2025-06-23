@@ -22,7 +22,7 @@ struct MDB_xcursor;
 enum Pidlock_op : int;
 
 #ifndef _GNU_SOURCE
-#define _GNU_SOURCE 1
+#define GNU_SOURCE 1
 #endif
 
 #if defined(__WIN64__)
@@ -241,10 +241,10 @@ typedef HANDLE mdb_mutex_t, mdb_mutexref_t;
 #define pthread_key_delete(x)	TlsFree(x)
 #define pthread_getspecific(x)	TlsGetValue(x)
 #define pthread_setspecific(x,y)	(TlsSetValue(x,y) ? 0 : ErrCode())
-#define pthread_mutex_unlock(x)	ReleaseMutex(*x)
-#define pthread_mutex_lock(x)	WaitForSingleObject(*x, INFINITE)
-#define pthread_cond_signal(x)	SetEvent(*x)
-#define pthread_cond_wait(cond,mutex)	do{SignalObjectAndWait(*mutex, *cond, INFINITE, FALSE); WaitForSingleObject(*mutex, INFINITE);}while(0)
+#define pthread_mutex_unlock(x)	ReleaseMutex(*(x))
+#define pthread_mutex_lock(x)	WaitForSingleObject(*(x), INFINITE)
+#define pthread_cond_signal(x)	SetEvent(*(x))
+#define pthread_cond_wait(cond,mutex)	do{SignalObjectAndWait(*(mutex), *(cond), INFINITE, FALSE); WaitForSingleObject(*(mutex), INFINITE);}while(0)
 #define THREAD_CREATE(thr,start,arg) \
 	(((thr) = CreateThread(NULL, 0, start, arg, 0, NULL)) ? 0 : ErrCode())
 #define THREAD_FINISH(thr) \

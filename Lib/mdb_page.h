@@ -229,7 +229,7 @@ struct MDB_node
 	(keyptr)->mv_size = NODEKSZ(node); (keyptr)->mv_data = NODEKEY(node); } }
 
 	// Set the node's key into key.
-#define MDB_GET_KEY2(node, key)	{ key.mv_size = NODEKSZ(node); key.mv_data = NODEKEY(node); }
+#define MDB_GET_KEY2(node, key)	{ (key).mv_size = NODEKSZ(node); (key).mv_data = NODEKEY(node); }
 
 // Page Management Functions
 int  mdb_page_alloc(MDB_cursor *mc, int num, MDB_page **mp);

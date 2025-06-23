@@ -10,7 +10,7 @@ HeaderFileExtensions:
   - h
 ImplementationFileExtensions:
   - cpp
-HeaderFilterRegex: ''
+HeaderFilterRegex: '.*'
 ExcludeHeaderFilterRegex: ''
 FormatStyle:     none
 CheckOptions:
