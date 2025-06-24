@@ -320,7 +320,7 @@ int main(int argc, char* argv[])
             fprintf(stderr, "mdb_cursor_open failed, error %d %s\n", rc, mdb_strerror(rc));
             goto txn_abort;
         }
-        while ((rc = mdb_cursor_get(cursor, &key, NULL, MDB_NEXT_NODUP)) == 0)
+        while ((rc = mdb_cursor_get(cursor, &key, NULL, MDB_NEXT)) == 0)
         {
             char* str;
             MDB_dbi db2;

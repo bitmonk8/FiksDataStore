@@ -44,11 +44,7 @@ struct flagbit
 
 flagbit dbflags[] = {
     {MDB_REVERSEKEY, "reversekey"},
-    {   MDB_DUPSORT,    "dupsort"},
     {MDB_INTEGERKEY, "integerkey"},
-    {  MDB_DUPFIXED,   "dupfixed"},
-    {MDB_INTEGERDUP, "integerdup"},
-    {MDB_REVERSEDUP, "reversedup"},
     {             0,         NULL}
 };
 
@@ -141,9 +137,6 @@ static int dumpit(MDB_txn* txn, MDB_dbi dbi, char* name)
     if (info.me_mapaddr != nullptr)
         printf("mapaddr=%p\n", info.me_mapaddr);
     printf("maxreaders=%u\n", info.me_maxreaders);
-
-    if ((flags & MDB_DUPSORT) != 0U)
-        printf("duplicates=1\n");
 
     for (int flag_idx = 0; dbflags[flag_idx].bit != 0; flag_idx++)
         if ((flags & dbflags[flag_idx].bit) != 0U)
@@ -360,7 +353,7 @@ int main(int argc, char* argv[])
             fprintf(stderr, "mdb_cursor_open failed, error %d %s\n", rc, mdb_strerror(rc));
             goto txn_abort;
         }
-        while ((rc = mdb_cursor_get(cursor, &key, NULL, MDB_NEXT_NODUP)) == 0)
+        while ((rc = mdb_cursor_get(cursor, &key, NULL, MDB_NEXT)) == 0)
         {
             char* str;
             MDB_dbi db2;

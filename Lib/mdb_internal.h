@@ -18,7 +18,6 @@ struct MDB_rxbody;
 struct MDB_txbody;
 struct MDB_txn;
 struct MDB_txninfo;
-struct MDB_xcursor;
 enum Pidlock_op : int;
 
 #ifndef _GNU_SOURCE
@@ -371,18 +370,16 @@ typedef pthread_mutex_t* mdb_mutexref_t;
 // The max size of a key we can write, or 0 for computed max.
 //
 // This macro should normally be left alone or set to 0.
-// Note that a database with big keys or dupsort data cannot be
+// Note that a database with big keys cannot be
 // reliably modified by a liblmdb which uses a smaller max.
 // The default is 511 for backwards compat.
 //
 // Other values are allowed, for backwards compat. However:
 // A value bigger than the computed max can break if you do not
 // know what you are doing, and liblmdb <= 0.9.10 can break when
-// modifying a DB with keys/dupsort data bigger than its max.
+// modifying a DB with keys bigger than its max.
 //
-// Data items in an MDB_DUPSORT database are also limited to
-// this size, since they're actually keys of a sub-DB. Keys and
-// MDB_DUPSORT data items must fit on a node in a regular page.
+// Keys must fit on a node in a regular page.
 //
 #ifndef MDB_MAXKEYSIZE
 #define MDB_MAXKEYSIZE 511
@@ -502,8 +499,7 @@ enum
 #define MDB_VALID 0x8000  // DB handle is valid, for me_dbflags
 #define PERSISTENT_FLAGS (0xffff & ~(MDB_VALID))
 // mdb_dbi_open() flags
-#define VALID_FLAGS                                                                                                    \
-    (MDB_REVERSEKEY | MDB_DUPSORT | MDB_INTEGERKEY | MDB_DUPFIXED | MDB_INTEGERDUP | MDB_REVERSEDUP | MDB_CREATE)
+#define VALID_FLAGS (MDB_REVERSEKEY | MDB_INTEGERKEY | MDB_CREATE)
 
 // Handle for the DB used to track free pages.
 #define FREE_DBI 0

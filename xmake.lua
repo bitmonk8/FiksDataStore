@@ -78,6 +78,7 @@ target("mtest2")
         end
     end)    
 
+
 local testdir3 = path.join(os.tmpdir(), "test3")
 target("mtest3")
     set_kind("binary")
@@ -88,7 +89,7 @@ target("mtest3")
     end
     add_tests("test3", {
         rundir = testdir3,
-        fail_outputs = "TEST FAILED: ", 
+        fail_outputs = "TEST FAILED: ",
         plain = true
     })
     before_test(function (target)
@@ -98,73 +99,7 @@ target("mtest3")
         if os.isdir(testdir3) then
             os.rmdir(testdir3)
         end
-    end)    
-
-local testdir4 = path.join(os.tmpdir(), "test4")
-target("mtest4")
-    set_kind("binary")
-    add_files("Tests/mtest4.cpp")
-    add_deps("fiksstore")
-    if is_plat("windows") then
-        add_syslinks("advapi32")
-    end
-    add_tests("test4", {
-        rundir = testdir4,
-        fail_outputs = "TEST FAILED: ", 
-        plain = true
-    })
-    before_test(function (target)
-        os.mkdir(testdir4)
     end)
-    after_test(function (target)
-        if os.isdir(testdir4) then
-            os.rmdir(testdir4)
-        end
-    end)    
-
-local testdir5 = path.join(os.tmpdir(), "test5")
-target("mtest5")
-    set_kind("binary")
-    add_files("Tests/mtest5.cpp")
-    add_deps("fiksstore")
-    if is_plat("windows") then
-        add_syslinks("advapi32")
-    end
-    add_tests("test5", {
-        rundir = testdir5,
-        fail_outputs = "TEST FAILED: ", 
-        plain = true
-    })
-    before_test(function (target)
-        os.mkdir(testdir5)
-    end)
-    after_test(function (target)
-        if os.isdir(testdir5) then
-            os.rmdir(testdir5)
-        end
-    end)    
-
-local testdir6 = path.join(os.tmpdir(), "test6")
-target("mtest6")
-    set_kind("binary")
-    add_files("Tests/mtest6.cpp")
-    add_deps("fiksstore")
-    if is_plat("windows") then
-        add_syslinks("advapi32")
-    end
-    add_tests("test6", {
-        rundir = testdir6,
-        fail_outputs = "TEST FAILED: ", 
-        plain = true
-    })
-    before_test(function (target)
-        os.mkdir(testdir6)
-    end)
-    after_test(function (target)
-        if os.isdir(testdir6) then
-            os.rmdir(testdir6)
-        end
-    end)    
 
 target("mdb_copy")
     set_kind("binary")

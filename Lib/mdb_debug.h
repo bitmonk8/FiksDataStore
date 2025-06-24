@@ -55,7 +55,7 @@ extern txnid_t mdb_debug_start;
 //	This is used for printing a hex dump of a key's contents.
 #define DKBUF char kbuf[DKBUF_MAXKEYSIZE * 2 + 1]
 //	A data value buffer.
-//	This is used for printing a hex dump of a #MDB_DUPSORT value's contents.
+//	This is used for printing a hex dump of a data value's contents.
 #define DDBUF char dbuf[DKBUF_MAXKEYSIZE * 2 + 1 + 2]
 //	Display a key in hex.
 //	Invoke a function to display a key in hex.

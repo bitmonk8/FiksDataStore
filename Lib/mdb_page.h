@@ -14,7 +14,7 @@ struct MDB_page
         pgno_t p_pgno;            // page number
         struct MDB_page* p_next;  // for in-memory list of freed pages
     } mp_p;
-    uint16_t mp_pad;    // key size if this is a LEAF2 page
+    uint16_t mp_pad;    // padding for alignment
     uint16_t mp_flags;  // mdb_page
 #define mp_lower mp_pb.pb.pb_lower
 #define mp_upper mp_pb.pb.pb_upper
@@ -65,9 +65,8 @@ struct MDB_page2
 #define P_LEAF 0x02      // leaf page
 #define P_OVERFLOW 0x04  // overflow page
 #define P_META 0x08      // meta page
-#define P_DIRTY 0x10     // dirty page, also set for P_SUBP pages
-#define P_LEAF2 0x20     // for MDB_DUPFIXED records
-#define P_SUBP 0x40      // for MDB_DUPSORT sub-pages
+#define P_DIRTY 0x10     // dirty page
+#define P_SUBP 0x02      // for sub-page (removed but kept for compatibility)
 #define P_LOOSE 0x4000   // page was dirtied then freed, can be reused
 #define P_KEEP 0x8000    // leave this page alone during spill
 
@@ -77,7 +76,6 @@ struct MDB_page2
 #define MDB_PS_FIRST 4
 #define MDB_PS_LAST 8
 
-#define MDB_SPLIT_REPLACE MDB_APPENDDUP  // newkey is not new
 
 /* from mdb.c, for MDB_cursor */
 #define C_INITIALIZED 0x01           // cursor has been initialized and is valid
@@ -100,13 +98,12 @@ struct MDB_page2
 /* from mdb.c, for MDB_node */
 #define F_BIGDATA 0x01  // data put on overflow page
 #define F_SUBDATA 0x02  // data is a sub-database
-#define F_DUPDATA 0x04  // data has duplicates
-#define NODE_ADD_FLAGS (F_DUPDATA | F_SUBDATA | MDB_RESERVE | MDB_APPEND)
+#define F_DUPDATA 0x04  // data has duplicates (removed but kept for compatibility)
+#define NODE_ADD_FLAGS (F_SUBDATA | MDB_RESERVE | MDB_APPEND)
 
-// The address of a key in a LEAF2 page.
-// LEAF2 pages are used for MDB_DUPFIXED sorted-duplicate sub-DBs.
-// There are no node headers, keys are stored contiguously.
-#define LEAF2KEY(p, i, ks) (reinterpret_cast<char*>(p) + PAGEHDRSZ + ((i) * (ks)))
+// Split flags
+#define MDB_SPLIT_REPLACE 0x01  // replace existing item (removed but kept for compatibility)
+
 
 // The amount of space remaining in the page
 #define SIZELEFT(p) (indx_t)(MP_UPPER(p) - MP_LOWER(p))
@@ -119,14 +116,10 @@ struct MDB_page2
 
 // Test if a page is a leaf page
 #define IS_LEAF(p) F_ISSET(MP_FLAGS(p), P_LEAF)
-// Test if a page is a LEAF2 page
-#define IS_LEAF2(p) F_ISSET(MP_FLAGS(p), P_LEAF2)
 // Test if a page is a branch page
 #define IS_BRANCH(p) F_ISSET(MP_FLAGS(p), P_BRANCH)
 // Test if a page is an overflow page
 #define IS_OVERFLOW(p) F_ISSET(MP_FLAGS(p), P_OVERFLOW)
-// Test if a page is a sub page
-#define IS_SUBP(p) F_ISSET(MP_FLAGS(p), P_SUBP)
 
 // The number of overflow pages needed to store the given size.
 #define OVPAGES(size, psize) ((PAGEHDRSZ - 1 + (size)) / (psize) + 1)
@@ -136,7 +129,7 @@ struct MDB_page2
 #define NEXT_LOOSE_PAGE(p) (*(MDB_page**)((p) + 2))
 
 // Header for a single key/data pair within a page.
-// Used in pages of type P_BRANCH and P_LEAF without P_LEAF2.
+// Used in pages of type P_BRANCH and P_LEAF.
 // We guarantee 2-byte alignment for 'MDB_node's.
 //
 // mn_lo and mn_hi are used for data size on leaf nodes, and for child
@@ -146,8 +139,7 @@ struct MDB_page2
 //
 // Leaf node flags describe node contents. F_BIGDATA says the node's
 // data part is the page number of an overflow page with actual data.
-// F_DUPDATA and F_SUBDATA can be combined giving duplicate data in
-// a sub-page/sub-database, and named databases (just F_SUBDATA).
+// F_SUBDATA indicates named databases.
 struct MDB_node
 {
     // part of data size or pgno

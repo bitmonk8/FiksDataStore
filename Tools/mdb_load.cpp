@@ -64,11 +64,7 @@ struct flagbit
 
 flagbit dbflags[] = {
     {MDB_REVERSEKEY, S("reversekey")},
-    {MDB_DUPSORT, S("dupsort")},
     {MDB_INTEGERKEY, S("integerkey")},
-    {MDB_DUPFIXED, S("dupfixed")},
-    {MDB_INTEGERDUP, S("integerdup")},
-    {MDB_REVERSEDUP, S("reversedup")},
     {0, NULL, 0}
 };
 
@@ -465,7 +461,7 @@ int main(int argc, char* argv[])
         }
         else if (strcmp(arg, "-N") == 0)
         {
-            putflags = MDB_NOOVERWRITE | MDB_NODUPDATA;
+            putflags = MDB_NOOVERWRITE;
         }
         else if (strcmp(arg, "-Q") == 0)
         {
@@ -562,8 +558,6 @@ int main(int argc, char* argv[])
         if (append != 0)
         {
             mdb_set_compare(txn, dbi, greater);
-            if ((flags & MDB_DUPSORT) != 0)
-                mdb_set_dupsort(txn, dbi, greater);
         }
 
         rc = mdb_cursor_open(txn, dbi, &mc);
@@ -588,24 +582,7 @@ int main(int argc, char* argv[])
 
             if (append != 0)
             {
-                const int base_append_flag = MDB_APPEND;
-                if ((flags & MDB_DUPSORT) != 0)
-                {
-                    const bool same_key =
-                        (prevk.mv_size == key.mv_size && (memcmp(prevk.mv_data, key.mv_data, key.mv_size) == 0));
-                    if (same_key)
-                        appflag = MDB_CURRENT | MDB_APPENDDUP;
-                    else
-                    {
-                        memcpy(prevk.mv_data, key.mv_data, key.mv_size);
-                        prevk.mv_size = key.mv_size;
-                        appflag = base_append_flag;
-                    }
-                }
-                else
-                {
-                    appflag = base_append_flag;
-                }
+                appflag = MDB_APPEND;
             }
             else
             {

@@ -147,7 +147,7 @@ struct MDB_env
     char* me_map;                   // the memory map of the data file
     MDB_txninfo* me_txns;           // the memory map of the lock file or NULL
     MDB_meta* me_metas[NUM_METAS];  // pointers to the two meta pages
-    void* me_pbuf;                  // scratch area for DUPSORT put()
+    void* me_pbuf;                  // scratch area for put operations
     MDB_txn* me_txn;                // current write transaction
     MDB_txn* me_txn0;               // prealloc'd write transaction
     mdb_size_t me_mapsize;          // size of the data memory map

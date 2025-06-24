@@ -214,8 +214,8 @@ static int mdb_cursor_shadow(MDB_txn* src, MDB_txn* dst)
         if (current_cursor != NULL)
         {
             const size_t base_cursor_size = sizeof(MDB_cursor);
-            const size_t total_cursor_size =
-                (current_cursor->mc_xcursor != nullptr) ? base_cursor_size + sizeof(MDB_xcursor) : base_cursor_size;
+            // No xcursor support - simplified cursor size
+            const size_t total_cursor_size = base_cursor_size;
 
             for (; current_cursor != nullptr;)
             {
@@ -232,12 +232,7 @@ static int mdb_cursor_shadow(MDB_txn* src, MDB_txn* dst)
                 current_cursor->mc_txn = dst;
                 current_cursor->mc_dbflag = &dst->mt_dbflags[i];
 
-                MDB_xcursor* const xcursor = current_cursor->mc_xcursor;
-                if (xcursor != NULL)
-                {
-                    *(MDB_xcursor*)(backup_cursor + 1) = *xcursor;
-                    xcursor->mx_cursor.mc_txn = dst;
-                }
+                // No xcursor support - removed
 
                 current_cursor->mc_next = dst->mt_cursors[i];
                 dst->mt_cursors[i] = current_cursor;
@@ -430,7 +425,6 @@ static void mdb_cursors_close(MDB_txn* txn, unsigned merge)
     MDB_cursor* mc;
     MDB_cursor* next;
     MDB_cursor* bk;
-    MDB_xcursor* mx;
     int i;
 
     for (i = txn->mt_numdbs; --i >= 0;)
@@ -449,17 +443,13 @@ static void mdb_cursors_close(MDB_txn* txn, unsigned merge)
                     mc->mc_txn = bk->mc_txn;
                     mc->mc_db = bk->mc_db;
                     mc->mc_dbflag = bk->mc_dbflag;
-                    mx = mc->mc_xcursor;
-                    if (mx != NULL)
-                        mx->mx_cursor.mc_txn = bk->mc_txn;
+                    // No xcursor support - removed
                 }
                 else
                 {
                     // Abort nested txn
                     *mc = *bk;
-                    mx = mc->mc_xcursor;
-                    if (mx != NULL)
-                        *mx = *(MDB_xcursor*)(bk + 1);
+                    // No xcursor support - removed
                 }
                 mc = bk;
             }

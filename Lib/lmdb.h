@@ -262,8 +262,7 @@ struct MDB_cursor;
 // update operation, or the end of the transaction. Do not modify or
 // free them, they commonly point into the database itself.
 // Key sizes must be between 1 and #mdb_env_get_maxkeysize() inclusive.
-// The same applies to data sizes in databases with the #MDB_DUPSORT flag.
-// Other data items can in theory be from 0 to 0xffffffff bytes long.
+// Data items can in theory be from 0 to 0xffffffff bytes long.
 struct MDB_val
 {
     size_t mv_size;  // size of the data item
@@ -321,18 +320,10 @@ typedef void(MDB_rel_func)(MDB_val* item, void* oldptr, void* newptr, void* relc
 
 // use reverse string keys
 #define MDB_REVERSEKEY 0x02
-// use sorted duplicates
-#define MDB_DUPSORT 0x04
 // numeric keys in native byte order, either unsigned int or #mdb_size_t.
 // (lmdb expects 32-bit int <= size_t <= 32/64-bit mdb_size_t.)
 // The keys must all be of the same size.
 #define MDB_INTEGERKEY 0x08
-// with #MDB_DUPSORT, sorted dup items have fixed size
-#define MDB_DUPFIXED 0x10
-// with #MDB_DUPSORT, dups are #MDB_INTEGERKEY-style integers
-#define MDB_INTEGERDUP 0x20
-// with #MDB_DUPSORT, use reverse string dups
-#define MDB_REVERSEDUP 0x40
 // create DB if not already existing
 #define MDB_CREATE 0x40000
 // @}
@@ -342,10 +333,6 @@ typedef void(MDB_rel_func)(MDB_val* item, void* oldptr, void* newptr, void* relc
 
 // For put: Don't write if the key already exists.
 #define MDB_NOOVERWRITE 0x10
-// Only for #MDB_DUPSORT
-// For put: don't write if the key and data pair already exist.
-// For mdb_cursor_del: remove all duplicate data items.
-#define MDB_NODUPDATA 0x20
 // For mdb_cursor_put: overwrite the current key/data pair
 #define MDB_CURRENT 0x40
 // For put: Just reserve space for data, don't copy it. Return a
@@ -353,10 +340,6 @@ typedef void(MDB_rel_func)(MDB_val* item, void* oldptr, void* newptr, void* relc
 #define MDB_RESERVE 0x10000
 // Data is being appended, don't split full pages.
 #define MDB_APPEND 0x20000
-// Duplicate data is being appended, don't split full pages.
-#define MDB_APPENDDUP 0x40000
-// Store multiple data items in one call. Only for #MDB_DUPFIXED.
-#define MDB_MULTIPLE 0x80000
 // @}
 
 // @defgroup mdb_copy Copy Flags
@@ -372,34 +355,14 @@ typedef void(MDB_rel_func)(MDB_val* item, void* oldptr, void* newptr, void* relc
 // using a cursor.
 typedef enum MDB_cursor_op
 {
-    MDB_FIRST,      // Position at first key/data item
-    MDB_FIRST_DUP,  // Position at first data item of current key.
-    // Only for #MDB_DUPSORT
-    MDB_GET_BOTH,        // Position at key/data pair. Only for #MDB_DUPSORT
-    MDB_GET_BOTH_RANGE,  // position at key, nearest data. Only for #MDB_DUPSORT
-    MDB_GET_CURRENT,     // Return key/data at current cursor position
-    MDB_GET_MULTIPLE,    // Return up to a page of duplicate data items
-    // from current cursor position. Move cursor to prepare
-    // for #MDB_NEXT_MULTIPLE. Only for #MDB_DUPFIXED
-    MDB_LAST,      // Position at last key/data item
-    MDB_LAST_DUP,  // Position at last data item of current key.
-    // Only for #MDB_DUPSORT
-    MDB_NEXT,      // Position at next data item
-    MDB_NEXT_DUP,  // Position at next data item of current key.
-    // Only for #MDB_DUPSORT
-    MDB_NEXT_MULTIPLE,  // Return up to a page of duplicate data items
-    // from next cursor position. Move cursor to prepare
-    // for #MDB_NEXT_MULTIPLE. Only for #MDB_DUPFIXED
-    MDB_NEXT_NODUP,  // Position at first data item of next key
-    MDB_PREV,        // Position at previous data item
-    MDB_PREV_DUP,    // Position at previous data item of current key.
-    // Only for #MDB_DUPSORT
-    MDB_PREV_NODUP,    // Position at last data item of previous key
-    MDB_SET,           // Position at specified key
-    MDB_SET_KEY,       // Position at specified key, return key + data
-    MDB_SET_RANGE,     // Position at first key greater than or equal to specified key.
-    MDB_PREV_MULTIPLE  // Position at previous page and return up to
-    // a page of duplicate data items. Only for #MDB_DUPFIXED
+    MDB_FIRST,        // Position at first key/data item
+    MDB_GET_CURRENT,  // Return key/data at current cursor position
+    MDB_LAST,         // Position at last key/data item
+    MDB_NEXT,         // Position at next data item
+    MDB_PREV,         // Position at previous data item
+    MDB_SET,          // Position at specified key
+    MDB_SET_KEY,      // Position at specified key, return key + data
+    MDB_SET_RANGE     // Position at first key greater than or equal to specified key.
 } MDB_cursor_op;
 
 // @defgroup errors Return Codes
@@ -439,8 +402,7 @@ typedef enum MDB_cursor_op
 // Database contents grew beyond environment mapsize
 #define MDB_MAP_RESIZED (-30785)
 // Operation and DB incompatible, or DB type changed. This can mean:
-// The operation expects an #MDB_DUPSORT / #MDB_DUPFIXED database.
-// Opening a named DB when the unnamed DB has #MDB_DUPSORT / #MDB_INTEGERKEY.
+// Opening a named DB when the unnamed DB has #MDB_INTEGERKEY.
 // Accessing a data record as a database, or vice versa.
 // The database was dropped and recreated with different flags.
 #define MDB_INCOMPATIBLE (-30784)
@@ -448,7 +410,7 @@ typedef enum MDB_cursor_op
 #define MDB_BAD_RSLOT (-30783)
 // Transaction must abort, has a child, or is invalid
 #define MDB_BAD_TXN (-30782)
-// Unsupported size of key/DB name/data, or wrong DUPFIXED size
+// Unsupported size of key/DB name/data
 #define MDB_BAD_VALSIZE (-30781)
 // The specified DBI was changed unexpectedly
 #define MDB_BAD_DBI (-30780)
@@ -859,7 +821,7 @@ int mdb_env_get_maxreaders(MDB_env* env, unsigned int* readers);
 // EINVAL - an invalid parameter was specified, or the environment is already open.
 int mdb_env_set_maxdbs(MDB_env* env, MDB_dbi dbs);
 
-// @brief Get the maximum size of keys and #MDB_DUPSORT data we can write.
+// @brief Get the maximum size of keys we can write.
 // Depends on the compile-time constant #MDB_MAXKEYSIZE. Default 511.
 // See @ref MDB_val.
 // @param[in] env An environment handle returned by #mdb_env_create()
@@ -1033,28 +995,11 @@ int mdb_txn_renew(MDB_txn* txn);
 // Keys are strings to be compared in reverse order, from the end
 // of the strings to the beginning. By default, Keys are treated as strings and
 // compared from beginning to end.
-// #MDB_DUPSORT
-// Duplicate keys may be used in the database. (Or, from another perspective,
-// keys may have multiple data items, stored in sorted order.) By default
-// keys must be unique and may have only a single data item.
 // #MDB_INTEGERKEY
 // Keys are binary integers in native byte order, either unsigned int
 // or #mdb_size_t, and will be sorted as such.
 // (lmdb expects 32-bit int <= size_t <= 32/64-bit mdb_size_t.)
 // The keys must all be of the same size.
-// #MDB_DUPFIXED
-// This flag may only be used in combination with #MDB_DUPSORT. This option
-// tells the library that the data items for this database are all the same
-// size, which allows further optimizations in storage and retrieval. When
-// all data items are the same size, the #MDB_GET_MULTIPLE, #MDB_NEXT_MULTIPLE
-// and #MDB_PREV_MULTIPLE cursor operations may be used to retrieve multiple
-// items at once.
-// #MDB_INTEGERDUP
-// This option specifies that duplicate data items are binary integers,
-// similar to #MDB_INTEGERKEY keys.
-// #MDB_REVERSEDUP
-// This option specifies that duplicate data items should be compared as
-// strings in reverse order.
 // #MDB_CREATE
 // Create the named database if it doesn't exist. This option is not
 // allowed in a read-only transaction or a read-only environment.
@@ -1129,25 +1074,6 @@ int mdb_drop(MDB_txn* txn, MDB_dbi dbi, int del);
 // EINVAL - an invalid parameter was specified.
 int mdb_set_compare(MDB_txn* txn, MDB_dbi dbi, MDB_cmp_func* cmp);
 
-// @brief Set a custom data comparison function for a #MDB_DUPSORT database.
-// This comparison function is called whenever it is necessary to compare a data
-// item specified by the application with a data item currently stored in the database.
-// This function only takes effect if the database was opened with the #MDB_DUPSORT
-// flag.
-// If no comparison function is specified, and no special key flags were specified
-// with #mdb_dbi_open(), the data items are compared lexically, with shorter items collating
-// before longer items.
-// @warning This function must be called before any data access functions are used,
-// otherwise data corruption may occur. The same comparison function must be used by every
-// program accessing the database, every time the database is used.
-// @param[in] txn A transaction handle returned by #mdb_txn_begin()
-// @param[in] dbi A database handle returned by #mdb_dbi_open()
-// @param[in] cmp A #MDB_cmp_func function
-// @return A non-zero error value on failure and 0 on success. Some possible
-// errors are:
-//
-// EINVAL - an invalid parameter was specified.
-int mdb_set_dupsort(MDB_txn* txn, MDB_dbi dbi, MDB_cmp_func* cmp);
 
 // @brief Set a relocation function for a #MDB_FIXEDMAP database.
 // @todo The relocation function is called whenever it is necessary to move the data
@@ -1183,9 +1109,6 @@ int mdb_set_relctx(MDB_txn* txn, MDB_dbi dbi, void* ctx);
 // This function retrieves key/data pairs from the database. The address
 // and length of the data associated with the specified \b key are returned
 // in the structure to which \b data refers.
-// If the database supports duplicate keys (#MDB_DUPSORT) then the
-// first data item for the key will be returned. Retrieval of other
-// items requires the use of #mdb_cursor_get().
 //
 // @note The memory pointed to by the returned values is owned by the
 // database. The caller need not dispose of the memory, and may not
@@ -1206,9 +1129,7 @@ int mdb_get(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data);
 
 // @brief Store items into a database.
 // This function stores key/data pairs in the database. The default behavior
-// is to enter the new key/data pair, replacing any previously existing key
-// if duplicates are disallowed, or adding a duplicate data item if
-// duplicates are allowed (#MDB_DUPSORT).
+// is to enter the new key/data pair, replacing any previously existing key.
 // @param[in] txn A transaction handle returned by #mdb_txn_begin()
 // @param[in] dbi A database handle returned by #mdb_dbi_open()
 // @param[in] key The key to store in the database
@@ -1217,15 +1138,9 @@ int mdb_get(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data);
 // must be set to 0 or by bitwise OR'ing together one or more of the
 // values described here.
 //
-// #MDB_NODUPDATA - enter the new key/data pair only if it does not
-// already appear in the database. This flag may only be specified
-// if the database was opened with #MDB_DUPSORT. The function will
-// return #MDB_KEYEXIST if the key/data pair already appears in the
-// database.
 // #MDB_NOOVERWRITE - enter the new key/data pair only if the key
 // does not already appear in the database. The function will return
-// #MDB_KEYEXIST if the key already appears in the database, even if
-// the database supports duplicates (#MDB_DUPSORT). The \b data
+// #MDB_KEYEXIST if the key already appears in the database. The \b data
 // parameter will be set to point to the existing item.
 // #MDB_RESERVE - reserve space for data of the given size, but
 // don't copy the given data. Instead, return a pointer to the
@@ -1233,13 +1148,11 @@ int mdb_get(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data);
 // the next update operation or the transaction ends. This saves
 // an extra memcpy if the data is being generated later.
 // LMDB does nothing else with this memory, the caller is expected
-// to modify all of the space requested. This flag must not be
-// specified if the database was opened with #MDB_DUPSORT.
+// to modify all of the space requested.
 // #MDB_APPEND - append the given key/data pair to the end of the
 // database. This option allows fast bulk loading when keys are
 // already known to be in the correct order. Loading unsorted keys
 // with this flag will cause a #MDB_KEYEXIST error.
-// #MDB_APPENDDUP - as above, but for sorted dup data.
 //
 // @return A non-zero error value on failure and 0 on success. Some possible
 // errors are:
@@ -1252,14 +1165,9 @@ int mdb_put(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data, unsigned int
 
 // @brief Delete items from a database.
 // This function removes key/data pairs from the database.
-// If the database does not support sorted duplicate data items
-// (#MDB_DUPSORT) the data parameter is ignored.
-// If the database supports sorted duplicates and the data parameter
-// is NULL, all of the duplicate data items for the key will be
-// deleted. Otherwise, if the data parameter is non-NULL
-// only the matching data item will be deleted.
-// This function will return #MDB_NOTFOUND if the specified key/data
-// pair is not in the database.
+// The data parameter is ignored.
+// This function will return #MDB_NOTFOUND if the specified key
+// is not in the database.
 // @param[in] txn A transaction handle returned by #mdb_txn_begin()
 // @param[in] dbi A database handle returned by #mdb_dbi_open()
 // @param[in] key The key to delete from the database
@@ -1352,41 +1260,21 @@ int mdb_cursor_get(MDB_cursor* cursor, MDB_val* key, MDB_val* data, MDB_cursor_o
 //
 // #MDB_CURRENT - replace the item at the current cursor position.
 // The \b key parameter must still be provided, and must match it.
-// If using sorted duplicates (#MDB_DUPSORT) the data item must still
-// sort into the same place. This is intended to be used when the
-// new data is the same size as the old. Otherwise it will simply
-// perform a delete of the old record followed by an insert.
-// #MDB_NODUPDATA - enter the new key/data pair only if it does not
-// already appear in the database. This flag may only be specified
-// if the database was opened with #MDB_DUPSORT. The function will
-// return #MDB_KEYEXIST if the key/data pair already appears in the
-// database.
+// This is intended to be used when the new data is the same size as the old.
+// Otherwise it will simply perform a delete of the old record followed by an insert.
 // #MDB_NOOVERWRITE - enter the new key/data pair only if the key
 // does not already appear in the database. The function will return
-// #MDB_KEYEXIST if the key already appears in the database, even if
-// the database supports duplicates (#MDB_DUPSORT).
+// #MDB_KEYEXIST if the key already appears in the database.
 // #MDB_RESERVE - reserve space for data of the given size, but
 // don't copy the given data. Instead, return a pointer to the
 // reserved space, which the caller can fill in later - before
 // the next update operation or the transaction ends. This saves
-// an extra memcpy if the data is being generated later. This flag
-// must not be specified if the database was opened with #MDB_DUPSORT.
+// an extra memcpy if the data is being generated later.
 // #MDB_APPEND - append the given key/data pair to the end of the
 // database. No key comparisons are performed. This option allows
 // fast bulk loading when keys are already known to be in the
 // correct order. Loading unsorted keys with this flag will cause
 // a #MDB_KEYEXIST error.
-// #MDB_APPENDDUP - as above, but for sorted dup data.
-// #MDB_MULTIPLE - store multiple contiguous data elements in a
-// single request. This flag may only be specified if the database
-// was opened with #MDB_DUPFIXED. The \b data argument must be an
-// array of two MDB_vals. The mv_size of the first MDB_val must be
-// the size of a single data element. The mv_data of the first MDB_val
-// must point to the beginning of the array of contiguous data elements.
-// The mv_size of the second MDB_val must be the count of the number
-// of data elements to store. On return this field will be set to
-// the count of the number of elements actually written. The mv_data
-// of the second MDB_val is unused.
 //
 // @return A non-zero error value on failure and 0 on success. Some possible
 // errors are:
@@ -1405,10 +1293,7 @@ int mdb_cursor_put(MDB_cursor* cursor, MDB_val* key, MDB_val* data, unsigned int
 // this operation.
 // @param[in] cursor A cursor handle returned by #mdb_cursor_open()
 // @param[in] flags Options for this operation. This parameter
-// must be set to 0 or one of the values described here.
-//
-// #MDB_NODUPDATA - delete all of the data items for the current key.
-// This flag may only be specified if the database was opened with #MDB_DUPSORT.
+// must be set to 0.
 //
 // @return A non-zero error value on failure and 0 on success. Some possible
 // errors are:
@@ -1417,16 +1302,6 @@ int mdb_cursor_put(MDB_cursor* cursor, MDB_val* key, MDB_val* data, unsigned int
 // EINVAL - an invalid parameter was specified.
 int mdb_cursor_del(MDB_cursor* cursor, unsigned int flags);
 
-// @brief Return count of duplicates for current key.
-// This call is only valid on databases that support sorted duplicate
-// data items #MDB_DUPSORT.
-// @param[in] cursor A cursor handle returned by #mdb_cursor_open()
-// @param[out] countp Address where the count will be stored
-// @return A non-zero error value on failure and 0 on success. Some possible
-// errors are:
-//
-// EINVAL - cursor is not initialized, or an invalid parameter was specified.
-int mdb_cursor_count(MDB_cursor* cursor, mdb_size_t* countp);
 
 // @brief Compare two data items according to a particular database.
 // This returns a comparison as if the two data items were keys in the
@@ -1438,15 +1313,6 @@ int mdb_cursor_count(MDB_cursor* cursor, mdb_size_t* countp);
 // @return < 0 if a < b, 0 if a == b, > 0 if a > b
 int mdb_cmp(MDB_txn* txn, MDB_dbi dbi, const MDB_val* a, const MDB_val* b);
 
-// @brief Compare two data items according to a particular database.
-// This returns a comparison as if the two items were data items of
-// the specified database. The database must have the #MDB_DUPSORT flag.
-// @param[in] txn A transaction handle returned by #mdb_txn_begin()
-// @param[in] dbi A database handle returned by #mdb_dbi_open()
-// @param[in] a The first item to compare
-// @param[in] b The second item to compare
-// @return < 0 if a < b, 0 if a == b, > 0 if a > b
-int mdb_dcmp(MDB_txn* txn, MDB_dbi dbi, const MDB_val* a, const MDB_val* b);
 
 // @brief A callback function used to print a message from the library.
 // @param[in] msg The string to be printed.

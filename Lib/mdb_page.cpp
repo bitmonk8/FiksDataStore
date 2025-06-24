@@ -947,7 +947,7 @@ void mdb_page_copy(MDB_page* dst, MDB_page* src, unsigned int psize)
      * alignment so memcpy may copy words instead of bytes.
      */
     unused &= -Align;
-    if ((unused != 0U) && !IS_LEAF2(src))
+    if (unused != 0U)
     {
         upper = (upper + PAGEBASE) & -Align;
         memcpy(dst, src, (lower + PAGEBASE + (Align - 1)) & -Align);
@@ -1642,23 +1642,6 @@ int mdb_node_add(MDB_cursor* mc, indx_t indx, MDB_val* key, MDB_val* data, pgno_
              key ? key->mv_size : 0,
              key ? DKEY(key) : "null"));
 
-    if (IS_LEAF2(mp))
-    {
-        /* Move higher keys up one slot. */
-        int ksize = mc->mc_db->md_pad;
-        int dif;
-        char* ptr = LEAF2KEY(mp, indx, static_cast<size_t>(ksize));
-        dif = NUMKEYS(mp) - indx;
-        if (dif > 0)
-            memmove(ptr + ksize, ptr, static_cast<size_t>(dif) * ksize);
-        /* insert new key */
-        memcpy(ptr, key->mv_data, ksize);
-
-        /* Just using these for counting */
-        MP_LOWER(mp) += sizeof(indx_t);
-        MP_UPPER(mp) -= ksize - sizeof(indx_t);
-        return MDB_SUCCESS;
-    }
 
     room = (ssize_t)SIZELEFT(mp) - (ssize_t)sizeof(indx_t);
     if (key != NULL)
@@ -1757,8 +1740,7 @@ full:
 
 // Delete the specified node from a page.
 // mc Cursor pointing to the node to delete.
-// ksize The size of a node. Only used if the page is
-// part of a #MDB_DUPFIXED database.
+// ksize The size of a node (unused parameter).
 //
 void mdb_node_del(MDB_cursor* mc, int ksize)
 {
@@ -1776,16 +1758,6 @@ void mdb_node_del(MDB_cursor* mc, int ksize)
     numkeys = NUMKEYS(mp);
     mdb_cassert(mc, indx < numkeys);
 
-    if (IS_LEAF2(mp))
-    {
-        int x = numkeys - 1 - indx;
-        base = LEAF2KEY(mp, indx, static_cast<size_t>(ksize));
-        if (x != 0)
-            memmove(base, base + ksize, static_cast<size_t>(x) * ksize);
-        MP_LOWER(mp) -= sizeof(indx_t);
-        MP_UPPER(mp) += ksize - sizeof(indx_t);
-        return;
-    }
 
     node = NODEPTR(mp, indx);
     sz = NODESIZE + node->mn_ksize;
@@ -1839,19 +1811,10 @@ void mdb_node_shrink(MDB_page* mp, indx_t indx)
     nsize = NODEDSZ(node) - delta;
 
     /* Prepare to shift upward, set len = length(subpage part to shift) */
-    if (IS_LEAF2(sp))
-    {
-        len = nsize;
-        if ((nsize & 1) != 0U)
-            return; /* do not make the node uneven-sized */
-    }
-    else
-    {
-        xp = reinterpret_cast<MDB_page*>(reinterpret_cast<char*>(sp) + delta); /* destination subpage */
-        for (i = NUMKEYS(sp); --i >= 0;)
-            MP_PTRS(xp)[i] = MP_PTRS(sp)[i] - delta;
-        len = PAGEHDRSZ;
-    }
+    xp = reinterpret_cast<MDB_page*>(reinterpret_cast<char*>(sp) + delta); /* destination subpage */
+    for (i = NUMKEYS(sp); --i >= 0;)
+        MP_PTRS(xp)[i] = MP_PTRS(sp)[i] - delta;
+    len = PAGEHDRSZ;
     MP_UPPER(sp) = MP_LOWER(sp);
     COPY_PGNO(MP_PGNO(sp), mp->mp_pgno);
     SETDSZ(node, nsize);
@@ -1891,16 +1854,6 @@ int mdb_node_move(MDB_cursor* csrc, MDB_cursor* cdst, int fromleft)
     if (rc != 0)
         return rc;
 
-    if (IS_LEAF2(csrc->mc_pg[csrc->mc_top]))
-    {
-        key.mv_size = csrc->mc_db->md_pad;
-        key.mv_data = LEAF2KEY(csrc->mc_pg[csrc->mc_top], csrc->mc_ki[csrc->mc_top], key.mv_size);
-        data.mv_size = 0;
-        data.mv_data = NULL;
-        srcpg = 0;
-        flags = 0;
-    }
-    else
     {
         srcnode = NODEPTR(csrc->mc_pg[csrc->mc_top], csrc->mc_ki[csrc->mc_top]);
         mdb_cassert(csrc, !((size_t)srcnode & 1));
@@ -1914,17 +1867,9 @@ int mdb_node_move(MDB_cursor* csrc, MDB_cursor* cdst, int fromleft)
             rc = mdb_page_search_lowest(csrc);
             if (rc != 0)
                 return rc;
-            if (IS_LEAF2(csrc->mc_pg[csrc->mc_top]))
-            {
-                key.mv_size = csrc->mc_db->md_pad;
-                key.mv_data = LEAF2KEY(csrc->mc_pg[csrc->mc_top], 0, key.mv_size);
-            }
-            else
-            {
-                s2 = NODEPTR(csrc->mc_pg[csrc->mc_top], 0);
-                key.mv_size = NODEKSZ(s2);
-                key.mv_data = NODEKEY(s2);
-            }
+            s2 = NODEPTR(csrc->mc_pg[csrc->mc_top], 0);
+            key.mv_size = NODEKSZ(s2);
+            key.mv_data = NODEKEY(s2);
             csrc->mc_snum = snum--;
             csrc->mc_top = snum;
             csrc->mc_ki[snum] = 0;
@@ -1951,17 +1896,9 @@ int mdb_node_move(MDB_cursor* csrc, MDB_cursor* cdst, int fromleft)
         rc = mdb_page_search_lowest(&mn);
         if (rc != 0)
             return rc;
-        if (IS_LEAF2(mn.mc_pg[mn.mc_top]))
-        {
-            bkey.mv_size = mn.mc_db->md_pad;
-            bkey.mv_data = LEAF2KEY(mn.mc_pg[mn.mc_top], 0, bkey.mv_size);
-        }
-        else
-        {
-            s2 = NODEPTR(mn.mc_pg[mn.mc_top], 0);
-            bkey.mv_size = NODEKSZ(s2);
-            bkey.mv_data = NODEKEY(s2);
-        }
+        s2 = NODEPTR(mn.mc_pg[mn.mc_top], 0);
+        bkey.mv_size = NODEKSZ(s2);
+        bkey.mv_data = NODEKEY(s2);
         mn.mc_snum = snum--;
         mn.mc_top = snum;
         mn.mc_ki[snum] = 0;
@@ -2063,16 +2000,9 @@ int mdb_node_move(MDB_cursor* csrc, MDB_cursor* cdst, int fromleft)
     {
         if (csrc->mc_ki[csrc->mc_top - 1] != 0)
         {
-            if (IS_LEAF2(csrc->mc_pg[csrc->mc_top]))
-            {
-                key.mv_data = LEAF2KEY(csrc->mc_pg[csrc->mc_top], 0, key.mv_size);
-            }
-            else
-            {
-                srcnode = NODEPTR(csrc->mc_pg[csrc->mc_top], 0);
-                key.mv_size = NODEKSZ(srcnode);
-                key.mv_data = NODEKEY(srcnode);
-            }
+            srcnode = NODEPTR(csrc->mc_pg[csrc->mc_top], 0);
+            key.mv_size = NODEKSZ(srcnode);
+            key.mv_data = NODEKEY(srcnode);
             DPRINTF(
                 ("update separator for source page %" Yu " to [%s]", csrc->mc_pg[csrc->mc_top]->mp_pgno, DKEY(&key)));
             mdb_cursor_copy(csrc, &mn);
@@ -2099,16 +2029,9 @@ int mdb_node_move(MDB_cursor* csrc, MDB_cursor* cdst, int fromleft)
     {
         if (cdst->mc_ki[cdst->mc_top - 1] != 0)
         {
-            if (IS_LEAF2(csrc->mc_pg[csrc->mc_top]))
-            {
-                key.mv_data = LEAF2KEY(cdst->mc_pg[cdst->mc_top], 0, key.mv_size);
-            }
-            else
-            {
-                srcnode = NODEPTR(cdst->mc_pg[cdst->mc_top], 0);
-                key.mv_size = NODEKSZ(srcnode);
-                key.mv_data = NODEKEY(srcnode);
-            }
+            srcnode = NODEPTR(cdst->mc_pg[cdst->mc_top], 0);
+            key.mv_size = NODEKSZ(srcnode);
+            key.mv_data = NODEKEY(srcnode);
             DPRINTF(("update separator for destination page %" Yu " to [%s]",
                      cdst->mc_pg[cdst->mc_top]->mp_pgno,
                      DKEY(&key)));
@@ -2174,57 +2097,34 @@ int mdb_page_merge(MDB_cursor* csrc, MDB_cursor* cdst)
     /* Move all nodes from src to dst.
      */
     j = nkeys = NUMKEYS(pdst);
-    if (IS_LEAF2(psrc))
+    for (unsigned int i = 0; i < NUMKEYS(psrc); i++, j++)
     {
-        key.mv_size = csrc->mc_db->md_pad;
-        key.mv_data = METADATA(psrc);
-        for (unsigned int i = 0; i < NUMKEYS(psrc); i++, j++)
+        srcnode = NODEPTR(psrc, i);
+        if (i == 0 && IS_BRANCH(psrc))
         {
-            rc = mdb_node_add(cdst, j, &key, NULL, 0, 0);
-            if (rc != MDB_SUCCESS)
+            MDB_cursor mn;
+            MDB_node* s2;
+            mdb_cursor_copy(csrc, &mn);
+            mn.mc_xcursor = NULL;
+            /* must find the lowest key below src */
+            rc = mdb_page_search_lowest(&mn);
+            if (rc != 0)
                 return rc;
-            key.mv_data = (char*)key.mv_data + key.mv_size;
+            s2 = NODEPTR(mn.mc_pg[mn.mc_top], 0);
+            key.mv_size = NODEKSZ(s2);
+            key.mv_data = NODEKEY(s2);
         }
-    }
-    else
-    {
-        for (unsigned int i = 0; i < NUMKEYS(psrc); i++, j++)
+        else
         {
-            srcnode = NODEPTR(psrc, i);
-            if (i == 0 && IS_BRANCH(psrc))
-            {
-                MDB_cursor mn;
-                MDB_node* s2;
-                mdb_cursor_copy(csrc, &mn);
-                mn.mc_xcursor = NULL;
-                /* must find the lowest key below src */
-                rc = mdb_page_search_lowest(&mn);
-                if (rc != 0)
-                    return rc;
-                if (IS_LEAF2(mn.mc_pg[mn.mc_top]))
-                {
-                    key.mv_size = mn.mc_db->md_pad;
-                    key.mv_data = LEAF2KEY(mn.mc_pg[mn.mc_top], 0, key.mv_size);
-                }
-                else
-                {
-                    s2 = NODEPTR(mn.mc_pg[mn.mc_top], 0);
-                    key.mv_size = NODEKSZ(s2);
-                    key.mv_data = NODEKEY(s2);
-                }
-            }
-            else
-            {
-                key.mv_size = srcnode->mn_ksize;
-                key.mv_data = NODEKEY(srcnode);
-            }
+            key.mv_size = srcnode->mn_ksize;
+            key.mv_data = NODEKEY(srcnode);
+        }
 
-            data.mv_size = NODEDSZ(srcnode);
-            data.mv_data = NODEDATA(srcnode);
-            rc = mdb_node_add(cdst, j, &key, &data, NODEPGNO(srcnode), srcnode->mn_flags);
-            if (rc != MDB_SUCCESS)
-                return rc;
-        }
+        data.mv_size = NODEDSZ(srcnode);
+        data.mv_data = NODEDATA(srcnode);
+        rc = mdb_node_add(cdst, j, &key, &data, NODEPGNO(srcnode), srcnode->mn_flags);
+        if (rc != MDB_SUCCESS)
+            return rc;
     }
 
     DPRINTF(("dst page %" Yu " now has %u keys (%.1f%% filled)",
@@ -2631,58 +2531,6 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
     {
         split_indx = (nkeys + 1) / 2;
 
-        if (IS_LEAF2(rp))
-        {
-            char* split;
-            char* ins;
-            int x;
-            unsigned int lsize;
-            unsigned int rsize;
-            unsigned int ksize;
-            // Move half of the keys to the right sibling
-            x = mc->mc_ki[mc->mc_top] - split_indx;
-            ksize = mc->mc_db->md_pad;
-            split = LEAF2KEY(mp, split_indx, static_cast<size_t>(ksize));
-            rsize = static_cast<unsigned int>(nkeys - split_indx) * ksize;
-            lsize = static_cast<unsigned int>(nkeys - split_indx) * sizeof(indx_t);
-            mp->mp_lower -= lsize;
-            rp->mp_lower += lsize;
-            mp->mp_upper += rsize - lsize;
-            rp->mp_upper -= rsize - lsize;
-            sepkey.mv_size = ksize;
-            if (newindx == split_indx)
-            {
-                sepkey.mv_data = newkey->mv_data;
-            }
-            else
-            {
-                sepkey.mv_data = split;
-            }
-            if (x < 0)
-            {
-                ins = LEAF2KEY(mp, mc->mc_ki[mc->mc_top], static_cast<size_t>(ksize));
-                memcpy(rp->mp_ptrs, split, rsize);
-                sepkey.mv_data = rp->mp_ptrs;
-                memmove(ins + ksize,
-                        ins,
-                        static_cast<size_t>(split_indx - mc->mc_ki[mc->mc_top]) * static_cast<size_t>(ksize));
-                memcpy(ins, newkey->mv_data, ksize);
-                mp->mp_lower += sizeof(indx_t);
-                mp->mp_upper -= ksize - sizeof(indx_t);
-            }
-            else
-            {
-                if (x != 0)
-                    memcpy(rp->mp_ptrs, split, static_cast<size_t>(x) * ksize);
-                ins = LEAF2KEY(rp, x, static_cast<size_t>(ksize));
-                memcpy(ins, newkey->mv_data, ksize);
-                memcpy(ins + ksize, split + (static_cast<size_t>(x) * ksize), rsize - (static_cast<size_t>(x) * ksize));
-                rp->mp_lower += sizeof(indx_t);
-                rp->mp_upper -= ksize - sizeof(indx_t);
-                mc->mc_ki[mc->mc_top] = x;
-            }
-        }
-        else
         {
             // Maximum free space in an empty page
             const int pmax = env->me_psize - PAGEHDRSZ;
@@ -2883,7 +2731,7 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
         for (int i = 0; i < mc->mc_top; i++)
             mc->mc_ki[i] = mn.mc_ki[i];
     }
-    else if (!IS_LEAF2(mp))
+    else
     {
         // Move nodes
         mc->mc_pg[mc->mc_top] = rp;
@@ -2982,20 +2830,18 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
                 newdata->mv_data = NODEDATA(node);
         }
     }
-    else
+
+    if (newindx >= split_indx)
     {
-        if (newindx >= split_indx)
+        mc->mc_pg[mc->mc_top] = rp;
+        mc->mc_ki[ptop]++;
+        // Make sure mc_ki is still valid.
+        if (mn.mc_pg[ptop] != mc->mc_pg[ptop] && mc->mc_ki[ptop] >= NUMKEYS(mc->mc_pg[ptop]))
         {
-            mc->mc_pg[mc->mc_top] = rp;
-            mc->mc_ki[ptop]++;
-            // Make sure mc_ki is still valid.
-            if (mn.mc_pg[ptop] != mc->mc_pg[ptop] && mc->mc_ki[ptop] >= NUMKEYS(mc->mc_pg[ptop]))
+            for (int i = 0; i <= ptop; i++)
             {
-                for (int i = 0; i <= ptop; i++)
-                {
-                    mc->mc_pg[i] = mn.mc_pg[i];
-                    mc->mc_ki[i] = mn.mc_ki[i];
-                }
+                mc->mc_pg[i] = mn.mc_pg[i];
+                mc->mc_ki[i] = mn.mc_ki[i];
             }
         }
     }

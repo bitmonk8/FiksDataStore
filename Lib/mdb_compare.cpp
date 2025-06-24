@@ -12,9 +12,6 @@ int mdb_cmp_long(const MDB_val* a, const MDB_val* b)
 }
 
 // Compare two items pointing at aligned unsigned int's.
-//
-// This is also set as MDB_INTEGERDUP|MDB_DUPFIXED's MDB_dbx.md_dcmp,
-// but mdb_cmp_clong() is called instead if the data type is mdb_size_t.
 int mdb_cmp_int(const MDB_val* a, const MDB_val* b)
 {
     return (*(unsigned int*)a->mv_data < *(unsigned int*)b->mv_data)

@@ -9,8 +9,7 @@
 
 // Set the default comparison functions for a database.
 // Called immediately after a database is opened to set the defaults.
-// The user can then override them with mdb_set_compare() or
-// mdb_set_dupsort().
+// The user can then override them with mdb_set_compare().
 static void mdb_default_cmp(MDB_txn* txn, MDB_dbi dbi)
 {
     uint16_t f = txn->mt_dbs[dbi].md_flags;
@@ -19,11 +18,7 @@ static void mdb_default_cmp(MDB_txn* txn, MDB_dbi dbi)
                                : ((f & MDB_INTEGERKEY) != 0) ? mdb_cmp_cint
                                                              : mdb_cmp_memn;
 
-    txn->mt_dbxs[dbi].md_dcmp =
-        ((f & MDB_DUPSORT) == 0)
-            ? 0
-            : (((f & MDB_INTEGERDUP) != 0) ? (((f & MDB_DUPFIXED) != 0) ? mdb_cmp_int : mdb_cmp_cint)
-                                           : (((f & MDB_REVERSEDUP) != 0) ? mdb_cmp_memnr : mdb_cmp_memn));
+    txn->mt_dbxs[dbi].md_dcmp = 0;
 }
 
 int mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* dbi)
@@ -82,7 +77,7 @@ int mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* db
         return MDB_DBS_FULL;
 
     // Cannot mix named databases with some mainDB flags
-    if ((txn->mt_dbs[MAIN_DBI].md_flags & (MDB_DUPSORT | MDB_INTEGERKEY)) != 0)
+    if ((txn->mt_dbs[MAIN_DBI].md_flags & MDB_INTEGERKEY) != 0)
         return ((flags & MDB_CREATE) != 0U) ? MDB_INCOMPATIBLE : MDB_NOTFOUND;
 
     // Find the DB info
@@ -99,7 +94,7 @@ int mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* db
     {
         // make sure this is actually a DB
         MDB_node* node = NODEPTR(mc.mc_pg[mc.mc_top], mc.mc_ki[mc.mc_top]);
-        if ((node->mn_flags & (F_DUPDATA | F_SUBDATA)) != F_SUBDATA)
+        if ((node->mn_flags & F_SUBDATA) != F_SUBDATA)
             return MDB_INCOMPATIBLE;
     }
     else
@@ -195,7 +190,7 @@ int mdb_drop0(MDB_cursor* mc, int subs)
     {
         MDB_txn* txn = mc->mc_txn;
 
-        // DUPSORT sub-DBs have no ovpages/DBs. Omit scanning leaves.
+        // Sub-DBs have no ovpages/DBs. Omit scanning leaves.
         // This also avoids any P_LEAF2 pages, which have no nodes.
         // Also if the DB doesn't have sub-DBs and has no overflow
         // pages, omit scanning leaves.
@@ -231,10 +226,9 @@ int mdb_drop0(MDB_cursor* mc, int subs)
                     }
                     else if ((subs != 0) && ((ni->mn_flags & F_SUBDATA) != 0))
                     {
-                        mdb_xcursor_init1(mc, ni);
-                        rc = mdb_drop0(&mc->mc_xcursor->mx_cursor, 0);
-                        if (rc != 0)
-                            goto done;
+                        // Sub-database handling - simplified without duplicate support
+                        // This would need proper sub-database handling implementation
+                        // For now, we'll skip this case
                     }
                 }
                 if ((subs == 0) && (mc->mc_db->md_overflow_pages == 0U))
@@ -295,23 +289,19 @@ static int mdb_del0(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data, unsi
     DPRINTF(("====> delete db %u key [%s]", dbi, DKEY(key)));
 
     MDB_cursor mc{};
-    MDB_xcursor mx{};
-    mdb_cursor_init(&mc, txn, dbi, &mx);
+    mdb_cursor_init(&mc, txn, dbi, NULL);
 
     MDB_cursor_op op{};
-    MDB_val rdata{};
     MDB_val* xdata{nullptr};
     if (data != nullptr)
     {
-        op = MDB_GET_BOTH;
-        rdata = *data;
-        xdata = &rdata;
+        op = MDB_SET;  // Simplified without MDB_GET_BOTH
+        xdata = nullptr;  // Ignore data parameter since no duplicates
     }
     else
     {
         op = MDB_SET;
         xdata = nullptr;
-        flags |= MDB_NODUPDATA;
     }
     int exact{};
     int rc{mdb_cursor_set(&mc, key, xdata, op, &exact)};
@@ -342,11 +332,8 @@ int mdb_del(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data)
     if ((txn->mt_flags & (MDB_TXN_RDONLY | MDB_TXN_BLOCKED)) != 0U)
         return ((txn->mt_flags & MDB_TXN_RDONLY) != 0U) ? EACCES : MDB_BAD_TXN;
 
-    if (!F_ISSET(txn->mt_dbs[dbi].md_flags, MDB_DUPSORT))
-    {
-        // must ignore any data
-        data = NULL;
-    }
+    // Without duplicate support, always ignore data parameter
+    data = NULL;
 
     MDB_TRACE(("%p, %u, %" Z "u[%s], %" Z "u%s",
                txn,
@@ -375,7 +362,7 @@ int mdb_drop(MDB_txn* txn, MDB_dbi dbi, int del)
         return rc;
 
     MDB_TRACE(("%u, %d", dbi, del));
-    rc = mdb_drop0(mc, mc->mc_db->md_flags & MDB_DUPSORT);
+    rc = mdb_drop0(mc, 0);  // No duplicate support, so subs = 0
     // Invalidate the dropped DB's cursors
     for (MDB_cursor* m2{txn->mt_cursors[dbi]}; m2 != nullptr; m2 = m2->mc_next)
         m2->mc_flags &= ~(C_INITIALIZED | C_EOF);
@@ -422,7 +409,7 @@ int mdb_put(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data, unsigned int
     if ((key == nullptr) || (data == nullptr) || !TXN_DBI_EXIST(txn, dbi, DB_USRVALID))
         return EINVAL;
 
-    if ((flags & ~(MDB_NOOVERWRITE | MDB_NODUPDATA | MDB_RESERVE | MDB_APPEND | MDB_APPENDDUP)) != 0U)
+    if ((flags & ~(MDB_NOOVERWRITE | MDB_RESERVE | MDB_APPEND)) != 0U)
         return EINVAL;
 
     if ((txn->mt_flags & (MDB_TXN_RDONLY | MDB_TXN_BLOCKED)) != 0U)
@@ -437,8 +424,7 @@ int mdb_put(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data, unsigned int
                mdb_dval(txn, dbi, data, dbuf),
                flags));
     MDB_cursor mc{};
-    MDB_xcursor mx{};
-    mdb_cursor_init(&mc, txn, dbi, &mx);
+    mdb_cursor_init(&mc, txn, dbi, NULL);
     mc.mc_next = txn->mt_cursors[dbi];
     txn->mt_cursors[dbi] = &mc;
     int rc{mdb_cursor_put_impl(&mc, key, data, flags)};
@@ -455,14 +441,6 @@ int mdb_set_compare(MDB_txn* txn, MDB_dbi dbi, MDB_cmp_func* cmp)
     return MDB_SUCCESS;
 }
 
-int mdb_set_dupsort(MDB_txn* txn, MDB_dbi dbi, MDB_cmp_func* cmp)
-{
-    if (!TXN_DBI_EXIST(txn, dbi, DB_USRVALID))
-        return EINVAL;
-
-    txn->mt_dbxs[dbi].md_dcmp = cmp;
-    return MDB_SUCCESS;
-}
 
 int mdb_set_relfunc(MDB_txn* txn, MDB_dbi dbi, MDB_rel_func* rel)
 {
@@ -495,8 +473,7 @@ int mdb_get(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data)
         return MDB_BAD_TXN;
 
     MDB_cursor mc{};
-    MDB_xcursor mx{};
-    mdb_cursor_init(&mc, txn, dbi, &mx);
+    mdb_cursor_init(&mc, txn, dbi, NULL);
     int exact{};
     int rc{mdb_cursor_set(&mc, key, data, MDB_SET, &exact)};
     return rc;

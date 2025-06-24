@@ -3,21 +3,19 @@
 #include "mdb_db.h"
 #include "mdb_internal.h"
 
+// Forward declaration for MDB_xcursor
+struct MDB_xcursor;
+
 // Cursors are used for all DB operations.
 // A cursor holds a path of (page pointer, key index) from the DB
-// root to a position in the DB, plus other state. MDB_DUPSORT
-// cursors include an xcursor to the current data item. Write txns
+// root to a position in the DB, plus other state. Write txns
 // track their cursors and keep them up to date when data moves.
-// Exception: An xcursor's pointer to a P_SUBP page can be stale.
-// (A node with F_DUPDATA but no F_SUBDATA contains a subpage).
 struct MDB_cursor
 {
     // Next cursor on this DB in this txn
     MDB_cursor* mc_next;
     // Backup of the original cursor if this cursor is a shadow
     MDB_cursor* mc_backup;
-    // Context used for databases with MDB_DUPSORT, otherwise NULL
-    struct MDB_xcursor* mc_xcursor;
     // The transaction that owns this cursor
     MDB_txn* mc_txn;
     // The database handle this cursor operates on
@@ -44,60 +42,28 @@ struct MDB_cursor
     unsigned int mc_flags;          // mdb_cursor
     MDB_page* mc_pg[CURSOR_STACK];  // stack of pushed pages
     indx_t mc_ki[CURSOR_STACK];     // stack of page indices
+    // Extended cursor for duplicate data (removed but kept for compatibility)
+    MDB_xcursor* mc_xcursor;
 #define MC_OVPG(mc) ((MDB_page*)0)
 #define MC_SET_OVPG(mc, pg) ((void)0)
 };
 
-// Context for sorted-dup records.
-// We could have gone to a fully recursive design, with arbitrarily
-// deep nesting of sub-databases. But for now we only handle these
-// levels - main DB, optional sub-DB, sorted-duplicate DB.
+// Extended cursor structure (removed but kept for compatibility)
 struct MDB_xcursor
 {
-    // A sub-cursor for traversing the Dup DB
     MDB_cursor mx_cursor;
-    // The database record for this Dup DB
-    MDB_db mx_db;
-    // The auxiliary DB record for this Dup DB
-    MDB_dbx mx_dbx;
-    // The mt_dbflag for this Dup DB
-    unsigned char mx_dbflag;
 };
 
-// Check if there is an inited xcursor
-#define XCURSOR_INITED(mc) ((mc)->mc_xcursor && ((mc)->mc_xcursor->mx_cursor.mc_flags & C_INITIALIZED))
-
-// Update the xcursor's sub-page pointer, if any, in mc.  Needed
-// when the node which contains the sub-page may have moved.  Called
-// with leaf page mp = mc->mc_pg[top].
-#define XCURSOR_REFRESH(mc, top, mp)                                                                                   \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        MDB_page* xr_pg = (mp);                                                                                        \
-        MDB_node* xr_node;                                                                                             \
-        if (!XCURSOR_INITED(mc) || (mc)->mc_ki[top] >= NUMKEYS(xr_pg))                                                 \
-            break;                                                                                                     \
-        xr_node = NODEPTR(xr_pg, (mc)->mc_ki[top]);                                                                    \
-        if ((xr_node->mn_flags & (F_DUPDATA | F_SUBDATA)) == F_DUPDATA)                                                \
-            (mc)->mc_xcursor->mx_cursor.mc_pg[0] =                                                                     \
-                reinterpret_cast<MDB_page*>(reinterpret_cast<char*>(xr_node->mn_data) + xr_node->mn_ksize);            \
-    } while (0)
+// Macros for duplicate support (removed but kept for compatibility)
+#define XCURSOR_REFRESH(mc, top, mp) ((void)0)
+#define IS_SUBP(mp) (0)
 
 // Perform act while tracking temporary cursor mn
 #define WITH_CURSOR_TRACKING(mn, act)                                                                                  \
     do                                                                                                                 \
     {                                                                                                                  \
-        MDB_cursor dummy, *tracked, **tp = &(mn).mc_txn->mt_cursors[(mn).mc_dbi];                                      \
-        if ((mn).mc_flags & C_SUB)                                                                                     \
-        {                                                                                                              \
-            dummy.mc_flags = C_INITIALIZED;                                                                            \
-            dummy.mc_xcursor = (MDB_xcursor*)&(mn);                                                                    \
-            tracked = &dummy;                                                                                          \
-        }                                                                                                              \
-        else                                                                                                           \
-        {                                                                                                              \
-            tracked = &(mn);                                                                                           \
-        }                                                                                                              \
+        MDB_cursor *tracked, **tp = &(mn).mc_txn->mt_cursors[(mn).mc_dbi];                                             \
+        tracked = &(mn);                                                                                               \
         tracked->mc_next = *tp;                                                                                        \
         *tp = tracked;                                                                                                 \
         {                                                                                                              \
@@ -106,10 +72,7 @@ struct MDB_xcursor
         *tp = tracked->mc_next;                                                                                        \
     } while (0)
 
-void mdb_cursor_init(MDB_cursor* mc, MDB_txn* txn, MDB_dbi dbi, MDB_xcursor* mx);
-void mdb_xcursor_init0(MDB_cursor* mc);
-void mdb_xcursor_init1(MDB_cursor* mc, MDB_node* node);
-void mdb_xcursor_init2(MDB_cursor* mc, MDB_xcursor* src_mx, int force);
+void mdb_cursor_init(MDB_cursor* mc, MDB_txn* txn, MDB_dbi dbi, MDB_xcursor* mx = nullptr);
 
 void mdb_cursor_copy(const MDB_cursor* csrc, MDB_cursor* cdst);
 void mdb_cursor_pop(MDB_cursor* mc);

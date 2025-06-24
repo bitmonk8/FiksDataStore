@@ -1969,8 +1969,7 @@ int ESECT mdb_env_cthr_toggle(mdb_copy* my, int adjust)
 // Depth-first tree traversal for compacting copy.
 // my control structure.
 // pg database root.
-// flags includes #F_DUPDATA if it is a sorted-duplicate sub-DB.
-int ESECT mdb_env_cwalk(mdb_copy* my, pgno_t* pg, int flags)
+int ESECT mdb_env_cwalk(mdb_copy* my, pgno_t* pg)
 {
     MDB_cursor mc = {0};
     MDB_node* ni;
@@ -2022,7 +2021,7 @@ int ESECT mdb_env_cwalk(mdb_copy* my, pgno_t* pg, int flags)
 
         if (IS_LEAF(mp))
         {
-            if (!IS_LEAF2(mp) && ((flags & F_DUPDATA) == 0))
+            // No LEAF2 or duplicate support - simplified logic
             {
                 for (i = 0; i < n; i++)
                 {
@@ -2083,7 +2082,7 @@ int ESECT mdb_env_cwalk(mdb_copy* my, pgno_t* pg, int flags)
 
                         memcpy(&db, NODEDATA(ni), sizeof(db));
                         my->mc_toggle = toggle;
-                        rc = mdb_env_cwalk(my, &db.md_root, ni->mn_flags & F_DUPDATA);
+                        rc = mdb_env_cwalk(my, &db.md_root);
                         if (rc != 0)
                             goto done;
                         toggle = my->mc_toggle;
@@ -2260,7 +2259,7 @@ int ESECT mdb_env_copyfd1(MDB_env* env, HANDLE fd)
 
     my.mc_wlen[0] = env->me_psize * NUM_METAS;
     my.mc_txn = txn;
-    rc = mdb_env_cwalk(&my, &root, 0);
+    rc = mdb_env_cwalk(&my, &root);
     if (rc == MDB_SUCCESS && root != new_root)
     {
         rc = MDB_INCOMPATIBLE;  // page leak or corrupt DB
@@ -2555,9 +2554,8 @@ int ESECT mdb_stat(MDB_txn* txn, MDB_dbi dbi, MDB_stat* arg)
     if ((txn->mt_dbflags[dbi] & DB_STALE) != 0)
     {
         MDB_cursor mc;
-        MDB_xcursor mx;
         // Stale, must read the DB's root. cursor_init does it for us.
-        mdb_cursor_init(&mc, txn, dbi, &mx);
+        mdb_cursor_init(&mc, txn, dbi, NULL);
     }
     return mdb_stat0(txn->mt_env, &txn->mt_dbs[dbi], arg);
 }

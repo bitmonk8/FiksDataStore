@@ -15,5 +15,5 @@ int mdb_cmp_long(const MDB_val* a, const MDB_val* b);
 #define mdb_cmp_clong mdb_cmp_cint
 #endif
 
-// True if we need #mdb_cmp_clong() instead of \b cmp for #MDB_INTEGERDUP
+// True if we need #mdb_cmp_clong() instead of \b cmp for integer keys
 #define NEED_CMP_CLONG(cmp, ksize) (UINT_MAX < MDB_SIZE_MAX && (cmp) == mdb_cmp_int && (ksize) == sizeof(mdb_size_t))

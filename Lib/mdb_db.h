@@ -5,7 +5,7 @@
 // Information about a single database in the environment.
 struct MDB_db
 {
-    uint32_t md_pad;           // also ksize for LEAF2 pages
+    uint32_t md_pad;           // padding for alignment
     uint16_t md_flags;         // mdb_dbi_open
     uint16_t md_depth;         // depth of this tree
     pgno_t md_branch_pages;    // number of internal pages

@@ -47,7 +47,6 @@ struct MDB_txn
 #define DB_NEW 0x04       // Named-DB handle opened in this txn
 #define DB_VALID 0x08     // DB handle is valid, see also MDB_VALID
 #define DB_USRVALID 0x10  // As DB_VALID, but not set for FREE_DBI
-#define DB_DUPDATA 0x20   // DB is MDB_DUPSORT data
 
     // In write txns, array of cursors for each DB
     MDB_cursor** mt_cursors;
