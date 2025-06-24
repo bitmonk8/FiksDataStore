@@ -2535,37 +2535,12 @@ int mdb_rebalance(MDB_cursor* mc)
 // newpgno The page number, if the new node is a branch node.
 // nflags The #NODE_ADD_FLAGS for the new node.
 // 0 on success, non-zero on failure.
-//
 int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t newpgno, unsigned int nflags)
 {
-    unsigned int flags{};
-    int rc{MDB_SUCCESS};
-    int new_root{0};
-    int did_split{0};
-    indx_t newindx{};
-    pgno_t pgno{0};
-    int i{};
-    int j{};
-    int split_indx{};
-    int nkeys{};
-    int pmax{};
-    MDB_env* env = mc->mc_txn->mt_env;
-    MDB_node* node{nullptr};
-    MDB_val sepkey{};
-    MDB_val rkey{};
-    MDB_val xdata{};
-    MDB_val* rdata = &xdata;
-    MDB_page* copy{nullptr};
-    MDB_page* mp{nullptr};
-    MDB_page* rp{nullptr};
-    MDB_page* pp{nullptr};
-    int ptop{};
-    MDB_cursor mn{};
     DKBUF;
-
-    mp = mc->mc_pg[mc->mc_top];
-    newindx = mc->mc_ki[mc->mc_top];
-    nkeys = NUMKEYS(mp);
+    MDB_page* mp = mc->mc_pg[mc->mc_top];
+    const indx_t newindx = mc->mc_ki[mc->mc_top];
+    int nkeys = NUMKEYS(mp);
 
     DPRINTF(("-----> splitting %s page %" Yu " and adding [%s] at index %i/%i",
              IS_LEAF(mp) ? "leaf" : "branch",
@@ -2574,25 +2549,33 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
              mc->mc_ki[mc->mc_top],
              nkeys));
 
-    /* Create a right sibling. */
-    rc = mdb_page_new(mc, mp->mp_flags, 1, &rp);
-    if (rc != 0)
-        return rc;
+    // Create a right sibling.
+    MDB_page* rp{nullptr};
+    const int pageNewResult = mdb_page_new(mc, mp->mp_flags, 1, &rp);
+    if (pageNewResult != 0)
+        return pageNewResult;
+
     rp->mp_pad = mp->mp_pad;
     DPRINTF(("new right sibling: page %" Yu, rp->mp_pgno));
 
-    /* Usually when splitting the root page, the cursor
-     * height is 1. But when called from mdb_update_key,
-     * the cursor height may be greater because it walks
-     * up the stack while finding the branch slot to update.
-     */
+    int new_root{0};
+    int ptop{};
+
+    // Usually when splitting the root page, the cursor
+    // height is 1. But when called from mdb_update_key,
+    // the cursor height may be greater because it walks
+    // up the stack while finding the branch slot to update.
     if (mc->mc_top < 1)
     {
-        rc = mdb_page_new(mc, P_BRANCH, 1, &pp);
-        if (rc != 0)
-            goto done;
-        /* shift current top to make room for new parent */
-        for (i = mc->mc_snum; i > 0; i--)
+        MDB_page* pp{nullptr};
+        const int pageNewResult = mdb_page_new(mc, P_BRANCH, 1, &pp);
+        if (pageNewResult != 0)
+        {
+            mc->mc_txn->mt_flags |= MDB_TXN_ERROR;
+            return pageNewResult;
+        }
+        // shift current top to make room for new parent
+        for (int i = mc->mc_snum; i > 0; i--)
         {
             mc->mc_pg[i] = mc->mc_pg[i - 1];
             mc->mc_ki[i] = mc->mc_ki[i - 1];
@@ -2603,16 +2586,17 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
         DPRINTF(("root split! new root = %" Yu, pp->mp_pgno));
         new_root = mc->mc_db->md_depth++;
 
-        /* Add left (implicit) pointer. */
-        rc = mdb_node_add(mc, 0, NULL, NULL, mp->mp_pgno, 0);
-        if (rc != MDB_SUCCESS)
+        // Add left (implicit) pointer.
+        const int nodeAddResult = mdb_node_add(mc, 0, NULL, NULL, mp->mp_pgno, 0);
+        if (nodeAddResult != MDB_SUCCESS)
         {
-            /* undo the pre-push */
+            // undo the pre-push
             mc->mc_pg[0] = mc->mc_pg[1];
             mc->mc_ki[0] = mc->mc_ki[1];
             mc->mc_db->md_root = mp->mp_pgno;
             mc->mc_db->md_depth--;
-            goto done;
+            mc->mc_txn->mt_flags |= MDB_TXN_ERROR;
+            return nodeAddResult;
         }
         mc->mc_snum++;
         mc->mc_top++;
@@ -2624,10 +2608,17 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
         DPRINTF(("parent branch page is %" Yu, mc->mc_pg[ptop]->mp_pgno));
     }
 
+    MDB_cursor mn{};
     mdb_cursor_copy(mc, &mn);
     mn.mc_xcursor = NULL;
     mn.mc_pg[mn.mc_top] = rp;
     mn.mc_ki[ptop] = mc->mc_ki[ptop] + 1;
+
+    MDB_page* copy{nullptr};
+    int split_indx{};
+    MDB_val sepkey{};
+    MDB_node* node{nullptr};
+    MDB_env* env = mc->mc_txn->mt_env;
 
     if ((nflags & MDB_APPEND) != 0u)
     {
@@ -2648,7 +2639,7 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
             unsigned int lsize;
             unsigned int rsize;
             unsigned int ksize;
-            /* Move half of the keys to the right sibling */
+            // Move half of the keys to the right sibling
             x = mc->mc_ki[mc->mc_top] - split_indx;
             ksize = mc->mc_db->md_pad;
             split = LEAF2KEY(mp, split_indx, static_cast<size_t>(ksize));
@@ -2693,63 +2684,57 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
         }
         else
         {
-            int psize;
-            int nsize;
-            int k;
-            int keythresh;
+            // Maximum free space in an empty page
+            const int pmax = env->me_psize - PAGEHDRSZ;
 
-            /* Maximum free space in an empty page */
-            pmax = env->me_psize - PAGEHDRSZ;
-            /* Threshold number of keys considered "small" */
-            keythresh = env->me_psize >> 7;
+            // Threshold number of keys considered "small"
+            const int keythresh = env->me_psize >> 7;
 
-            if (IS_LEAF(mp))
-                nsize = mdb_leaf_size(env, newkey, newdata);
-            else
-                nsize = mdb_branch_size(env, newkey);
-            nsize = EVEN(nsize);
+            const int nsize = EVEN(IS_LEAF(mp) ? mdb_leaf_size(env, newkey, newdata) : mdb_branch_size(env, newkey));
 
-            /* grab a page to hold a temporary copy */
+            // grab a page to hold a temporary copy
             copy = mdb_page_malloc(mc->mc_txn, 1);
             if (copy == NULL)
             {
-                rc = ENOMEM;
-                goto done;
+                if (copy != nullptr) // tmp page
+                    mdb_page_free(env, copy);
+                mc->mc_txn->mt_flags |= MDB_TXN_ERROR;
+                return ENOMEM;
             }
+
             copy->mp_pgno = mp->mp_pgno;
             copy->mp_flags = mp->mp_flags;
             copy->mp_lower = (PAGEHDRSZ - PAGEBASE);
             copy->mp_upper = env->me_psize - PAGEBASE;
 
-            /* prepare to insert */
-            for (i = 0, j = 0; i < nkeys; i++)
+            // prepare to insert
+            for (int i = 0, j = 0; i < nkeys; i++)
             {
                 if (i == newindx)
-                {
                     copy->mp_ptrs[j++] = 0;
-                }
                 copy->mp_ptrs[j++] = mp->mp_ptrs[i];
             }
 
-            /* When items are relatively large the split point needs
-             * to be checked, because being off-by-one will make the
-             * difference between success or failure in mdb_node_add.
-             *
-             * It's also relevant if a page happens to be laid out
-             * such that one half of its nodes are all "small" and
-             * the other half of its nodes are "large." If the new
-             * item is also "large" and falls on the half with
-             * "large" nodes, it also may not fit.
-             *
-             * As a final tweak, if the new item goes on the last
-             * spot on the page (and thus, onto the new page), bias
-             * the split so the new page is emptier than the old page.
-             * This yields better packing during sequential inserts.
-             */
+            // When items are relatively large the split point needs
+            // to be checked, because being off-by-one will make the
+            // difference between success or failure in mdb_node_add.
+            
+            // It's also relevant if a page happens to be laid out
+            // such that one half of its nodes are all "small" and
+            // the other half of its nodes are "large." If the new
+            // item is also "large" and falls on the half with
+            // "large" nodes, it also may not fit.
+            
+            // As a final tweak, if the new item goes on the last
+            // spot on the page (and thus, onto the new page), bias
+            // the split so the new page is emptier than the old page.
+            // This yields better packing during sequential inserts.
             if (nkeys < keythresh || nsize > pmax / 16 || newindx >= nkeys)
             {
-                /* Find split point */
-                psize = 0;
+                // Find split point
+                int i;
+                int j;
+                int k;
                 if (newindx <= split_indx || newindx >= nkeys)
                 {
                     i = 0;
@@ -2762,6 +2747,8 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
                     j = -1;
                     k = split_indx - 1;
                 }
+
+                int psize = 0;
                 for (; i != k; i += j)
                 {
                     if (i == newindx)
@@ -2805,30 +2792,36 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
 
     DPRINTF(("separator is %d [%s]", split_indx, DKEY(&sepkey)));
 
-    /* Copy separator key to the parent.
-     */
+    int did_split{0};
+    pgno_t pgno{0};
+
+    // Copy separator key to the parent.
     if (SIZELEFT(mn.mc_pg[ptop]) < mdb_branch_size(env, &sepkey))
     {
         int snum = mc->mc_snum;
         mn.mc_snum--;
         mn.mc_top--;
         did_split = 1;
-        /* We want other splits to find mn when doing fixups */
-        WITH_CURSOR_TRACKING(mn, rc = mdb_page_split(&mn, &sepkey, NULL, rp->mp_pgno, 0));
-        if (rc != 0)
-            goto done;
-
-        /* root split? */
-        if (mc->mc_snum > snum)
+        // We want other splits to find mn when doing fixups
+        int pageSplitResult = MDB_SUCCESS;
+        WITH_CURSOR_TRACKING(mn, pageSplitResult = mdb_page_split(&mn, &sepkey, NULL, rp->mp_pgno, 0));
+        if (pageSplitResult != 0)
         {
-            ptop++;
+            if (copy != nullptr) // tmp page
+                mdb_page_free(env, copy);
+            mc->mc_txn->mt_flags |= MDB_TXN_ERROR;
+            return pageSplitResult;
         }
-        /* Right page might now have changed parent.
-         * Check if left page also changed parent.
-         */
+
+        // root split?
+        if (mc->mc_snum > snum)
+            ptop++;
+
+        // Right page might now have changed parent.
+        // Check if left page also changed parent.
         if (mn.mc_pg[ptop] != mc->mc_pg[ptop] && mc->mc_ki[ptop] >= NUMKEYS(mc->mc_pg[ptop]))
         {
-            for (i = 0; i < ptop; i++)
+            for (int i = 0; i < ptop; i++)
             {
                 mc->mc_pg[i] = mn.mc_pg[i];
                 mc->mc_ki[i] = mn.mc_ki[i];
@@ -2840,42 +2833,65 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
             }
             else
             {
-                /* find right page's left sibling */
+                // find right page's left sibling
                 mc->mc_ki[ptop] = mn.mc_ki[ptop];
-                rc = mdb_cursor_sibling(mc, 0);
+                int cursorSiblingResult = mdb_cursor_sibling(mc, 0);
+                if (cursorSiblingResult != MDB_SUCCESS)
+                {
+                    if (cursorSiblingResult == MDB_NOTFOUND) // improper mdb_cursor_sibling() result
+                        cursorSiblingResult = MDB_PROBLEM;
+                    if (copy != nullptr) // tmp page
+                        mdb_page_free(env, copy);
+                    mc->mc_txn->mt_flags |= MDB_TXN_ERROR;
+                    return cursorSiblingResult;
+                }
             }
         }
     }
     else
     {
         mn.mc_top--;
-        rc = mdb_node_add(&mn, mn.mc_ki[ptop], &sepkey, NULL, rp->mp_pgno, 0);
+        int nodeAddResult = mdb_node_add(&mn, mn.mc_ki[ptop], &sepkey, NULL, rp->mp_pgno, 0);
         mn.mc_top++;
+        if (nodeAddResult != MDB_SUCCESS)
+        {
+            if (nodeAddResult == MDB_NOTFOUND) // improper mdb_cursor_sibling() result
+                nodeAddResult = MDB_PROBLEM;
+            if (copy != nullptr) // tmp page
+                mdb_page_free(env, copy);
+            mc->mc_txn->mt_flags |= MDB_TXN_ERROR;
+            return nodeAddResult;
+        }
     }
-    if (rc != MDB_SUCCESS)
-    {
-        if (rc == MDB_NOTFOUND) /* improper mdb_cursor_sibling() result */
-            rc = MDB_PROBLEM;
-        goto done;
-    }
+
+    MDB_val rkey{};
+    MDB_val xdata{};
+    MDB_val* rdata = &xdata;
+
     if ((nflags & MDB_APPEND) != 0u)
     {
         mc->mc_pg[mc->mc_top] = rp;
         mc->mc_ki[mc->mc_top] = 0;
-        rc = mdb_node_add(mc, 0, newkey, newdata, newpgno, nflags);
-        if (rc != 0)
-            goto done;
-        for (i = 0; i < mc->mc_top; i++)
+        const int nodeAddResult = mdb_node_add(mc, 0, newkey, newdata, newpgno, nflags);
+        if (nodeAddResult != 0)
+        {
+            if (copy != nullptr) // tmp page
+                mdb_page_free(env, copy);
+            mc->mc_txn->mt_flags |= MDB_TXN_ERROR;
+            return nodeAddResult;
+        }
+        for (int i = 0; i < mc->mc_top; i++)
             mc->mc_ki[i] = mn.mc_ki[i];
     }
     else if (!IS_LEAF2(mp))
     {
-        /* Move nodes */
+        // Move nodes
         mc->mc_pg[mc->mc_top] = rp;
-        i = split_indx;
-        j = 0;
+        int i = split_indx;
+        int j = 0;
         do
         {
+            unsigned int flags{};
             if (i == newindx)
             {
                 rkey.mv_data = newkey->mv_data;
@@ -2887,7 +2903,7 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
                 else
                     pgno = newpgno;
                 flags = nflags;
-                /* Update index for the new key. */
+                // Update index for the new key.
                 mc->mc_ki[mc->mc_top] = j;
             }
             else
@@ -2908,13 +2924,18 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
 
             if (!IS_LEAF(mp) && j == 0)
             {
-                /* First branch index doesn't need key data. */
+                // First branch index doesn't need key data.
                 rkey.mv_size = 0;
             }
 
-            rc = mdb_node_add(mc, j, &rkey, rdata, pgno, flags);
-            if (rc != 0)
-                goto done;
+            const int nodeAddResult = mdb_node_add(mc, j, &rkey, rdata, pgno, flags);
+            if (nodeAddResult != 0)
+            {
+                if (copy != nullptr) // tmp page
+                    mdb_page_free(env, copy);
+                mc->mc_txn->mt_flags |= MDB_TXN_ERROR;
+                return nodeAddResult;
+            }
             if (i == nkeys)
             {
                 i = 0;
@@ -2929,13 +2950,13 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
         } while (i != split_indx);
 
         nkeys = NUMKEYS(copy);
-        for (i = 0; i < nkeys; i++)
+        for (int i = 0; i < nkeys; i++)
             mp->mp_ptrs[i] = copy->mp_ptrs[i];
         mp->mp_lower = copy->mp_lower;
         mp->mp_upper = copy->mp_upper;
         memcpy(NODEPTR(mp, nkeys - 1), NODEPTR(copy, nkeys - 1), env->me_psize - copy->mp_upper - PAGEBASE);
 
-        /* reset back to original page */
+        // reset back to original page
         if (newindx < split_indx)
         {
             mc->mc_pg[mc->mc_top] = mp;
@@ -2944,8 +2965,7 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
         {
             mc->mc_pg[mc->mc_top] = rp;
             mc->mc_ki[ptop]++;
-            /* Make sure mc_ki is still valid.
-             */
+            // Make sure mc_ki is still valid.
             if (mn.mc_pg[ptop] != mc->mc_pg[ptop] && mc->mc_ki[ptop] >= NUMKEYS(mc->mc_pg[ptop]))
             {
                 for (i = 0; i <= ptop; i++)
@@ -2968,11 +2988,10 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
         {
             mc->mc_pg[mc->mc_top] = rp;
             mc->mc_ki[ptop]++;
-            /* Make sure mc_ki is still valid.
-             */
+            // Make sure mc_ki is still valid.
             if (mn.mc_pg[ptop] != mc->mc_pg[ptop] && mc->mc_ki[ptop] >= NUMKEYS(mc->mc_pg[ptop]))
             {
-                for (i = 0; i <= ptop; i++)
+                for (int i = 0; i <= ptop; i++)
                 {
                     mc->mc_pg[i] = mn.mc_pg[i];
                     mc->mc_ki[i] = mn.mc_ki[i];
@@ -2982,7 +3001,7 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
     }
 
     {
-        /* Adjust other cursors pointing to mp */
+        // Adjust other cursors pointing to mp
         MDB_cursor* m2;
         MDB_cursor* m3;
         MDB_dbi dbi = mc->mc_dbi;
@@ -3001,10 +3020,10 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
             if (new_root != 0)
             {
                 int k;
-                /* sub cursors may be on different DB */
+                // sub cursors may be on different DB
                 if (m3->mc_pg[0] != mp)
                     continue;
-                /* root split */
+                // root split
                 for (k = new_root; k >= 0; k--)
                 {
                     m3->mc_ki[k + 1] = m3->mc_ki[k];
@@ -3030,7 +3049,7 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
                 {
                     m3->mc_pg[mc->mc_top] = rp;
                     m3->mc_ki[mc->mc_top] -= nkeys;
-                    for (i = 0; i < mc->mc_top; i++)
+                    for (int i = 0; i < mc->mc_top; i++)
                     {
                         m3->mc_ki[i] = mn.mc_ki[i];
                         m3->mc_pg[i] = mn.mc_pg[i];
@@ -3046,12 +3065,9 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
                 XCURSOR_REFRESH(m3, mc->mc_top, m3->mc_pg[mc->mc_top]);
         }
     }
-    DPRINTF(("mp left: %d, rp left: %d", SIZELEFT(mp), SIZELEFT(rp)));
 
-done:
-    if (copy != nullptr) /* tmp page */
+    DPRINTF(("mp left: %d, rp left: %d", SIZELEFT(mp), SIZELEFT(rp)));
+    if (copy != nullptr) // tmp page
         mdb_page_free(env, copy);
-    if (rc != 0)
-        mc->mc_txn->mt_flags |= MDB_TXN_ERROR;
-    return rc;
+    return MDB_SUCCESS;
 }
