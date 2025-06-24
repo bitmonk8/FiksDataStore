@@ -1,5 +1,7 @@
 #include "mdb_txn.h"
 
+#include <utility>
+
 #include "mdb_cursor.h"
 #include "mdb_db.h"
 #include "mdb_debug.h"
@@ -17,7 +19,7 @@ struct MDB_ntxn
 // Common code for #mdb_txn_begin() and #mdb_txn_renew().
 // [in] txn the transaction handle to initialize
 //  0 on success, non-zero on failure.
-int mdb_txn_renew0(MDB_txn* txn)
+auto mdb_txn_renew0(MDB_txn* txn) -> int
 {
     MDB_env* env = txn->mt_env;
     MDB_txninfo* ti = env->me_txns;
@@ -35,16 +37,18 @@ int mdb_txn_renew0(MDB_txn* txn)
         {
             meta = mdb_env_pick_meta(env);
             txn->mt_txnid = meta->mm_txnid;
-            txn->mt_u.reader = NULL;
+            txn->mt_u.reader = nullptr;
         }
         else
         {
-            MDB_reader* r = (MDB_reader*)(((env->me_flags & MDB_NOTLS) != 0U) ? txn->mt_u.reader
+            auto* r = (MDB_reader*)(((env->me_flags & MDB_NOTLS) != 0U) ? txn->mt_u.reader
                                                                               : pthread_getspecific(env->me_txkey));
             if (r != nullptr)
             {
-                if (r->mr_pid != env->me_pid || r->mr_txnid != (txnid_t)-1)
+                if ((r->mr_pid != env->me_pid) || (r->mr_txnid != -1))
+                {
                     return MDB_BAD_RSLOT;
+                }
             }
             else
             {
@@ -135,15 +139,15 @@ int mdb_txn_renew0(MDB_txn* txn)
         if (txn->mt_txnid == mdb_debug_start)
             mdb_debug = MDB_DBG_INFO;
 #endif
-        txn->mt_child = NULL;
-        txn->mt_loose_pgs = NULL;
+        txn->mt_child = nullptr;
+        txn->mt_loose_pgs = nullptr;
         txn->mt_loose_count = 0;
         txn->mt_dirty_room = MDB_IDL_UM_MAX;
         txn->mt_u.dirty_list = env->me_dirty_list;
         txn->mt_u.dirty_list[0].mid = 0;
         txn->mt_free_pgs = env->me_free_pgs;
         txn->mt_free_pgs[0] = 0;
-        txn->mt_spill_pgs = NULL;
+        txn->mt_spill_pgs = nullptr;
         env->me_txn = txn;
         memcpy(txn->mt_dbiseqs, env->me_dbiseqs, env->me_maxdbs * sizeof(unsigned int));
     }
@@ -183,7 +187,7 @@ int mdb_txn_renew0(MDB_txn* txn)
     return rc;
 }
 
-int mdb_txn_renew(MDB_txn* txn)
+auto mdb_txn_renew(MDB_txn* txn) -> int
 {
     int rc;
 
@@ -204,14 +208,14 @@ int mdb_txn_renew(MDB_txn* txn)
 }
 
 // Back up parent txn's cursors, then grab the originals for tracking
-static int mdb_cursor_shadow(MDB_txn* src, MDB_txn* dst)
+static auto mdb_cursor_shadow(MDB_txn* src, MDB_txn* dst) -> int
 {
     int i{};
 
     for (i = src->mt_numdbs; --i >= 0;)
     {
         MDB_cursor* current_cursor = src->mt_cursors[i];
-        if (current_cursor != NULL)
+        if (current_cursor != nullptr)
         {
             const size_t base_cursor_size = sizeof(MDB_cursor);
             // No xcursor support - simplified cursor size
@@ -219,7 +223,7 @@ static int mdb_cursor_shadow(MDB_txn* src, MDB_txn* dst)
 
             for (; current_cursor != nullptr;)
             {
-                MDB_cursor* const backup_cursor = (MDB_cursor*)malloc(total_cursor_size);
+                auto* const backup_cursor = (MDB_cursor*)malloc(total_cursor_size);
                 if (backup_cursor == nullptr)
                     return ENOMEM;
 
@@ -245,7 +249,7 @@ static int mdb_cursor_shadow(MDB_txn* src, MDB_txn* dst)
     return MDB_SUCCESS;
 }
 
-int mdb_txn_begin(MDB_env* env, MDB_txn* parent, unsigned int flags, MDB_txn** ret)
+auto mdb_txn_begin(MDB_env* env, MDB_txn* parent, unsigned int flags, MDB_txn** ret) -> int
 {
     MDB_txn* txn{nullptr};
     MDB_ntxn* ntxn{nullptr};
@@ -284,7 +288,7 @@ int mdb_txn_begin(MDB_env* env, MDB_txn* parent, unsigned int flags, MDB_txn** r
         goto renew;
     }
     txn = (MDB_txn*)calloc(1, size);
-    if (txn == NULL)
+    if (txn == nullptr)
     {
         DPRINTF(("calloc: %s", strerror(errno)));
         return ENOMEM;
@@ -311,7 +315,7 @@ int mdb_txn_begin(MDB_env* env, MDB_txn* parent, unsigned int flags, MDB_txn** r
         txn->mt_txnid = parent->mt_txnid;
         txn->mt_dirty_room = parent->mt_dirty_room;
         txn->mt_u.dirty_list[0].mid = 0;
-        txn->mt_spill_pgs = NULL;
+        txn->mt_spill_pgs = nullptr;
         txn->mt_next_pgno = parent->mt_next_pgno;
         parent->mt_flags |= MDB_TXN_HAS_CHILD;
         parent->mt_child = txn;
@@ -367,14 +371,14 @@ int mdb_txn_begin(MDB_env* env, MDB_txn* parent, unsigned int flags, MDB_txn** r
     return rc;
 }
 
-MDB_env* mdb_txn_env(MDB_txn* txn)
+auto mdb_txn_env(MDB_txn* txn) -> MDB_env*
 {
     if (txn == nullptr)
-        return NULL;
+        return nullptr;
     return txn->mt_env;
 }
 
-mdb_size_t mdb_txn_id(MDB_txn* txn)
+auto mdb_txn_id(MDB_txn* txn) -> mdb_size_t
 {
     if (txn == nullptr)
         return 0;
@@ -402,7 +406,7 @@ static void mdb_dbis_update(MDB_txn* txn, int keep)
                 char* ptr = (char*)env->me_dbxs[i].md_name.mv_data;
                 if (ptr != nullptr)
                 {
-                    env->me_dbxs[i].md_name.mv_data = NULL;
+                    env->me_dbxs[i].md_name.mv_data = nullptr;
                     env->me_dbxs[i].md_name.mv_size = 0;
                     env->me_dbflags[i] = 0;
                     env->me_dbiseqs[i]++;
@@ -433,7 +437,7 @@ static void mdb_cursors_close(MDB_txn* txn, unsigned merge)
         {
             next = mc->mc_next;
             bk = mc->mc_backup;
-            if (bk != NULL)
+            if (bk != nullptr)
             {
                 if (merge != 0U)
                 {
@@ -456,7 +460,7 @@ static void mdb_cursors_close(MDB_txn* txn, unsigned merge)
             // Only malloced cursors are permanently tracked.
             free(mc);
         }
-        cursors[i] = NULL;
+        cursors[i] = nullptr;
     }
 }
 
@@ -506,12 +510,12 @@ void mdb_txn_end(MDB_txn* txn, unsigned mode)
             txn->mt_u.reader->mr_txnid = (txnid_t)-1;
             if ((env->me_flags & MDB_NOTLS) == 0U)
             {
-                txn->mt_u.reader = NULL; /* txn does not own reader */
+                txn->mt_u.reader = nullptr; /* txn does not own reader */
             }
             else if ((mode & MDB_END_SLOT) != 0U)
             {
                 txn->mt_u.reader->mr_pid = 0;
-                txn->mt_u.reader = NULL;
+                txn->mt_u.reader = nullptr;
             } /* else txn owns the slot until it does MDB_END_SLOT */
         }
         txn->mt_numdbs = 0; /* prevent further DBI activity */
@@ -536,10 +540,10 @@ void mdb_txn_end(MDB_txn* txn, unsigned mode)
             mdb_midl_shrink(&txn->mt_free_pgs);
             env->me_free_pgs = txn->mt_free_pgs;
             // me_pgstate:
-            env->me_pghead = NULL;
+            env->me_pghead = nullptr;
             env->me_pglast = 0;
 
-            env->me_txn = NULL;
+            env->me_txn = nullptr;
             mode = 0;  // txn == env->me_txn0, do not free() it
 
             /* The writer mutex was locked in mdb_txn_begin. */
@@ -548,7 +552,7 @@ void mdb_txn_end(MDB_txn* txn, unsigned mode)
         }
         else
         {
-            txn->mt_parent->mt_child = NULL;
+            txn->mt_parent->mt_child = nullptr;
             txn->mt_parent->mt_flags &= ~MDB_TXN_HAS_CHILD;
             env->me_pgstate = ((MDB_ntxn*)txn)->mnt_pgstate;
             mdb_midl_free(txn->mt_free_pgs);
@@ -564,7 +568,7 @@ void mdb_txn_end(MDB_txn* txn, unsigned mode)
 
 void mdb_txn_reset(MDB_txn* txn)
 {
-    if (txn == NULL)
+    if (txn == nullptr)
         return;
 
     // This call is only valid for read-only txns
@@ -576,7 +580,7 @@ void mdb_txn_reset(MDB_txn* txn)
 
 void mdb_txn_abort_impl(MDB_txn* txn)
 {
-    if (txn == NULL)
+    if (txn == nullptr)
         return;
 
     if (txn->mt_child != nullptr)
@@ -593,7 +597,7 @@ void mdb_txn_abort(MDB_txn* txn)
 
 // Save the freelist as of this transaction to the freeDB.
 // This changes the freelist. Keep trying until it stabilizes.
-int mdb_freelist_save(MDB_txn* txn)
+auto mdb_freelist_save(MDB_txn* txn) -> int
 {
     // env->me_pghead[] can grow and shrink during this call.
     // env->me_pglast and txn->mt_free_pgs[] can only grow.
@@ -613,12 +617,12 @@ int mdb_freelist_save(MDB_txn* txn)
     ssize_t mop_len{};
     ssize_t clean_limit{};
 
-    mdb_cursor_init(&mc, txn, FREE_DBI, NULL);
+    mdb_cursor_init(&mc, txn, FREE_DBI, nullptr);
 
     if (env->me_pghead != nullptr)
     {
         // Make sure first page of freeDB is touched and on freelist
-        rc = mdb_page_search(&mc, NULL, MDB_PS_FIRST | MDB_PS_MODIFY);
+        rc = mdb_page_search(&mc, nullptr, MDB_PS_FIRST | MDB_PS_MODIFY);
         if ((rc != 0) && rc != MDB_NOTFOUND)
             return rc;
     }
@@ -650,7 +654,7 @@ int mdb_freelist_save(MDB_txn* txn)
                 mdb_tassert(txn, dl[x].mid == mp->mp_pgno);
                 mdb_dpage_free(env, mp);
             }
-            dl[x].mptr = NULL;
+            dl[x].mptr = nullptr;
         }
         {
             // squash freed slots out of the dirty list
@@ -675,7 +679,7 @@ int mdb_freelist_save(MDB_txn* txn)
                 dl[0].mid = 0;
             }
         }
-        txn->mt_loose_pgs = NULL;
+        txn->mt_loose_pgs = nullptr;
         txn->mt_loose_count = 0;
     }
 
@@ -694,7 +698,7 @@ int mdb_freelist_save(MDB_txn* txn)
         // deleted, delete them and any we reserved for me_pghead.
         while (pglast < env->me_pglast)
         {
-            rc = mdb_cursor_first(&mc, &key, NULL);
+            rc = mdb_cursor_first(&mc, &key, nullptr);
             if (rc != 0)
                 return rc;
             pglast = head_id = *(txnid_t*)key.mv_data;
@@ -711,7 +715,7 @@ int mdb_freelist_save(MDB_txn* txn)
             if (freecnt == 0U)
             {
                 // Make sure last page of freeDB is touched and on freelist
-                rc = mdb_page_search(&mc, NULL, MDB_PS_LAST | MDB_PS_MODIFY);
+                rc = mdb_page_search(&mc, nullptr, MDB_PS_LAST | MDB_PS_MODIFY);
                 if ((rc != 0) && rc != MDB_NOTFOUND)
                     return rc;
             }
@@ -807,7 +811,7 @@ int mdb_freelist_save(MDB_txn* txn)
         loose[0] = count;
         mdb_midl_sort(loose);
         mdb_midl_xmerge(mop, loose);
-        txn->mt_loose_pgs = NULL;
+        txn->mt_loose_pgs = nullptr;
         txn->mt_loose_count = 0;
         mop_len = mop[0];
     }
@@ -851,14 +855,14 @@ int mdb_freelist_save(MDB_txn* txn)
 // This function has extensive variable re-assignments that violate single-purpose principle
 // Variables rc, i, x, y, len, ps_len are re-purposed throughout the function
 // Requires careful refactoring to maintain complex transaction commit logic
-int mdb_txn_commit_impl(MDB_txn* txn)
+auto mdb_txn_commit_impl(MDB_txn* txn) -> int
 {
     int rc{};
     unsigned int i{};
     unsigned int end_mode{};
     MDB_env* env{nullptr};
 
-    if (txn == NULL)
+    if (txn == nullptr)
         return EINVAL;
 
     // mdb_txn_end() mode for a commit which writes nothing
@@ -1039,7 +1043,7 @@ int mdb_txn_commit_impl(MDB_txn* txn)
         *lp = txn->mt_loose_pgs;
         parent->mt_loose_count += txn->mt_loose_count;
 
-        parent->mt_child = NULL;
+        parent->mt_child = nullptr;
         mdb_midl_free(((MDB_ntxn*)txn)->mnt_pgstate.mf_pghead);
         free(txn);
         return rc;
@@ -1071,7 +1075,7 @@ int mdb_txn_commit_impl(MDB_txn* txn)
         MDB_val data;
         data.mv_size = sizeof(MDB_db);
 
-        mdb_cursor_init(&mc, txn, MAIN_DBI, NULL);
+        mdb_cursor_init(&mc, txn, MAIN_DBI, nullptr);
         for (i = CORE_DBS; i < txn->mt_numdbs; i++)
         {
             if ((txn->mt_dbflags[i] & DB_DIRTY) != 0)
@@ -1094,7 +1098,7 @@ int mdb_txn_commit_impl(MDB_txn* txn)
         goto fail;
 
     mdb_midl_free(env->me_pghead);
-    env->me_pghead = NULL;
+    env->me_pghead = nullptr;
     mdb_midl_shrink(&txn->mt_free_pgs);
 
 #if (MDB_DEBUG) > 2
@@ -1135,7 +1139,7 @@ fail:
     return rc;
 }
 
-int mdb_txn_commit(MDB_txn* txn)
+auto mdb_txn_commit(MDB_txn* txn) -> int
 {
     MDB_TRACE(("%p", txn));
     return mdb_txn_commit_impl(txn);

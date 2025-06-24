@@ -19,7 +19,7 @@ static void mdb_default_cmp(MDB_txn* txn, MDB_dbi dbi)
     txn->mt_dbxs[dbi].md_dcmp = 0;
 }
 
-int mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* dbi)
+auto mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* dbi) -> int
 {
     if ((flags & ~VALID_FLAGS) != 0U)
         return EINVAL;
@@ -84,7 +84,7 @@ int mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* db
     key.mv_data = (void*)name;
     MDB_val data{};
     MDB_cursor mc{};
-    mdb_cursor_init(&mc, txn, MAIN_DBI, NULL);
+    mdb_cursor_init(&mc, txn, MAIN_DBI, nullptr);
     int rc{mdb_cursor_set(&mc, &key, &data, MDB_SET, &exact)};
     if (rc == MDB_SUCCESS)
     {
@@ -103,7 +103,7 @@ int mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* db
 
     // Done here so we cannot fail after creating a new DB
     char* namedup{mdb_strdup(name)};
-    if (namedup == NULL)
+    if (namedup == nullptr)
         return ENOMEM;
 
     if (rc != 0)
@@ -157,7 +157,7 @@ void mdb_dbi_close(MDB_env* env, MDB_dbi dbi)
     if (ptr != nullptr)
     {
         MDB_TRACE(("%p, %u", env, dbi));
-        env->me_dbxs[dbi].md_name.mv_data = NULL;
+        env->me_dbxs[dbi].md_name.mv_data = nullptr;
         env->me_dbxs[dbi].md_name.mv_size = 0;
         env->me_dbflags[dbi] = 0;
         env->me_dbiseqs[dbi]++;
@@ -165,7 +165,7 @@ void mdb_dbi_close(MDB_env* env, MDB_dbi dbi)
     }
 }
 
-int mdb_dbi_flags(MDB_txn* txn, MDB_dbi dbi, unsigned int* flags)
+auto mdb_dbi_flags(MDB_txn* txn, MDB_dbi dbi, unsigned int* flags) -> int
 {
     // We could return the flags for the FREE_DBI too but what's the point?
     if (!TXN_DBI_EXIST(txn, dbi, DB_USRVALID))
@@ -178,9 +178,9 @@ int mdb_dbi_flags(MDB_txn* txn, MDB_dbi dbi, unsigned int* flags)
 // mc: Cursor on the DB to free.
 // subs: non-Zero to check for sub-DBs in this DB.
 // Returns 0 on success, non-zero on failure.
-int mdb_drop0(MDB_cursor* mc, int subs)
+auto mdb_drop0(MDB_cursor* mc, int subs) -> int
 {
-    int rc{mdb_page_search(mc, NULL, MDB_PS_FIRST)};
+    int rc{mdb_page_search(mc, nullptr, MDB_PS_FIRST)};
     if (rc == MDB_SUCCESS)
     {
         MDB_txn* txn = mc->mc_txn;
@@ -208,7 +208,7 @@ int mdb_drop0(MDB_cursor* mc, int subs)
                         MDB_page* omp;
                         pgno_t pg;
                         memcpy(&pg, NODEDATA(ni), sizeof(pg));
-                        rc = mdb_page_get(mc, pg, &omp, NULL);
+                        rc = mdb_page_get(mc, pg, &omp, nullptr);
                         if (rc != 0)
                             goto done;
                         mdb_cassert(mc, IS_OVERFLOW(omp));
@@ -277,14 +277,14 @@ int mdb_drop0(MDB_cursor* mc, int subs)
     return rc;
 }
 
-static int mdb_del0(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data, unsigned flags)
+static auto mdb_del0(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data, unsigned flags) -> int
 {
     DKBUF;
 
     DPRINTF(("====> delete db %u key [%s]", dbi, DKEY(key)));
 
     MDB_cursor mc{};
-    mdb_cursor_init(&mc, txn, dbi, NULL);
+    mdb_cursor_init(&mc, txn, dbi, nullptr);
 
     MDB_cursor_op op{};
     MDB_val* xdata{nullptr};
@@ -317,7 +317,7 @@ static int mdb_del0(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data, unsi
     return rc;
 }
 
-int mdb_del(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data)
+auto mdb_del(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data) -> int
 {
     DKBUF;
     DDBUF;
@@ -328,7 +328,7 @@ int mdb_del(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data)
         return ((txn->mt_flags & MDB_TXN_RDONLY) != 0U) ? EACCES : MDB_BAD_TXN;
 
     // Without duplicate support, always ignore data parameter
-    data = NULL;
+    data = nullptr;
 
     MDB_TRACE(("%p, %u, %" Z "u[%s], %" Z "u%s",
                txn,
@@ -340,7 +340,7 @@ int mdb_del(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data)
     return mdb_del0(txn, dbi, key, data, 0);
 }
 
-int mdb_drop(MDB_txn* txn, MDB_dbi dbi, int del)
+auto mdb_drop(MDB_txn* txn, MDB_dbi dbi, int del) -> int
 {
     if ((unsigned)del > 1 || !TXN_DBI_EXIST(txn, dbi, DB_USRVALID))
         return EINVAL;
@@ -367,7 +367,7 @@ int mdb_drop(MDB_txn* txn, MDB_dbi dbi, int del)
     // Can't delete the main DB
     if ((del != 0) && dbi >= CORE_DBS)
     {
-        rc = mdb_del0(txn, MAIN_DBI, &mc->mc_dbx->md_name, NULL, F_SUBDATA);
+        rc = mdb_del0(txn, MAIN_DBI, &mc->mc_dbx->md_name, nullptr, F_SUBDATA);
         if (rc == 0)
         {
             txn->mt_dbflags[dbi] = DB_STALE;
@@ -396,7 +396,7 @@ leave:
     return rc;
 }
 
-int mdb_put(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data, unsigned int flags)
+auto mdb_put(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data, unsigned int flags) -> int
 {
     DKBUF;
     DDBUF;
@@ -419,7 +419,7 @@ int mdb_put(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data, unsigned int
                mdb_dval(txn, dbi, data, dbuf),
                flags));
     MDB_cursor mc{};
-    mdb_cursor_init(&mc, txn, dbi, NULL);
+    mdb_cursor_init(&mc, txn, dbi, nullptr);
     mc.mc_next = txn->mt_cursors[dbi];
     txn->mt_cursors[dbi] = &mc;
     int rc{mdb_cursor_put_impl(&mc, key, data, flags)};
@@ -427,7 +427,7 @@ int mdb_put(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data, unsigned int
     return rc;
 }
 
-int mdb_set_compare(MDB_txn* txn, MDB_dbi dbi, MDB_cmp_func* cmp)
+auto mdb_set_compare(MDB_txn* txn, MDB_dbi dbi, MDB_cmp_func cmp) -> int
 {
     if (!TXN_DBI_EXIST(txn, dbi, DB_USRVALID))
         return EINVAL;
@@ -436,7 +436,7 @@ int mdb_set_compare(MDB_txn* txn, MDB_dbi dbi, MDB_cmp_func* cmp)
     return MDB_SUCCESS;
 }
 
-int mdb_get(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data)
+auto mdb_get(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data) -> int
 {
     DKBUF;
 
@@ -449,7 +449,7 @@ int mdb_get(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data)
         return MDB_BAD_TXN;
 
     MDB_cursor mc{};
-    mdb_cursor_init(&mc, txn, dbi, NULL);
+    mdb_cursor_init(&mc, txn, dbi, nullptr);
     int exact{};
     int rc{mdb_cursor_set(&mc, key, data, MDB_SET, &exact)};
     return rc;

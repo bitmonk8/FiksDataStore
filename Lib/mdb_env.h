@@ -193,10 +193,10 @@ struct MDB_env
     MDB_assert_func* me_assert_func;  // Callback for assertion failures
 };
 
-int ESECT mdb_env_share_locks(MDB_env* env, int* excl);
-int mdb_env_sync0(MDB_env* env, int force, pgno_t numpgs);
+auto ESECT mdb_env_share_locks(MDB_env* env, int* excl) -> int;
+auto mdb_env_sync0(MDB_env* env, int force, pgno_t numpgs) -> int;
 
-int mdb_env_read_header(MDB_env* env, int prev, MDB_meta* meta);
-MDB_meta* mdb_env_pick_meta(const MDB_env* env);
-int mdb_env_write_meta(MDB_txn* txn);
+auto mdb_env_read_header(MDB_env* env, int prev, MDB_meta* meta) -> int;
+auto mdb_env_pick_meta(const MDB_env* env) -> MDB_meta*;
+auto mdb_env_write_meta(MDB_txn* txn) -> int;
 void mdb_env_close0(MDB_env* env, int excl);

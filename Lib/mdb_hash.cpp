@@ -28,7 +28,7 @@
  * @param len: Length of value.
  * @return: 64-bit hash.
  */
-mdb_hash_t mdb_hash(const void* val, size_t len)
+auto mdb_hash(const void* val, size_t len) -> mdb_hash_t
 {
     const unsigned char* s{(const unsigned char*)val};
     const unsigned char* end{s + len};

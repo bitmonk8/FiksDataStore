@@ -38,7 +38,7 @@
             : ((void)fprintf(stderr, "TEST FAILED: %s:%d: %s: %s\n", __FILE__, __LINE__, msg, mdb_strerror(rc)),       \
                abort()))
 
-int main(int argc, char* argv[])
+auto main(int argc, char* argv[]) -> int
 {
     int i = 0;
     int j = 0;
@@ -56,11 +56,11 @@ int main(int argc, char* argv[])
     int* values;
     char sval[32] = "";
 
-    struct stat st = {0};
+    struct stat st = {.st_dev=0};
     if (stat("./testdb", &st) == -1)
         mkdir("./testdb", 0700);
 
-    srand(static_cast<unsigned int>(time(NULL)));
+    srand(static_cast<unsigned int>(time(nullptr)));
 
     count = (rand() % 384) + 64;
     values = static_cast<int*>(malloc(count * sizeof(int)));
@@ -75,8 +75,8 @@ int main(int argc, char* argv[])
     E(mdb_env_set_mapsize(env, 10485760));
     E(mdb_env_open(env, "./testdb", 0 /*|MDB_NOSYNC*/, 0664));
 
-    E(mdb_txn_begin(env, NULL, 0, &txn));
-    E(mdb_dbi_open(txn, NULL, 0, &dbi));
+    E(mdb_txn_begin(env, nullptr, 0, &txn));
+    E(mdb_dbi_open(txn, nullptr, 0, &dbi));
 
     key.mv_size = sizeof(int);
     key.mv_data = sval;
@@ -101,7 +101,7 @@ int main(int argc, char* argv[])
     E(mdb_txn_commit(txn));
     E(mdb_env_stat(env, &mst));
 
-    E(mdb_txn_begin(env, NULL, MDB_RDONLY, &txn));
+    E(mdb_txn_begin(env, nullptr, MDB_RDONLY, &txn));
     E(mdb_cursor_open(txn, dbi, &cursor));
     while ((rc = mdb_cursor_get(cursor, &key, &data, MDB_NEXT)) == 0)
     {
@@ -122,10 +122,10 @@ int main(int argc, char* argv[])
     for (int delete_idx = count - 1; delete_idx > -1; delete_idx -= (rand() % 5))
     {
         deletion_count++;
-        txn = NULL;
-        E(mdb_txn_begin(env, NULL, 0, &txn));
+        txn = nullptr;
+        E(mdb_txn_begin(env, nullptr, 0, &txn));
         snprintf(sval, sizeof(sval), "%03x ", values[delete_idx]);
-        if (RES(MDB_NOTFOUND, mdb_del(txn, dbi, &key, NULL)))
+        if (RES(MDB_NOTFOUND, mdb_del(txn, dbi, &key, nullptr)))
         {
             deletion_count--;
             mdb_txn_abort(txn);
@@ -139,7 +139,7 @@ int main(int argc, char* argv[])
     printf("Deleted %d values\n", deletion_count);
 
     E(mdb_env_stat(env, &mst));
-    E(mdb_txn_begin(env, NULL, MDB_RDONLY, &txn));
+    E(mdb_txn_begin(env, nullptr, MDB_RDONLY, &txn));
     E(mdb_cursor_open(txn, dbi, &cursor));
     printf("Cursor next\n");
     while ((rc = mdb_cursor_get(cursor, &key, &data, MDB_NEXT)) == 0)
@@ -186,7 +186,7 @@ int main(int argc, char* argv[])
     mdb_txn_abort(txn);
 
     printf("Deleting with cursor\n");
-    E(mdb_txn_begin(env, NULL, 0, &txn));
+    E(mdb_txn_begin(env, nullptr, 0, &txn));
     E(mdb_cursor_open(txn, dbi, &cur2));
     for (int cursor_del_idx = 0; cursor_del_idx < 50; cursor_del_idx++)
     {
@@ -199,7 +199,7 @@ int main(int argc, char* argv[])
                data.mv_data,
                static_cast<int>(data.mv_size),
                static_cast<char*>(data.mv_data));
-        E(mdb_del(txn, dbi, &key, NULL));
+        E(mdb_del(txn, dbi, &key, nullptr));
     }
 
     printf("Restarting cursor in txn\n");
@@ -219,7 +219,7 @@ int main(int argc, char* argv[])
     E(mdb_txn_commit(txn));
 
     printf("Restarting cursor outside txn\n");
-    E(mdb_txn_begin(env, NULL, 0, &txn));
+    E(mdb_txn_begin(env, nullptr, 0, &txn));
     E(mdb_cursor_open(txn, dbi, &cursor));
     for (MDB_cursor_op final_cursor_op = MDB_FIRST;; final_cursor_op = MDB_NEXT)
     {

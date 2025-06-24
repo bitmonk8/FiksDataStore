@@ -57,6 +57,6 @@ struct MDB_reader
 // Return 0 on success, nonzero (not rc) on error.
 #define LOCK_MUTEX(rc, env, mutex) (((rc) = LOCK_MUTEX0(mutex)) && ((rc) = mdb_mutex_failed(env, mutex, rc)))
 
-int mdb_mutex_failed(MDB_env* env, mdb_mutexref_t mutex, int rc);
-int mdb_reader_pid(MDB_env* env, enum Pidlock_op op, MDB_PID_T pid);
-int mdb_reader_check0(MDB_env* env, int rlocked, int* dead);
+auto mdb_mutex_failed(MDB_env* env, mdb_mutexref_t mutex, int rc) -> int;
+auto mdb_reader_pid(MDB_env* env, enum Pidlock_op op, MDB_PID_T pid) -> int;
+auto mdb_reader_check0(MDB_env* env, int rlocked, int* dead) -> int;

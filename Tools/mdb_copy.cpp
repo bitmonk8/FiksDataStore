@@ -19,15 +19,15 @@
 #endif
 #include "lmdb.h"
 
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <csignal>
+#include <cstdio>
+#include <cstdlib>
 
 static void sighandle(int sig)
 {
 }
 
-int main(int argc, char* argv[])
+auto main(int argc, char* argv[]) -> int
 {
     int rc;
     MDB_env* env;

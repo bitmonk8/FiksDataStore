@@ -1,5 +1,7 @@
 #include "mdb_lock.h"
 
+#include <utility>
+
 #include "mdb_debug.h"
 #include "mdb_env.h"
 
@@ -18,7 +20,7 @@
 // On Windows Pidset is a no-op, we merely check for the existence
 // of the process with the given pid. On POSIX we use a single byte
 // lock on the lockfile, set at an offset equal to the pid.
-int mdb_reader_pid(MDB_env* env, enum Pidlock_op op, MDB_PID_T pid)
+auto mdb_reader_pid(MDB_env* env, enum Pidlock_op op, MDB_PID_T pid) -> int
 {
 #if !(MDB_PIDLOCK) /* Currently the same as defined(_WIN32) */
     if (op == Pidcheck)
@@ -56,7 +58,7 @@ int mdb_reader_pid(MDB_env* env, enum Pidlock_op op, MDB_PID_T pid)
 #endif
 }
 
-int ESECT mdb_reader_list(MDB_env* env, MDB_msg_func* func, void* ctx)
+auto ESECT mdb_reader_list(MDB_env* env, MDB_msg_func func, void* ctx) -> int
 {
     if ((env == nullptr) || (func == nullptr))
         return -1;
@@ -78,7 +80,7 @@ int ESECT mdb_reader_list(MDB_env* env, MDB_msg_func* func, void* ctx)
             char buf[64]{};
             snprintf(buf,
                      sizeof(buf),
-                     txnid == (txnid_t)-1 ? "%10d %" Z "x -\n" : "%10d %" Z "x %" Yu "\n",
+                     (txnid == -1) ? "%10d %" Z "x -\n" : "%10d %" Z "x %" Yu "\n",
                      (int)mr[i].mr_pid,
                      (size_t)mr[i].mr_tid,
                      txnid);
@@ -103,7 +105,7 @@ int ESECT mdb_reader_list(MDB_env* env, MDB_msg_func* func, void* ctx)
 
 // Insert pid into list if not already present.
 // return -1 if already present.
-static int ESECT mdb_pid_insert(MDB_PID_T* ids, MDB_PID_T pid)
+static auto ESECT mdb_pid_insert(MDB_PID_T* ids, MDB_PID_T pid) -> int
 {
     // binary search of pid in list
     unsigned base{0};
@@ -144,7 +146,7 @@ static int ESECT mdb_pid_insert(MDB_PID_T* ids, MDB_PID_T pid)
     return 0;
 }
 
-int ESECT mdb_reader_check(MDB_env* env, int* dead)
+auto ESECT mdb_reader_check(MDB_env* env, int* dead) -> int
 {
     if (env == nullptr)
         return EINVAL;
@@ -159,7 +161,7 @@ int ESECT mdb_reader_check(MDB_env* env, int* dead)
 // mutex: LOCK_MUTEX0() mutex
 // rc: LOCK_MUTEX0() error (nonzero)
 // Returns 0 on success with the mutex locked, or an error code on failure.
-int ESECT mdb_mutex_failed(MDB_env* env, mdb_mutexref_t mutex, int rc)
+auto ESECT mdb_mutex_failed(MDB_env* env, mdb_mutexref_t mutex, int rc) -> int
 {
     if (rc == MDB_OWNERDEAD)
     {
@@ -176,14 +178,14 @@ int ESECT mdb_mutex_failed(MDB_env* env, mdb_mutexref_t mutex, int rc)
             if (env->me_txn != nullptr)
             {
                 env->me_flags |= MDB_FATAL_ERROR;
-                env->me_txn = NULL;
+                env->me_txn = nullptr;
                 cleanup_result = MDB_PANIC;
             }
         }
         DPRINTF(("%cmutex owner died, %s",
                  (rlocked ? 'r' : 'w'),
                  (cleanup_result ? "this process' env is hosed" : "recovering")));
-        const int reader_check_result{mdb_reader_check0(env, rlocked, NULL)};
+        const int reader_check_result{mdb_reader_check0(env, rlocked, nullptr)};
         int consistency_result = reader_check_result;
         if (reader_check_result == 0)
             consistency_result = mdb_mutex_consistent(mutex);
@@ -208,9 +210,9 @@ int ESECT mdb_mutex_failed(MDB_env* env, mdb_mutexref_t mutex, int rc)
 }
 
 // As #mdb_reader_check(). rlocked is set if caller locked #me_rmutex.
-int ESECT mdb_reader_check0(MDB_env* env, int rlocked, int* dead)
+auto ESECT mdb_reader_check0(MDB_env* env, int rlocked, int* dead) -> int
 {
-    mdb_mutexref_t rmutex{(rlocked != 0) ? NULL : env->me_rmutex};
+    mdb_mutexref_t rmutex{(rlocked != 0) ? nullptr : env->me_rmutex};
     unsigned int rdrs{env->me_txns->mti_numreaders};
     MDB_PID_T* pids{(MDB_PID_T*)malloc((rdrs + 1) * sizeof(MDB_PID_T))};
     if (pids == nullptr)

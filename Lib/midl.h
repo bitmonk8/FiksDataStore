@@ -52,7 +52,7 @@
 // ID List Management
 // A generic unsigned ID number. These were entryIDs in back-bdb.
 // Preferably it should have the same size as a pointer.
-typedef mdb_size_t MDB_ID;
+using MDB_ID = mdb_size_t;
 
 // An IDL is an ID List, a sorted array of IDs. The first
 // element of the array is a counter for how many actual
@@ -64,7 +64,7 @@ typedef mdb_size_t MDB_ID;
 // - Element [0]: Contains count of actual IDs
 // - Elements [1] to [count]: Contains sorted IDs in descending order
 // - Used for managing page IDs, transaction IDs, and database identifiers
-typedef MDB_ID* MDB_IDL;
+using MDB_IDL = MDB_ID*;
 
 /* IDL sizes - likely should be even bigger
  *   limiting factors: sizeof(ID), thread stack size
@@ -100,12 +100,12 @@ typedef MDB_ID* MDB_IDL;
 // ids The IDL to search.
 // id The ID to search for.
 // The index of the first ID greater than or equal to id.
-unsigned mdb_midl_search(const MDB_IDL ids, MDB_ID id);
+auto mdb_midl_search(const MDB_IDL ids, MDB_ID id) -> unsigned;
 
 // Allocate an IDL.
 // Allocates memory for an IDL of the given size.
 // IDL on success, NULL on failure.
-MDB_IDL mdb_midl_alloc(int num);
+auto mdb_midl_alloc(int num) -> MDB_IDL;
 
 // Free an IDL.
 // ids The IDL to free.
@@ -120,26 +120,26 @@ void mdb_midl_shrink(MDB_IDL* idp);
 // idp Address of the IDL.
 // num Number of elements to make room for.
 // 0 on success, ENOMEM on failure.
-int mdb_midl_need(MDB_IDL* idp, unsigned num);
+auto mdb_midl_need(MDB_IDL* idp, unsigned num) -> int;
 
 // Append an ID onto an IDL.
 // idp Address of the IDL to append to.
 // id The ID to append.
 // 0 on success, ENOMEM if the IDL is too large.
-int mdb_midl_append(MDB_IDL* idp, MDB_ID id);
+auto mdb_midl_append(MDB_IDL* idp, MDB_ID id) -> int;
 
 // Append an IDL onto an IDL.
 // idp Address of the IDL to append to.
 // app The IDL to append.
 // 0 on success, ENOMEM if the IDL is too large.
-int mdb_midl_append_list(MDB_IDL* idp, MDB_IDL app);
+auto mdb_midl_append_list(MDB_IDL* idp, MDB_IDL app) -> int;
 
 // Append an ID range onto an IDL.
 // idp Address of the IDL to append to.
 // id The lowest ID to append.
 // n Number of IDs to append.
 // 0 on success, ENOMEM if the IDL is too large.
-int mdb_midl_append_range(MDB_IDL* idp, MDB_ID id, unsigned n);
+auto mdb_midl_append_range(MDB_IDL* idp, MDB_ID id, unsigned n) -> int;
 
 // Merge an IDL onto an IDL. The destination IDL must be big enough.
 // idl The IDL to merge into.
@@ -169,23 +169,23 @@ struct MDB_ID2
 // - Element [0].mptr: Unused
 // - Elements [1] to [count]: Contains ID/pointer pairs sorted by ID in ascending order
 // - Used for mapping IDs to memory locations or data structures
-typedef MDB_ID2* MDB_ID2L;
+using MDB_ID2L = MDB_ID2*;
 
 // Search for an ID in an ID2L.
 // Uses binary search for O(log n) performance.
 // ids The ID2L to search.
 // id The ID to search for.
 // The index of the first ID2 whose mid member is greater than or equal to id.
-unsigned mdb_mid2l_search(MDB_ID2L ids, MDB_ID id);
+auto mdb_mid2l_search(MDB_ID2L ids, MDB_ID id) -> unsigned;
 
 // Insert an ID2 into a ID2L.
 // ids The ID2L to insert into.
 // id The ID2 to insert.
 // 0 on success, -1 if the ID was already present in the ID2L.
-int mdb_mid2l_insert(MDB_ID2L ids, MDB_ID2* id);
+auto mdb_mid2l_insert(MDB_ID2L ids, MDB_ID2* id) -> int;
 
 // Append an ID2 into a ID2L.
 // ids The ID2L to append into.
 // id The ID2 to append.
 // 0 on success, -2 if the ID2L is too big.
-int mdb_mid2l_append(MDB_ID2L ids, MDB_ID2* id);
+auto mdb_mid2l_append(MDB_ID2L ids, MDB_ID2* id) -> int;

@@ -17,11 +17,11 @@
 
 #include "lmdb.h"
 
-#include <ctype.h>
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cctype>
+#include <cerrno>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #ifdef _WIN32
 #define mdb_strdup _strdup
@@ -29,11 +29,13 @@
 #define mdb_strdup strdup
 #endif
 
-#define PRINT 1
-#define NOHDR 2
+enum {
+PRINT = 1,
+NOHDR = 2
+};
 static int mode;
 
-static char* subname = NULL;
+static char* subname = nullptr;
 
 static mdb_size_t lineno;
 static int version;
@@ -64,15 +66,15 @@ struct flagbit
 
 flagbit dbflags[] = {
     {MDB_REVERSEKEY, S("reversekey")},
-    {0, NULL, 0}
+    {.bit=0, .name=nullptr, .len=0}
 };
 
-static void readhdr(void)
+static void readhdr()
 {
     char* ptr;
 
     flags = 0;
-    while (fgets((char*)dbuf.mv_data, (int)dbuf.mv_size, stdin) != NULL)
+    while (fgets((char*)dbuf.mv_data, (int)dbuf.mv_size, stdin) != nullptr)
     {
         lineno++;
         if (strncmp((char*)dbuf.mv_data, "VERSION=", STRLENOF("VERSION=")) == 0)
@@ -201,12 +203,12 @@ static void readhdr(void)
     }
 }
 
-static void badend(void)
+static void badend()
 {
     fprintf(stderr, "%s: line %" Yu ": unexpected end of input\n", prog, lineno);
 }
 
-static int unhex(unsigned char* c2)
+static auto unhex(unsigned char* c2) -> int
 {
     int x;
     int c;
@@ -221,7 +223,7 @@ static int unhex(unsigned char* c2)
     return c;
 }
 
-static int readline(MDB_val* out, MDB_val* buf)
+static auto readline(MDB_val* out, MDB_val* buf) -> int
 {
     unsigned char* c1;
     unsigned char* c2;
@@ -241,7 +243,7 @@ static int readline(MDB_val* out, MDB_val* buf)
         if (c != ' ')
         {
             lineno++;
-            if (fgets((char*)buf->mv_data, (int)buf->mv_size, stdin) == NULL)
+            if (fgets((char*)buf->mv_data, (int)buf->mv_size, stdin) == nullptr)
             {
             badend:
                 Eof = 1;
@@ -253,14 +255,14 @@ static int readline(MDB_val* out, MDB_val* buf)
             goto badend;
         }
     }
-    if (fgets((char*)buf->mv_data, (int)buf->mv_size, stdin) == NULL)
+    if (fgets((char*)buf->mv_data, (int)buf->mv_size, stdin) == nullptr)
     {
         Eof = 1;
         return EOF;
     }
     lineno++;
 
-    unsigned char* const initial_data = (unsigned char*)buf->mv_data;
+    auto* const initial_data = (unsigned char*)buf->mv_data;
     const size_t initial_len = strlen((char*)initial_data);
     size_t total_len = initial_len;
 
@@ -276,9 +278,9 @@ static int readline(MDB_val* out, MDB_val* buf)
             return EOF;
         }
         buf->mv_data = new_data;
-        unsigned char* const buffer_base = (unsigned char*)buf->mv_data;
+        auto* const buffer_base = (unsigned char*)buf->mv_data;
         unsigned char* const append_pos = buffer_base + total_len;
-        if (fgets((char*)append_pos, (int)buf->mv_size + 1, stdin) == NULL)
+        if (fgets((char*)append_pos, (int)buf->mv_size + 1, stdin) == nullptr)
         {
             Eof = 1;
             badend();
@@ -289,7 +291,7 @@ static int readline(MDB_val* out, MDB_val* buf)
         total_len += append_len;
         current_pos = buffer_base;
     }
-    unsigned char* const source_ptr = (unsigned char*)buf->mv_data;
+    auto* const source_ptr = (unsigned char*)buf->mv_data;
     unsigned char* dest_ptr = source_ptr;
     const size_t final_len = total_len - 1;  // Remove newline
     source_ptr[final_len] = '\0';
@@ -357,18 +359,18 @@ static int readline(MDB_val* out, MDB_val* buf)
     return 0;
 }
 
-static void usage(void)
+static void usage()
 {
     fprintf(stderr, "usage: %s [-V] [-a] [-f input] [-n] [-s name] [-N] [-T] dbpath\n", prog);
     exit(EXIT_FAILURE);
 }
 
-static int greater(const MDB_val* a, const MDB_val* b)
+static auto greater(const MDB_val* a, const MDB_val* b) -> int
 {
     return 1;
 }
 
-int main(int argc, char* argv[])
+auto main(int argc, char* argv[]) -> int
 {
     int i;
     int rc;
@@ -517,7 +519,7 @@ int main(int argc, char* argv[])
         else if ((mode & NOHDR) == 0)
             readhdr();
 
-        rc = mdb_txn_begin(env, NULL, 0, &txn);
+        rc = mdb_txn_begin(env, nullptr, 0, &txn);
         if (rc != 0)
         {
             fprintf(stderr, "mdb_txn_begin failed, error %d %s\n", rc, mdb_strerror(rc));
@@ -587,7 +589,7 @@ int main(int argc, char* argv[])
                     rc = commit_rc;
                     goto env_close;
                 }
-                const int begin_rc = mdb_txn_begin(env, NULL, 0, &txn);
+                const int begin_rc = mdb_txn_begin(env, nullptr, 0, &txn);
                 if (begin_rc != 0)
                 {
                     fprintf(stderr, "mdb_txn_begin failed, error %d %s\n", begin_rc, mdb_strerror(begin_rc));
@@ -613,7 +615,7 @@ int main(int argc, char* argv[])
             }
         }
         rc = mdb_txn_commit(txn);
-        txn = NULL;
+        txn = nullptr;
         if (rc != 0)
         {
             fprintf(stderr, "%s: line %" Yu ": txn_commit: %s\n", prog, lineno, mdb_strerror(rc));

@@ -29,7 +29,13 @@ Checks: '-*,
          readability-suspicious-call-argument,
          readability-uppercase-literal-suffix,
          -bugprone-narrowing-conversions,
-         -bugprone-easily-swappable-parameters'
+         -bugprone-easily-swappable-parameters,
+         modernize-*,
+         -modernize-use-integer-sign-comparison,
+         -modernize-use-spaceship-operator,
+         -modernize-use-std-numbers,
+         -modernize-use-std-format,
+         -modernize-use-std-print'
 WarningsAsErrors: ''
 HeaderFileExtensions:
   - h

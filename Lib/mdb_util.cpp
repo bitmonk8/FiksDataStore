@@ -2,14 +2,14 @@
 
 #include "lmdb.h"
 
-#include <string.h>
+#include <cstring>
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
 
 // Return the library version info.
-const char* mdb_version(int* major, int* minor, int* patch)
+auto mdb_version(int* major, int* minor, int* patch) -> const char*
 {
     if (major != nullptr)
         *major = MDB_VERSION_MAJOR;
@@ -46,7 +46,7 @@ static const char* const mdb_errstr[] = {
     "MDB_LAST_ERRCODE: MDB_LAST_ERRCODE",
 };
 
-const char* mdb_strerror(int err)
+auto mdb_strerror(int err) -> const char*
 {
 #ifdef _WIN32
     // HACK: pad 4KB on stack over the buf. Return system msgs in buf.
@@ -87,7 +87,7 @@ const char* mdb_strerror(int err)
     default:;
     }
     buf[0] = 0;
-    FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, err, 0, ptr, MSGSIZE, NULL);
+    FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, err, 0, ptr, MSGSIZE, nullptr);
     return ptr;
 #else
     if (err < 0)

@@ -11,17 +11,17 @@
 // top-level directory of the distribution or, alternatively, at
 // <http://www.OpenLDAP.org/license.html>.
 //
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #ifndef _WIN32
 #include <unistd.h>
 #endif
 
-#include <assert.h>
-#include <ctype.h>
-#include <string.h>
+#include <cassert>
+#include <cctype>
+#include <cstring>
 #include <sys/types.h>
-#include <time.h>
+#include <ctime>
 #ifndef _WIN32
 #include <sys/wait.h>
 #endif
@@ -41,11 +41,15 @@ int maxkey;
 
 #define SOFF(s) (sizeof(s) + 1)
 
-#define MAXENVS 16
-#define MAXTXNS 16
-#define MAXCRSS 16
+enum {
+MAXENVS = 16,
+MAXTXNS = 16,
+MAXCRSS = 16
+};
 
-#define MAXPIDS 16
+enum {
+MAXPIDS = 16
+};
 
 /** A pair of cursors, one for scanned text and one for MDB.
  This is a test note.
@@ -98,7 +102,7 @@ int npids;
 unsigned long lcount;
 
 // Helper function to unhex a character.
-static int unhex(unsigned char* c2)
+static auto unhex(unsigned char* c2) -> int
 {
     int x;
     int c;
@@ -114,7 +118,7 @@ static int unhex(unsigned char* c2)
 }
 
 // Converts a hex string to a byte array.
-int inhex(char* in, char* out)
+auto inhex(char* in, char* out) -> int
 {
     char* c2 = out;
     while (isxdigit(*in) != 0)
@@ -135,7 +139,7 @@ static void addenv(void* tenv, MDB_env* renv)
     nenvs++;
 }
 
-static envpair* findenv(void* tenv)
+static auto findenv(void* tenv) -> envpair*
 {
     int i;
     if ((lastenv == nullptr) || lastenv->tenv != tenv)
@@ -155,7 +159,7 @@ static void delenv(envpair* ep)
     for (; i < nenvs - 1; i++)
         envs[i] = envs[i + 1];
     nenvs--;
-    lastenv = NULL;
+    lastenv = nullptr;
 }
 
 static void addtxn(void* tenv, void* ttxn, MDB_txn* rtxn)
@@ -173,7 +177,7 @@ static void addtxn(void* tenv, void* ttxn, MDB_txn* rtxn)
     lasttxn = tp;
 }
 
-static txnpair* findtxn(void* ttxn)
+static auto findtxn(void* ttxn) -> txnpair*
 {
     int i;
     int j;
@@ -213,7 +217,7 @@ static void deltxn(txnpair* tp)
     for (; i < lastenv->ntxns - 1; i++)
         lastenv->txns[i] = lastenv->txns[i + 1];
     lastenv->ntxns--;
-    lasttxn = NULL;
+    lasttxn = nullptr;
 }
 
 static void addcrs(txnpair* tp, void* tcrs, MDB_cursor* rcrs)
@@ -227,7 +231,7 @@ static void addcrs(txnpair* tp, void* tcrs, MDB_cursor* rcrs)
     lastcrs = tp->cursors + j;
 }
 
-static crspair* findcrs(void* tcrs)
+static auto findcrs(void* tcrs) -> crspair*
 {
     int i;
     int j;
@@ -295,7 +299,7 @@ static void delcrs(void* tcrs)
     for (i = cp - lasttxn->cursors; i < lasttxn->ncursors - 1; i++)
         lasttxn->cursors[i] = lasttxn->cursors[i + 1];
     lasttxn->ncursors--;
-    lastcrs = NULL;
+    lastcrs = nullptr;
 }
 
 // TODO: Fix Single-Purpose Variable violations in child() function
@@ -384,7 +388,7 @@ void child()
             MDB_txn* rtxn;
             sscanf(ptr + SOFF("mdb_txn_begin"), "%p, %*p, %u = %p", &tenv, &flags, &ttxn);
             ep = findenv(tenv);
-            E(mdb_txn_begin(ep->renv, NULL, flags, &rtxn));
+            E(mdb_txn_begin(ep->renv, nullptr, flags, &rtxn));
             addtxn(tenv, ttxn, rtxn);
         }
         else if (strncmp(ptr, SCMP("mdb_txn_commit")) == 0)
@@ -419,7 +423,7 @@ void child()
             ptr = strchr(dbname, ',');
             *ptr++ = '\0';
             if (strcmp(dbname, "(null)") == 0)
-                dbname = NULL;
+                dbname = nullptr;
             sscanf(ptr, "%u, %o", &flags, &tdbi);
             tp = findtxn(ttxn);
             E(mdb_dbi_open(tp->rtxn, dbname, flags, &dbi));
@@ -473,7 +477,7 @@ void child()
             if (data.mv_size > dbufsize)
             {
                 dbuf = (char*)realloc(dbuf, data.mv_size + 2);
-                assert(dbuf != NULL);
+                assert(dbuf != nullptr);
                 dbufsize = data.mv_size;
             }
             ptr += len + 1;
@@ -516,7 +520,7 @@ void child()
             if (data.mv_size > dbufsize)
             {
                 dbuf = (char*)realloc(dbuf, data.mv_size + 2);
-                assert(dbuf != NULL);
+                assert(dbuf != nullptr);
                 dbufsize = data.mv_size;
             }
             ptr += len + 1;
@@ -548,7 +552,7 @@ void child()
             if (data.mv_size > dbufsize)
             {
                 dbuf = (char*)realloc(dbuf, data.mv_size + 2);
-                assert(dbuf != NULL);
+                assert(dbuf != nullptr);
                 dbufsize = data.mv_size;
             }
             ptr += len + 1;
@@ -568,7 +572,7 @@ void child()
     exit(0);
 }
 
-static pidpair* addpid(int tpid)
+static auto addpid(int tpid) -> pidpair*
 {
     int fdout[2];
     int fdin[2];
@@ -588,7 +592,7 @@ static pidpair* addpid(int tpid)
         stdin = fdopen(0, "r");
         stdout = fdopen(1, "w");
         child();
-        return 0;  // NOTREACHED
+        return nullptr;  // NOTREACHED
     }
 
     pids[npids].rpid = pid;
@@ -599,7 +603,7 @@ static pidpair* addpid(int tpid)
     return lastpid;
 }
 
-static pidpair* findpid(int tpid)
+static auto findpid(int tpid) -> pidpair*
 {
     int i;
     if ((lastpid == nullptr) || lastpid->tpid != tpid)
@@ -608,7 +612,7 @@ static pidpair* findpid(int tpid)
             if (pids[i].tpid == tpid)
                 break;
         if (i == npids)
-            return NULL;
+            return nullptr;
         lastpid = &pids[i];
     }
     return lastpid;
@@ -653,7 +657,7 @@ static void reaper(int sig)
 // TODO: Fix Single-Purpose Variable violations in main() function
 // Lines 655-681: variables pp, ptr re-purposed for different purposes
 // Generic variable names like len, c should be more descriptive
-int main(int argc, char* argv[])
+auto main(int argc, char* argv[]) -> int
 {
     signal(SIGCHLD, reaper);
 

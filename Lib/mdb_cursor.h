@@ -76,22 +76,22 @@ void mdb_cursor_init(MDB_cursor* mc, MDB_txn* txn, MDB_dbi dbi, MDB_xcursor* mx 
 
 void mdb_cursor_copy(const MDB_cursor* csrc, MDB_cursor* cdst);
 void mdb_cursor_pop(MDB_cursor* mc);
-int mdb_cursor_push(MDB_cursor* mc, MDB_page* mp);
+auto mdb_cursor_push(MDB_cursor* mc, MDB_page* mp) -> int;
 
-int mdb_cursor_del(MDB_cursor* mc, unsigned int flags);
-int mdb_cursor_put(MDB_cursor* mc, MDB_val* key, MDB_val* data, unsigned int flags);
+auto mdb_cursor_del(MDB_cursor* mc, unsigned int flags) -> int;
+auto mdb_cursor_put(MDB_cursor* mc, MDB_val* key, MDB_val* data, unsigned int flags) -> int;
 
 // Internal implementation functions
-int mdb_cursor_del_impl(MDB_cursor* mc, unsigned int flags);
-int mdb_cursor_put_impl(MDB_cursor* mc, MDB_val* key, MDB_val* data, unsigned int flags);
+auto mdb_cursor_del_impl(MDB_cursor* mc, unsigned int flags) -> int;
+auto mdb_cursor_put_impl(MDB_cursor* mc, MDB_val* key, MDB_val* data, unsigned int flags) -> int;
 
-int mdb_cursor_del0(MDB_cursor* mc);
-int mdb_cursor_sibling(MDB_cursor* mc, int move_right);
-int mdb_cursor_next(MDB_cursor* mc, MDB_val* key, MDB_val* data, MDB_cursor_op op);
-int mdb_cursor_prev(MDB_cursor* mc, MDB_val* key, MDB_val* data, MDB_cursor_op op);
-int mdb_cursor_set(MDB_cursor* mc, MDB_val* key, MDB_val* data, MDB_cursor_op op, int* exactp);
-int mdb_cursor_first(MDB_cursor* mc, MDB_val* key, MDB_val* data);
-int mdb_cursor_last(MDB_cursor* mc, MDB_val* key, MDB_val* data);
+auto mdb_cursor_del0(MDB_cursor* mc) -> int;
+auto mdb_cursor_sibling(MDB_cursor* mc, int move_right) -> int;
+auto mdb_cursor_next(MDB_cursor* mc, MDB_val* key, MDB_val* data, MDB_cursor_op op) -> int;
+auto mdb_cursor_prev(MDB_cursor* mc, MDB_val* key, MDB_val* data, MDB_cursor_op op) -> int;
+auto mdb_cursor_set(MDB_cursor* mc, MDB_val* key, MDB_val* data, MDB_cursor_op op, int* exactp) -> int;
+auto mdb_cursor_first(MDB_cursor* mc, MDB_val* key, MDB_val* data) -> int;
+auto mdb_cursor_last(MDB_cursor* mc, MDB_val* key, MDB_val* data) -> int;
 
-int mdb_rebalance(MDB_cursor* mc);
-int mdb_update_key(MDB_cursor* mc, MDB_val* key);
+auto mdb_rebalance(MDB_cursor* mc) -> int;
+auto mdb_update_key(MDB_cursor* mc, MDB_val* key) -> int;

@@ -21,8 +21,8 @@ struct MDB_db
 struct MDB_dbx
 {
     MDB_val md_name;        // name of the database
-    MDB_cmp_func* md_cmp;   // function for comparing keys
-    MDB_cmp_func* md_dcmp;  // function for comparing data items
+    MDB_cmp_func md_cmp;   // function for comparing keys
+    MDB_cmp_func md_dcmp;  // function for comparing data items
 };
 
 // Check txn and dbi arguments to a function
@@ -31,4 +31,4 @@ struct MDB_dbx
 // Check for misused dbi handles
 #define TXN_DBI_CHANGED(txn, dbi) ((txn)->mt_dbiseqs[dbi] != (txn)->mt_env->me_dbiseqs[dbi])
 
-int mdb_drop0(MDB_cursor* mc, int subs);
+auto mdb_drop0(MDB_cursor* mc, int subs) -> int;

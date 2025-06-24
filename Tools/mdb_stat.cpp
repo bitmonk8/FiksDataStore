@@ -11,13 +11,13 @@
 // top-level directory of the distribution or, alternatively, at
 // <http://www.OpenLDAP.org/license.html>.
 //
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #ifdef _WIN32
 #include <io.h>
 #include <windows.h>
-typedef SSIZE_T ssize_t;
+using ssize_t = SSIZE_T;
 #else
 #include <unistd.h>
 #endif
@@ -45,7 +45,7 @@ static void usage(const char* prog)
     exit(EXIT_FAILURE);
 }
 
-int main(int argc, char* argv[])
+auto main(int argc, char* argv[]) -> int
 {
     int rc;
     MDB_env* env;
@@ -56,8 +56,8 @@ int main(int argc, char* argv[])
 
     // options
     const char* prog = argv[0];
-    const char* envname = NULL;
-    const char* subname = NULL;
+    const char* envname = nullptr;
+    const char* subname = nullptr;
     int alldbs = 0;
     int envinfo = 0;
     int freinfo = 0;
@@ -181,19 +181,19 @@ int main(int argc, char* argv[])
     if (rdrinfo != 0)
     {
         printf("Reader Table Status\n");
-        rc = mdb_reader_list(env, (MDB_msg_func*)fputs, stdout);
+        rc = mdb_reader_list(env, (MDB_msg_func)fputs, stdout);
         if (rdrinfo > 1)
         {
             int dead;
             mdb_reader_check(env, &dead);
             printf("  %d stale readers cleared.\n", dead);
-            rc = mdb_reader_list(env, (MDB_msg_func*)fputs, stdout);
+            rc = mdb_reader_list(env, (MDB_msg_func)fputs, stdout);
         }
         if ((subname == nullptr) && (alldbs == 0) && (freinfo == 0))
             goto env_close;
     }
 
-    rc = mdb_txn_begin(env, NULL, MDB_RDONLY, &txn);
+    rc = mdb_txn_begin(env, nullptr, MDB_RDONLY, &txn);
     if (rc != 0)
     {
         fprintf(stderr, "mdb_txn_begin failed, error %d %s\n", rc, mdb_strerror(rc));
@@ -319,7 +319,7 @@ int main(int argc, char* argv[])
             fprintf(stderr, "mdb_cursor_open failed, error %d %s\n", rc, mdb_strerror(rc));
             goto txn_abort;
         }
-        while ((rc = mdb_cursor_get(cursor, &key, NULL, MDB_NEXT)) == 0)
+        while ((rc = mdb_cursor_get(cursor, &key, nullptr, MDB_NEXT)) == 0)
         {
             char* str;
             MDB_dbi db2;

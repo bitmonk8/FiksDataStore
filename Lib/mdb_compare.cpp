@@ -4,7 +4,7 @@
 #include "mdb_txn.h"
 
 // Compare two items pointing at aligned mdb_size_t's
-int mdb_cmp_long(const MDB_val* a, const MDB_val* b)
+auto mdb_cmp_long(const MDB_val* a, const MDB_val* b) -> int
 {
     return (*(mdb_size_t*)a->mv_data < *(mdb_size_t*)b->mv_data)
                ? -1
@@ -12,7 +12,7 @@ int mdb_cmp_long(const MDB_val* a, const MDB_val* b)
 }
 
 // Compare two items pointing at aligned unsigned int's.
-int mdb_cmp_int(const MDB_val* a, const MDB_val* b)
+auto mdb_cmp_int(const MDB_val* a, const MDB_val* b) -> int
 {
     return (*(unsigned int*)a->mv_data < *(unsigned int*)b->mv_data)
                ? -1
@@ -21,11 +21,11 @@ int mdb_cmp_int(const MDB_val* a, const MDB_val* b)
 
 // Compare two items pointing at unsigned ints of unknown alignment.
 // Nodes and keys are guaranteed to be 2-byte aligned.
-int mdb_cmp_cint(const MDB_val* a, const MDB_val* b)
+auto mdb_cmp_cint(const MDB_val* a, const MDB_val* b) -> int
 {
 #if BYTE_ORDER == LITTLE_ENDIAN
-    unsigned short* u = (unsigned short*)((char*)a->mv_data + a->mv_size);
-    unsigned short* c = (unsigned short*)((char*)b->mv_data + a->mv_size);
+    auto* u = (unsigned short*)((char*)a->mv_data + a->mv_size);
+    auto* c = (unsigned short*)((char*)b->mv_data + a->mv_size);
     do
     {
         int x{*--u - *--c};
@@ -48,7 +48,7 @@ int mdb_cmp_cint(const MDB_val* a, const MDB_val* b)
 }
 
 // Compare two items lexically
-int mdb_cmp_memn(const MDB_val* a, const MDB_val* b)
+auto mdb_cmp_memn(const MDB_val* a, const MDB_val* b) -> int
 {
     unsigned int len = a->mv_size;
     ssize_t len_diff{(ssize_t)a->mv_size - (ssize_t)b->mv_size};
@@ -63,7 +63,7 @@ int mdb_cmp_memn(const MDB_val* a, const MDB_val* b)
 }
 
 // Compare two items in reverse byte order
-int mdb_cmp_memnr(const MDB_val* a, const MDB_val* b)
+auto mdb_cmp_memnr(const MDB_val* a, const MDB_val* b) -> int
 {
     const unsigned char* p1_lim{(const unsigned char*)a->mv_data};
     const unsigned char* p1{(const unsigned char*)a->mv_data + a->mv_size};
@@ -85,14 +85,14 @@ int mdb_cmp_memnr(const MDB_val* a, const MDB_val* b)
     return len_diff < 0 ? -1 : len_diff;
 }
 
-int mdb_cmp(MDB_txn* txn, MDB_dbi dbi, const MDB_val* a, const MDB_val* b)
+auto mdb_cmp(MDB_txn* txn, MDB_dbi dbi, const MDB_val* a, const MDB_val* b) -> int
 {
     return txn->mt_dbxs[dbi].md_cmp(a, b);
 }
 
-int mdb_dcmp(MDB_txn* txn, MDB_dbi dbi, const MDB_val* a, const MDB_val* b)
+auto mdb_dcmp(MDB_txn* txn, MDB_dbi dbi, const MDB_val* a, const MDB_val* b) -> int
 {
-    MDB_cmp_func* dcmp = txn->mt_dbxs[dbi].md_dcmp;
+    MDB_cmp_func dcmp = txn->mt_dbxs[dbi].md_dcmp;
     if (NEED_CMP_CLONG(dcmp, a->mv_size))
         dcmp = mdb_cmp_clong;
     return dcmp(a, b);

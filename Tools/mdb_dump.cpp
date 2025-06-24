@@ -15,25 +15,27 @@
 #define CRT_SECURE_NO_WARNINGS
 #endif
 
-#include <ctype.h>
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cctype>
+#include <cerrno>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #ifdef _WIN32
 #include <io.h>
 #include <windows.h>
-typedef SSIZE_T ssize_t;
+using ssize_t = SSIZE_T;
 #else
 #include <unistd.h>
 #endif
 #include "lmdb.h"
 
-#include <signal.h>
+#include <csignal>
 
 #define Yu MDB_PRIy(u)
 
-#define PRINT 1
+enum {
+PRINT = 1
+};
 static int mode;
 
 struct flagbit
@@ -43,8 +45,8 @@ struct flagbit
 };
 
 flagbit dbflags[] = {
-    {MDB_REVERSEKEY, "reversekey"},
-    {             0,         NULL}
+    {.bit=MDB_REVERSEKEY, .name="reversekey"},
+    {             .bit=0,         .name=nullptr}
 };
 
 static volatile sig_atomic_t gotsig;
@@ -104,7 +106,7 @@ static void byte2(MDB_val* v)
 }
 
 // Dump in BDB-compatible format
-static int dumpit(MDB_txn* txn, MDB_dbi dbi, char* name)
+static auto dumpit(MDB_txn* txn, MDB_dbi dbi, char* name) -> int
 {
     MDB_cursor* mc;
     MDB_stat ms;
@@ -177,7 +179,7 @@ static void usage(char* prog)
     exit(EXIT_FAILURE);
 }
 
-int main(int argc, char* argv[])
+auto main(int argc, char* argv[]) -> int
 {
     int alldbs = 0;
     int envflags = 0;
@@ -188,8 +190,8 @@ int main(int argc, char* argv[])
     MDB_txn* txn;
     MDB_dbi dbi;
     char* prog = argv[0];
-    char* envname = NULL;
-    char* subname = NULL;
+    char* envname = nullptr;
+    char* subname = nullptr;
 
     // ---------- manual option parsing (no getopt) ----------
     for (i = 1; i < argc; ++i)
@@ -208,7 +210,7 @@ int main(int argc, char* argv[])
         for (size_t j = 1; arg[j] != '\0'; ++j)
         {
             char opt = arg[j];
-            char* optarg = NULL;  // value, if needed
+            char* optarg = nullptr;  // value, if needed
 
             switch (opt)
             {
@@ -324,7 +326,7 @@ int main(int argc, char* argv[])
         goto env_close;
     }
 
-    rc = mdb_txn_begin(env, NULL, MDB_RDONLY, &txn);
+    rc = mdb_txn_begin(env, nullptr, MDB_RDONLY, &txn);
     if (rc != 0)
     {
         fprintf(stderr, "mdb_txn_begin failed, error %d %s\n", rc, mdb_strerror(rc));
@@ -350,7 +352,7 @@ int main(int argc, char* argv[])
             fprintf(stderr, "mdb_cursor_open failed, error %d %s\n", rc, mdb_strerror(rc));
             goto txn_abort;
         }
-        while ((rc = mdb_cursor_get(cursor, &key, NULL, MDB_NEXT)) == 0)
+        while ((rc = mdb_cursor_get(cursor, &key, nullptr, MDB_NEXT)) == 0)
         {
             char* str;
             MDB_dbi db2;

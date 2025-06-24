@@ -13,12 +13,12 @@
 //
 #include "lmdb.h"
 
-#include <ctype.h>
-#include <errno.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cctype>
+#include <cerrno>
+#include <csignal>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 static volatile sig_atomic_t gotsig;
 
@@ -33,7 +33,7 @@ static void usage(char* prog)
     exit(EXIT_FAILURE);
 }
 
-static int parse_cmdline(int argc, char** argv, int* envflags, int* do_delete, char** subname)
+static auto parse_cmdline(int argc, char** argv, int* envflags, int* do_delete, char** subname) -> int
 {
     int current_arg_index = 1;  // skip argv[0]
 
@@ -76,7 +76,7 @@ static int parse_cmdline(int argc, char** argv, int* envflags, int* do_delete, c
     return current_arg_index;
 }
 
-int main(int argc, char* argv[])
+auto main(int argc, char* argv[]) -> int
 {
     int i;
     int rc;
@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
     MDB_dbi dbi;
     char* prog = argv[0];
     char* envname;
-    char* subname = NULL;
+    char* subname = nullptr;
     int envflags = 0;
     int _delete = 0;
     int arg_index = 0;
@@ -126,7 +126,7 @@ int main(int argc, char* argv[])
         goto env_close;
     }
 
-    rc = mdb_txn_begin(env, NULL, 0, &txn);
+    rc = mdb_txn_begin(env, nullptr, 0, &txn);
     if (rc != 0)
     {
         fprintf(stderr, "mdb_txn_begin failed, error %d %s\n", rc, mdb_strerror(rc));
@@ -152,7 +152,7 @@ int main(int argc, char* argv[])
         fprintf(stderr, "mdb_txn_commit failed, error %d %s\n", rc, mdb_strerror(rc));
         goto txn_abort;
     }
-    txn = NULL;
+    txn = nullptr;
 
 txn_abort:
     if (txn != nullptr)

@@ -28,7 +28,7 @@ enum Pidlock_op : int;
 #define _FILE_OFFSET_BITS 64
 #endif
 
-typedef unsigned long long mdb_hash_t;
+using mdb_hash_t = unsigned long long;
 
 #ifdef _WIN32
 
@@ -86,7 +86,7 @@ typedef unsigned long long mdb_hash_t;
 
 #ifdef _MSC_VER
 #include <io.h>
-typedef SSIZE_T ssize_t;
+using ssize_t = SSIZE_T;
 #else
 #include <unistd.h>
 #endif
@@ -167,7 +167,9 @@ union semun
 #endif
 
 #if defined(__i386) || defined(__x86_64) || defined(_M_IX86)
-#define MISALIGNED_OK 1
+enum {
+MISALIGNED_OK = 1
+};
 #endif
 
 #if (BYTE_ORDER == LITTLE_ENDIAN) == (BYTE_ORDER == BIG_ENDIAN)
@@ -226,12 +228,15 @@ union semun
 #endif  // MDB_USE_POSIX_MUTEX
 
 #ifdef _WIN32
-#define MDB_PIDLOCK 0
+enum {
+MDB_PIDLOCK = 0
+};
 #define THREAD_RET DWORD
 #define pthread_t HANDLE
 #define pthread_mutex_t HANDLE
 #define pthread_cond_t HANDLE
-typedef HANDLE mdb_mutex_t, mdb_mutexref_t;
+using mdb_mutex_t = HANDLE;
+using mdb_mutexref_t = HANDLE;
 #define pthread_key_t DWORD
 #define pthread_self() GetCurrentThreadId()
 #define pthread_key_create(x, y) ((*(x) = TlsAlloc()) == TLS_OUT_OF_INDEXES ? ErrCode() : 0)
@@ -361,11 +366,13 @@ typedef pthread_mutex_t* mdb_mutexref_t;
 
 //
 // The version number for a database's lockfile format.
-#define MDB_LOCK_VERSION 2
+enum {
+MDB_LOCK_VERSION = 2,
 // Number of bits representing MDB_LOCK_VERSION in MDB_LOCK_FORMAT.
 // The remaining bits must leave room for MDB_lock_desc.
 //
-#define MDB_LOCK_VERSION_BITS 12
+MDB_LOCK_VERSION_BITS = 12
+};
 
 // The max size of a key we can write, or 0 for computed max.
 //
@@ -396,7 +403,9 @@ typedef pthread_mutex_t* mdb_mutexref_t;
 //
 // We only store a 32 bit value for node sizes.
 //
-#define MAXDATASIZE 0xffffffffUL
+enum {
+MAXDATASIZE = 0xffffffffUL
+};
 
 // An invalid page number.
 // Mainly used to denote an empty tree.
@@ -407,7 +416,9 @@ typedef pthread_mutex_t* mdb_mutexref_t;
 // This is certainly too small for any actual applications. Apps should always set
 // the size explicitly using mdb_env_set_mapsize().
 //
-#define DEFAULT_MAPSIZE 1048576
+enum {
+DEFAULT_MAPSIZE = 1048576
+};
 
 // Reader Lock Table
 // Readers don't acquire any locks for their data access. Instead, they
@@ -452,7 +463,9 @@ typedef pthread_mutex_t* mdb_mutexref_t;
 // couple mutexes fit exactly into 8KB on my development machine.
 // Applications should set the table size using mdb_env_set_maxreaders().
 //
-#define DEFAULT_READERS 126
+enum {
+DEFAULT_READERS = 126
+};
 
 // The size of a CPU cache line in bytes. We want our lock structures
 // aligned to this size to avoid false cache line sharing in the
@@ -467,7 +480,9 @@ typedef pthread_mutex_t* mdb_mutexref_t;
 // At 4 keys per node, enough for 2^64 nodes, so there's probably no need to
 // raise this on a 64 bit machine.
 //
-#define CURSOR_STACK 32
+enum {
+CURSOR_STACK = 32
+};
 
 // Lockfile format signature: version, features and field layout
 #define MDB_LOCK_FORMAT                                                                                                \
@@ -496,35 +511,43 @@ enum
 };
 //
 
-#define MDB_VALID 0x8000  // DB handle is valid, for me_dbflags
+enum {
+MDB_VALID = 0x8000  // DB handle is valid, for me_dbflags
+};
 #define PERSISTENT_FLAGS (0xffff & ~(MDB_VALID))
 // mdb_dbi_open() flags
 #define VALID_FLAGS (MDB_REVERSEKEY | MDB_CREATE)
 
 // Handle for the DB used to track free pages.
-#define FREE_DBI 0
+enum {
+FREE_DBI = 0,
 // Handle for the default DB.
-#define MAIN_DBI 1
+MAIN_DBI = 1,
 // Number of DBs in metapage (free and main) - also hardcoded elsewhere
-#define CORE_DBS 2
+CORE_DBS = 2
+};
 
 // Number of meta pages - also hardcoded elsewhere
-#define NUM_METAS 2
+enum {
+NUM_METAS = 2
+};
 
 // A transaction ID.
 // See struct MDB_txn.mt_txnid for details.
 //
-typedef MDB_ID txnid_t;
+using txnid_t = MDB_ID;
 
 // Used for offsets within a single page.
 // Since memory pages are typically 4 or 8KB in size, 12-13 bits,
 // this is plenty.
 //
-typedef uint16_t indx_t;
+using indx_t = uint16_t;
 
 // max bytes to write in one call
 static_assert(sizeof(ssize_t) == 8);  // MAX_WRITE depends on 64 bit architecture
-#define MAX_WRITE 0x40000000U
+enum {
+MAX_WRITE = 0x40000000U
+};
 
 // A page number in the database.
 // Note that 64 bit page numbers are overkill, since pages themselves
@@ -534,4 +557,4 @@ static_assert(sizeof(ssize_t) == 8);  // MAX_WRITE depends on 64 bit architectur
 // In the MDB_node structure, we only store 48 bits of this value,
 // which thus limits us to only 60 bits of addressable data.
 //
-typedef MDB_ID pgno_t;
+using pgno_t = MDB_ID;

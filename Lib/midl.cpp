@@ -17,10 +17,10 @@
 
 #include "midl.h"
 
-#include <errno.h>
-#include <limits.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cerrno>
+#include <climits>
+#include <cstdlib>
+#include <cstring>
 #include <sys/types.h>
 
 // LMDB Internals
@@ -29,7 +29,7 @@
 //
 #define CMP(x, y) ((x) < (y) ? -1 : (x) > (y))
 
-unsigned mdb_midl_search(const MDB_IDL ids, MDB_ID id)
+auto mdb_midl_search(const MDB_IDL ids, MDB_ID id) -> unsigned
 {
     //
     // binary search of id in ids
@@ -39,7 +39,7 @@ unsigned mdb_midl_search(const MDB_IDL ids, MDB_ID id)
     unsigned base = 0;
     unsigned cursor = 1;
     int val = 0;
-    unsigned n = (unsigned)ids[0];
+    auto n = (unsigned)ids[0];
 
     while (0 < n)
     {
@@ -104,9 +104,9 @@ unsigned mdb_midl_search(const MDB_IDL ids, MDB_ID id)
 //}
 #endif
 
-MDB_IDL mdb_midl_alloc(int num)
+auto mdb_midl_alloc(int num) -> MDB_IDL
 {
-    MDB_IDL ids = (MDB_IDL)malloc((num + 2) * sizeof(MDB_ID));
+    auto ids = (MDB_IDL)malloc((num + 2) * sizeof(MDB_ID));
     if (ids != nullptr)
     {
         *ids++ = num;
@@ -127,7 +127,7 @@ void mdb_midl_shrink(MDB_IDL* idp)
     --ids;
     if (*ids > MDB_IDL_UM_MAX)
     {
-        MDB_IDL new_ids = (MDB_IDL)realloc(ids, (MDB_IDL_UM_MAX + 2) * sizeof(MDB_ID));
+        auto new_ids = (MDB_IDL)realloc(ids, (MDB_IDL_UM_MAX + 2) * sizeof(MDB_ID));
         if (new_ids != nullptr)
         {
             ids = new_ids;
@@ -137,11 +137,11 @@ void mdb_midl_shrink(MDB_IDL* idp)
     }
 }
 
-static int mdb_midl_grow(MDB_IDL* idp, int num)
+static auto mdb_midl_grow(MDB_IDL* idp, int num) -> int
 {
     MDB_IDL idn = *idp - 1;
     /* grow it */
-    MDB_IDL new_idn = (MDB_IDL)realloc(idn, (*idn + num + 2) * sizeof(MDB_ID));
+    auto new_idn = (MDB_IDL)realloc(idn, (*idn + num + 2) * sizeof(MDB_ID));
     if (new_idn == nullptr)
         return ENOMEM;
     idn = new_idn;
@@ -150,7 +150,7 @@ static int mdb_midl_grow(MDB_IDL* idp, int num)
     return 0;
 }
 
-int mdb_midl_need(MDB_IDL* idp, unsigned num)
+auto mdb_midl_need(MDB_IDL* idp, unsigned num) -> int
 {
     MDB_IDL ids = *idp;
     num += (unsigned)ids[0];
@@ -166,7 +166,7 @@ int mdb_midl_need(MDB_IDL* idp, unsigned num)
     return 0;
 }
 
-int mdb_midl_append(MDB_IDL* idp, MDB_ID id)
+auto mdb_midl_append(MDB_IDL* idp, MDB_ID id) -> int
 {
     MDB_IDL ids = *idp;
     /* Too big? */
@@ -181,7 +181,7 @@ int mdb_midl_append(MDB_IDL* idp, MDB_ID id)
     return 0;
 }
 
-int mdb_midl_append_list(MDB_IDL* idp, MDB_IDL app)
+auto mdb_midl_append_list(MDB_IDL* idp, MDB_IDL app) -> int
 {
     MDB_IDL ids = *idp;
     /* Too big? */
@@ -196,7 +196,7 @@ int mdb_midl_append_list(MDB_IDL* idp, MDB_IDL app)
     return 0;
 }
 
-int mdb_midl_append_range(MDB_IDL* idp, MDB_ID id, unsigned n)
+auto mdb_midl_append_range(MDB_IDL* idp, MDB_ID id, unsigned n) -> int
 {
     MDB_ID* ids = *idp;
     MDB_ID len = ids[0];
@@ -239,7 +239,9 @@ void mdb_midl_xmerge(MDB_IDL idl, const MDB_IDL merge)
 
 /* Quicksort + Insertion sort for small arrays */
 
-#define SMALL 8
+enum {
+SMALL = 8
+};
 #define MIDL_SWAP(a, b)                                                                                                \
     {                                                                                                                  \
         itmp = (a);                                                                                                    \
@@ -329,7 +331,7 @@ void mdb_midl_sort(MDB_IDL ids)
     }
 }
 
-unsigned mdb_mid2l_search(MDB_ID2L ids, MDB_ID id)
+auto mdb_mid2l_search(MDB_ID2L ids, MDB_ID id) -> unsigned
 {
     // binary search of id in ids
     // if found, returns position of id
@@ -337,7 +339,7 @@ unsigned mdb_mid2l_search(MDB_ID2L ids, MDB_ID id)
     unsigned base = 0;
     unsigned cursor = 1;
     int val = 0;
-    unsigned n = (unsigned)ids[0].mid;
+    auto n = (unsigned)ids[0].mid;
 
     while (0 < n)
     {
@@ -367,7 +369,7 @@ unsigned mdb_mid2l_search(MDB_ID2L ids, MDB_ID id)
     return cursor;
 }
 
-int mdb_mid2l_insert(MDB_ID2L ids, MDB_ID2* id)
+auto mdb_mid2l_insert(MDB_ID2L ids, MDB_ID2* id) -> int
 {
     unsigned x{mdb_mid2l_search(ids, id->mid)};
 
@@ -398,7 +400,7 @@ int mdb_mid2l_insert(MDB_ID2L ids, MDB_ID2* id)
     return 0;
 }
 
-int mdb_mid2l_append(MDB_ID2L ids, MDB_ID2* id)
+auto mdb_mid2l_append(MDB_ID2L ids, MDB_ID2* id) -> int
 {
     /* Too big? */
     if (ids[0].mid >= MDB_IDL_UM_MAX)

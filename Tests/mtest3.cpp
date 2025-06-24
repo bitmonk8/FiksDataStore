@@ -14,12 +14,12 @@
 // Tests for DB splits and merges
 #include "lmdb.h"
 
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cerrno>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <sys/stat.h>
-#include <time.h>
+#include <ctime>
 
 #ifdef _WIN32
 #include <direct.h>
@@ -41,7 +41,7 @@
 
 char dkbuf[1024];
 
-int main(int argc, char* argv[])
+auto main(int argc, char* argv[]) -> int
 {
     int i = 0;
     int j = 0;
@@ -56,18 +56,18 @@ int main(int argc, char* argv[])
     MDB_cursor* cursor;
     char kbuf[16];
     char* sval;
-    struct stat st = {0};
+    struct stat st = {.st_dev=0};
     if (stat("testdb", &st) == -1)
         mkdir("testdb", 0700);
 
-    srand((unsigned int)time(NULL));
+    srand((unsigned int)time(nullptr));
 
     E(mdb_env_create(&env));
     E(mdb_env_set_mapsize(env, 10485760));
     E(mdb_env_set_maxdbs(env, 4));
     E(mdb_env_open(env, "testdb", MDB_NOSYNC, 0664));
 
-    E(mdb_txn_begin(env, NULL, 0, &txn));
+    E(mdb_txn_begin(env, nullptr, 0, &txn));
     E(mdb_dbi_open(txn, "id6", MDB_CREATE, &dbi));
     E(mdb_cursor_open(txn, dbi, &cursor));
     E(mdb_stat(txn, dbi, &mst));

@@ -2,11 +2,11 @@
 
 #include "mdb_internal.h"
 
-int mdb_cmp_memn(const MDB_val* a, const MDB_val* b);
-int mdb_cmp_memnr(const MDB_val* a, const MDB_val* b);
-int mdb_cmp_int(const MDB_val* a, const MDB_val* b);
-int mdb_cmp_cint(const MDB_val* a, const MDB_val* b);
-int mdb_cmp_long(const MDB_val* a, const MDB_val* b);
+auto mdb_cmp_memn(const MDB_val* a, const MDB_val* b) -> int;
+auto mdb_cmp_memnr(const MDB_val* a, const MDB_val* b) -> int;
+auto mdb_cmp_int(const MDB_val* a, const MDB_val* b) -> int;
+auto mdb_cmp_cint(const MDB_val* a, const MDB_val* b) -> int;
+auto mdb_cmp_long(const MDB_val* a, const MDB_val* b) -> int;
 
 // Compare two items pointing at '#mdb_size_t's of unknown alignment.
 #ifdef MISALIGNED_OK
