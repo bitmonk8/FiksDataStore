@@ -169,7 +169,6 @@ int main(int argc, char* argv[])
         (void)mdb_env_stat(env, &mst);
         (void)mdb_env_info(env, &mei);
         printf("Environment Info\n");
-        printf("  Map address: %p\n", mei.me_mapaddr);
         printf("  Map size: %" Yu "\n", mei.me_mapsize);
         printf("  Page size: %u\n", mst.ms_psize);
         printf("  Max pages: %" Yu "\n", mei.me_mapsize / mst.ms_psize);

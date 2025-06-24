@@ -123,26 +123,6 @@ static void readhdr(void)
                 exit(EXIT_FAILURE);
             }
         }
-        else if (strncmp((char*)dbuf.mv_data, "mapaddr=", STRLENOF("mapaddr=")) == 0)
-        {
-            ptr = (char*)memchr(dbuf.mv_data, '\n', dbuf.mv_size);
-            if (ptr != nullptr)
-                *ptr = '\0';
-#ifdef _WIN32
-            const int mapaddr_result = sscanf_s((char*)dbuf.mv_data + STRLENOF("mapaddr="), "%p", &info.me_mapaddr);
-#else
-            const int mapaddr_result = sscanf((char*)dbuf.mv_data + STRLENOF("mapaddr="), "%p", &info.me_mapaddr);
-#endif
-            if (mapaddr_result != 1)
-            {
-                fprintf(stderr,
-                        "%s: line %" Yu ": invalid mapaddr %s\n",
-                        prog,
-                        lineno,
-                        (char*)dbuf.mv_data + STRLENOF("mapaddr="));
-                exit(EXIT_FAILURE);
-            }
-        }
         else if (strncmp((char*)dbuf.mv_data, "mapsize=", STRLENOF("mapsize=")) == 0)
         {
             ptr = (char*)memchr(dbuf.mv_data, '\n', dbuf.mv_size);
@@ -510,8 +490,6 @@ int main(int argc, char* argv[])
     if (info.me_mapsize != 0U)
         mdb_env_set_mapsize(env, info.me_mapsize);
 
-    if (info.me_mapaddr != nullptr)
-        envflags |= MDB_FIXEDMAP;
 
     rc = mdb_env_open(env, envname, envflags, 0664);
     if (rc != 0)

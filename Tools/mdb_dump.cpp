@@ -133,8 +133,6 @@ static int dumpit(MDB_txn* txn, MDB_dbi dbi, char* name)
         printf("database=%s\n", name);
     printf("type=btree\n");
     printf("mapsize=%" Yu "\n", info.me_mapsize);
-    if (info.me_mapaddr != nullptr)
-        printf("mapaddr=%p\n", info.me_mapaddr);
     printf("maxreaders=%u\n", info.me_maxreaders);
 
     for (int flag_idx = 0; dbflags[flag_idx].bit != 0; flag_idx++)

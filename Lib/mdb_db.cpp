@@ -130,7 +130,6 @@ int mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* db
         unsigned int slot = (unused != 0U) ? unused : txn->mt_numdbs;
         txn->mt_dbxs[slot].md_name.mv_data = namedup;
         txn->mt_dbxs[slot].md_name.mv_size = len;
-        txn->mt_dbxs[slot].md_rel = NULL;
         txn->mt_dbflags[slot] = dbflag;
         // txn-> and env-> are the same in read txns, use
         // tmp variable to avoid undefined assignment
@@ -439,23 +438,6 @@ int mdb_set_compare(MDB_txn* txn, MDB_dbi dbi, MDB_cmp_func* cmp)
 }
 
 
-int mdb_set_relfunc(MDB_txn* txn, MDB_dbi dbi, MDB_rel_func* rel)
-{
-    if (!TXN_DBI_EXIST(txn, dbi, DB_USRVALID))
-        return EINVAL;
-
-    txn->mt_dbxs[dbi].md_rel = rel;
-    return MDB_SUCCESS;
-}
-
-int mdb_set_relctx(MDB_txn* txn, MDB_dbi dbi, void* ctx)
-{
-    if (!TXN_DBI_EXIST(txn, dbi, DB_USRVALID))
-        return EINVAL;
-
-    txn->mt_dbxs[dbi].md_relctx = ctx;
-    return MDB_SUCCESS;
-}
 
 int mdb_get(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data)
 {

@@ -967,7 +967,7 @@ int ESECT mdb_env_set_mapsize(MDB_env* env, mdb_size_t size)
 
         munmap(env->me_map, env->me_mapsize);
         env->me_mapsize = size;
-        old = ((env->me_flags & MDB_FIXEDMAP) != 0U) ? env->me_map : NULL;
+        old = NULL;
         rc = mdb_env_map(env, old);
         if (rc != 0)
             return rc;
@@ -1080,14 +1080,10 @@ int ESECT mdb_env_open2(MDB_env* env, int prev)
     }
     meta.mm_mapsize = env->me_mapsize;
 
-    if ((newenv != 0) && ((flags & MDB_FIXEDMAP) == 0U))
+    if (newenv != 0)
     {
         // mdb_env_map() may grow the datafile.  Write the metapages
         // first, so the file will be valid if initialization fails.
-        // Except with FIXEDMAP, since we do not yet know mm_address.
-        // We could fill in mm_address later, but then a different
-        // program might end up doing that - one with a memory layout
-        // and map address which does not suit the main program.
         rc = mdb_env_init_meta(env, &meta);
         if (rc != 0)
             return rc;
@@ -1108,14 +1104,12 @@ int ESECT mdb_env_open2(MDB_env* env, int prev)
     }
 #endif
 
-    rc = mdb_env_map(env, ((flags & MDB_FIXEDMAP) != 0U) ? meta.mm_address : NULL);
+    rc = mdb_env_map(env, NULL);
     if (rc != 0)
         return rc;
 
     if (newenv != 0)
     {
-        if ((flags & MDB_FIXEDMAP) != 0U)
-            meta.mm_address = env->me_map;
         i = mdb_env_init_meta(env, &meta);
         if (i != MDB_SUCCESS)
         {
@@ -1554,7 +1548,7 @@ fail:
 // environment and re-opening it with the new flags.
 #define CHANGEABLE (MDB_NOSYNC | MDB_NOMETASYNC | MDB_MAPASYNC | MDB_NOMEMINIT)
 #define CHANGELESS                                                                                                     \
-    (MDB_FIXEDMAP | MDB_NOSUBDIR | MDB_RDONLY | MDB_WRITEMAP | MDB_NOTLS | MDB_NOLOCK | MDB_NORDAHEAD |                \
+    (MDB_NOSUBDIR | MDB_RDONLY | MDB_WRITEMAP | MDB_NOTLS | MDB_NOLOCK | MDB_NORDAHEAD |                \
      MDB_PREVSNAPSHOT)
 
 #if VALID_FLAGS & PERSISTENT_FLAGS & (CHANGEABLE | CHANGELESS)
@@ -2214,7 +2208,6 @@ int ESECT mdb_env_copyfd1(MDB_env* env, HANDLE fd)
     mp->mp_flags = P_META;
     mm = reinterpret_cast<MDB_meta*>(reinterpret_cast<char*>(mp) + PAGEHDRSZ);
     mdb_env_init_meta0(env, mm);
-    mm->mm_address = env->me_metas[0]->mm_address;
 
     mp = (MDB_page*)(my.mc_wbuf[0] + env->me_psize);
     mp->mp_pgno = 1;
@@ -2579,7 +2572,6 @@ int ESECT mdb_env_info(MDB_env* env, MDB_envinfo* arg)
         return EINVAL;
 
     meta = mdb_env_pick_meta(env);
-    arg->me_mapaddr = meta->mm_address;
     arg->me_last_pgno = meta->mm_last_pg;
     arg->me_last_txnid = meta->mm_txnid;
 

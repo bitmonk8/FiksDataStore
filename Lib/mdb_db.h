@@ -23,8 +23,6 @@ struct MDB_dbx
     MDB_val md_name;        // name of the database
     MDB_cmp_func* md_cmp;   // function for comparing keys
     MDB_cmp_func* md_dcmp;  // function for comparing data items
-    MDB_rel_func* md_rel;   // user relocate function
-    void* md_relctx;        // user-provided context for md_rel
 };
 
 // Check txn and dbi arguments to a function

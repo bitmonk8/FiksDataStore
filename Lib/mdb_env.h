@@ -22,7 +22,6 @@ struct MDB_meta
     uint32_t mm_magic;
     // Version number of this file. Must be set to MDB_DATA_VERSION.
     uint32_t mm_version;
-    void* mm_address;         // address for fixed mapping
     mdb_size_t mm_mapsize;    // size of mmap region
     MDB_db mm_dbs[CORE_DBS];  // first is free space, 2nd is main db
                               // The size of pages used in this DB
