@@ -229,14 +229,14 @@ int main(int argc, char* argv[])
             iptr = (mdb_size_t*)data.mv_data;
             const mdb_size_t entry_page_count = *iptr;
             pages += entry_page_count;
-            
+
             if (freinfo > 1)
             {
                 const char* sequence_status = "";
                 const mdb_size_t* const page_list = iptr + 1;
                 const ssize_t total_pages = entry_page_count;
                 ssize_t max_span = 0;
-                
+
                 // Check sequence validity and find max span
                 mdb_size_t previous_page = 1;
                 for (ssize_t page_idx = total_pages - 1; page_idx >= 0; --page_idx)
@@ -245,7 +245,7 @@ int main(int argc, char* argv[])
                     if (current_page <= previous_page)
                         sequence_status = " [bad sequence]";
                     previous_page = current_page;
-                    
+
                     // Calculate span for this page
                     mdb_size_t span_base = current_page;
                     ssize_t current_span = 0;
@@ -256,13 +256,13 @@ int main(int argc, char* argv[])
                     if (current_span > max_span)
                         max_span = current_span;
                 }
-                
+
                 printf("    Transaction %" Yu ", %" Z "d pages, maxspan %" Z "d%s\n",
                        *(mdb_size_t*)key.mv_data,
                        total_pages,
                        max_span,
                        sequence_status);
-                
+
                 if (freinfo > 2)
                 {
                     // Print detailed page ranges
@@ -270,7 +270,7 @@ int main(int argc, char* argv[])
                     {
                         const mdb_size_t range_start = page_list[detail_idx];
                         ssize_t range_length = 1;
-                        
+
                         // Find consecutive pages
                         while (detail_idx > 0)
                         {
@@ -281,9 +281,10 @@ int main(int argc, char* argv[])
                             detail_idx = next_idx;
                         }
                         --detail_idx;
-                        
+
                         printf(range_length > 1 ? "     %9" Yu "[%" Z "d]\n" : "     %9" Yu "\n",
-                               range_start, range_length);
+                               range_start,
+                               range_length);
                     }
                 }
             }

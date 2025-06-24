@@ -36,7 +36,7 @@ static void usage(char* prog)
 static int parse_cmdline(int argc, char** argv, int* envflags, int* do_delete, char** subname)
 {
     int current_arg_index = 1;  // skip argv[0]
-    
+
     while (current_arg_index < argc)
     {
         const char* const current_arg = argv[current_arg_index];

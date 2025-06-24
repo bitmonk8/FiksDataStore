@@ -261,7 +261,7 @@ int mdb_page_flush(MDB_txn* txn, int keep)
     int writemap_loop_index = initial_keep_count;
     int dirty_list_write_pos = initial_keep_count;
     int page_write_index = initial_keep_count;
-    
+
     if (((env->me_flags & MDB_WRITEMAP) != 0u)
 #ifdef _WIN32
         /* In windows, we still do writes to the file (with write-through enabled in sync mode),
@@ -2696,7 +2696,7 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
             copy = mdb_page_malloc(mc->mc_txn, 1);
             if (copy == NULL)
             {
-                if (copy != nullptr) // tmp page
+                if (copy != nullptr)  // tmp page
                     mdb_page_free(env, copy);
                 mc->mc_txn->mt_flags |= MDB_TXN_ERROR;
                 return ENOMEM;
@@ -2718,13 +2718,13 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
             // When items are relatively large the split point needs
             // to be checked, because being off-by-one will make the
             // difference between success or failure in mdb_node_add.
-            
+
             // It's also relevant if a page happens to be laid out
             // such that one half of its nodes are all "small" and
             // the other half of its nodes are "large." If the new
             // item is also "large" and falls on the half with
             // "large" nodes, it also may not fit.
-            
+
             // As a final tweak, if the new item goes on the last
             // spot on the page (and thus, onto the new page), bias
             // the split so the new page is emptier than the old page.
@@ -2807,7 +2807,7 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
         WITH_CURSOR_TRACKING(mn, pageSplitResult = mdb_page_split(&mn, &sepkey, NULL, rp->mp_pgno, 0));
         if (pageSplitResult != 0)
         {
-            if (copy != nullptr) // tmp page
+            if (copy != nullptr)  // tmp page
                 mdb_page_free(env, copy);
             mc->mc_txn->mt_flags |= MDB_TXN_ERROR;
             return pageSplitResult;
@@ -2838,9 +2838,9 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
                 int cursorSiblingResult = mdb_cursor_sibling(mc, 0);
                 if (cursorSiblingResult != MDB_SUCCESS)
                 {
-                    if (cursorSiblingResult == MDB_NOTFOUND) // improper mdb_cursor_sibling() result
+                    if (cursorSiblingResult == MDB_NOTFOUND)  // improper mdb_cursor_sibling() result
                         cursorSiblingResult = MDB_PROBLEM;
-                    if (copy != nullptr) // tmp page
+                    if (copy != nullptr)  // tmp page
                         mdb_page_free(env, copy);
                     mc->mc_txn->mt_flags |= MDB_TXN_ERROR;
                     return cursorSiblingResult;
@@ -2855,9 +2855,9 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
         mn.mc_top++;
         if (nodeAddResult != MDB_SUCCESS)
         {
-            if (nodeAddResult == MDB_NOTFOUND) // improper mdb_cursor_sibling() result
+            if (nodeAddResult == MDB_NOTFOUND)  // improper mdb_cursor_sibling() result
                 nodeAddResult = MDB_PROBLEM;
-            if (copy != nullptr) // tmp page
+            if (copy != nullptr)  // tmp page
                 mdb_page_free(env, copy);
             mc->mc_txn->mt_flags |= MDB_TXN_ERROR;
             return nodeAddResult;
@@ -2875,7 +2875,7 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
         const int nodeAddResult = mdb_node_add(mc, 0, newkey, newdata, newpgno, nflags);
         if (nodeAddResult != 0)
         {
-            if (copy != nullptr) // tmp page
+            if (copy != nullptr)  // tmp page
                 mdb_page_free(env, copy);
             mc->mc_txn->mt_flags |= MDB_TXN_ERROR;
             return nodeAddResult;
@@ -2931,7 +2931,7 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
             const int nodeAddResult = mdb_node_add(mc, j, &rkey, rdata, pgno, flags);
             if (nodeAddResult != 0)
             {
-                if (copy != nullptr) // tmp page
+                if (copy != nullptr)  // tmp page
                     mdb_page_free(env, copy);
                 mc->mc_txn->mt_flags |= MDB_TXN_ERROR;
                 return nodeAddResult;
@@ -3067,7 +3067,7 @@ int mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t new
     }
 
     DPRINTF(("mp left: %d, rp left: %d", SIZELEFT(mp), SIZELEFT(rp)));
-    if (copy != nullptr) // tmp page
+    if (copy != nullptr)  // tmp page
         mdb_page_free(env, copy);
     return MDB_SUCCESS;
 }

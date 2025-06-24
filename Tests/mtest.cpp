@@ -203,7 +203,7 @@ int main(int argc, char* argv[])
     }
 
     printf("Restarting cursor in txn\n");
-    for (MDB_cursor_op cursor_op = MDB_FIRST; ; cursor_op = MDB_NEXT)
+    for (MDB_cursor_op cursor_op = MDB_FIRST;; cursor_op = MDB_NEXT)
     {
         if (RES(MDB_NOTFOUND, mdb_cursor_get(cur2, &key, &data, cursor_op)))
             break;
@@ -221,7 +221,7 @@ int main(int argc, char* argv[])
     printf("Restarting cursor outside txn\n");
     E(mdb_txn_begin(env, NULL, 0, &txn));
     E(mdb_cursor_open(txn, dbi, &cursor));
-    for (MDB_cursor_op final_cursor_op = MDB_FIRST; ; final_cursor_op = MDB_NEXT)
+    for (MDB_cursor_op final_cursor_op = MDB_FIRST;; final_cursor_op = MDB_NEXT)
     {
         if (RES(MDB_NOTFOUND, mdb_cursor_get(cursor, &key, &data, final_cursor_op)))
             break;

@@ -180,7 +180,9 @@ int ESECT mdb_mutex_failed(MDB_env* env, mdb_mutexref_t mutex, int rc)
                 cleanup_result = MDB_PANIC;
             }
         }
-        DPRINTF(("%cmutex owner died, %s", (rlocked ? 'r' : 'w'), (cleanup_result ? "this process' env is hosed" : "recovering")));
+        DPRINTF(("%cmutex owner died, %s",
+                 (rlocked ? 'r' : 'w'),
+                 (cleanup_result ? "this process' env is hosed" : "recovering")));
         const int reader_check_result{mdb_reader_check0(env, rlocked, NULL)};
         int consistency_result = reader_check_result;
         if (reader_check_result == 0)

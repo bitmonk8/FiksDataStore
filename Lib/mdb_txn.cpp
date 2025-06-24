@@ -214,16 +214,15 @@ static int mdb_cursor_shadow(MDB_txn* src, MDB_txn* dst)
         if (current_cursor != NULL)
         {
             const size_t base_cursor_size = sizeof(MDB_cursor);
-            const size_t total_cursor_size = (current_cursor->mc_xcursor != nullptr) 
-                                           ? base_cursor_size + sizeof(MDB_xcursor)
-                                           : base_cursor_size;
-            
-            for (; current_cursor != nullptr; )
+            const size_t total_cursor_size =
+                (current_cursor->mc_xcursor != nullptr) ? base_cursor_size + sizeof(MDB_xcursor) : base_cursor_size;
+
+            for (; current_cursor != nullptr;)
             {
                 MDB_cursor* const backup_cursor = (MDB_cursor*)malloc(total_cursor_size);
                 if (backup_cursor == nullptr)
                     return ENOMEM;
-                
+
                 *backup_cursor = *current_cursor;
                 current_cursor->mc_backup = backup_cursor;
                 current_cursor->mc_db = &dst->mt_dbs[i];
@@ -232,17 +231,17 @@ static int mdb_cursor_shadow(MDB_txn* src, MDB_txn* dst)
                 // txn pointer here for cursor fixups to keep working.
                 current_cursor->mc_txn = dst;
                 current_cursor->mc_dbflag = &dst->mt_dbflags[i];
-                
+
                 MDB_xcursor* const xcursor = current_cursor->mc_xcursor;
                 if (xcursor != NULL)
                 {
                     *(MDB_xcursor*)(backup_cursor + 1) = *xcursor;
                     xcursor->mx_cursor.mc_txn = dst;
                 }
-                
+
                 current_cursor->mc_next = dst->mt_cursors[i];
                 dst->mt_cursors[i] = current_cursor;
-                
+
                 // Move to next cursor in chain
                 current_cursor = backup_cursor->mc_next;
             }

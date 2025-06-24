@@ -39,11 +39,11 @@ int main(int argc, char* argv[])
     // Parse options without modifying original argc/argv
     int remaining_args = argc;
     char** current_argv = argv;
-    
+
     while (remaining_args > 1 && current_argv[1][0] == '-')
     {
         const char* const option = current_argv[1];
-        
+
         if (option[1] == 'n' && option[2] == '\0')
             flags |= MDB_NOSUBDIR;
         else if (option[1] == 'v' && option[2] == '\0')
@@ -57,10 +57,10 @@ int main(int argc, char* argv[])
         }
         else
         {
-            remaining_args = 0; // Invalid option - force usage error
+            remaining_args = 0;  // Invalid option - force usage error
             break;
         }
-        
+
         --remaining_args;
         ++current_argv;
     }

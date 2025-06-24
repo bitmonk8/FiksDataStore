@@ -154,9 +154,11 @@ static void readhdr(void)
             if (ptr != nullptr)
                 *ptr = '\0';
 #ifdef _WIN32
-            const int mapsize_result = sscanf_s((char*)dbuf.mv_data + STRLENOF("mapsize="), "%" MDB_SCNy(u), &info.me_mapsize);
+            const int mapsize_result =
+                sscanf_s((char*)dbuf.mv_data + STRLENOF("mapsize="), "%" MDB_SCNy(u), &info.me_mapsize);
 #else
-            const int mapsize_result = sscanf((char*)dbuf.mv_data + STRLENOF("mapsize="), "%" MDB_SCNy(u), &info.me_mapsize);
+            const int mapsize_result =
+                sscanf((char*)dbuf.mv_data + STRLENOF("mapsize="), "%" MDB_SCNy(u), &info.me_mapsize);
 #endif
             if (mapsize_result != 1)
             {
@@ -174,9 +176,11 @@ static void readhdr(void)
             if (ptr != nullptr)
                 *ptr = '\0';
 #ifdef _WIN32
-            const int maxreaders_result = sscanf_s((char*)dbuf.mv_data + STRLENOF("maxreaders="), "%u", &info.me_maxreaders);
+            const int maxreaders_result =
+                sscanf_s((char*)dbuf.mv_data + STRLENOF("maxreaders="), "%u", &info.me_maxreaders);
 #else
-            const int maxreaders_result = sscanf((char*)dbuf.mv_data + STRLENOF("maxreaders="), "%u", &info.me_maxreaders);
+            const int maxreaders_result =
+                sscanf((char*)dbuf.mv_data + STRLENOF("maxreaders="), "%u", &info.me_maxreaders);
 #endif
             if (maxreaders_result != 1)
             {
@@ -312,10 +316,10 @@ static int readline(MDB_val* out, MDB_val* buf)
     }
     unsigned char* const source_ptr = (unsigned char*)buf->mv_data;
     unsigned char* dest_ptr = source_ptr;
-    const size_t final_len = total_len - 1; // Remove newline
+    const size_t final_len = total_len - 1;  // Remove newline
     source_ptr[final_len] = '\0';
     end = source_ptr + final_len;
-    
+
     // TODO: This function has extensive variable re-purposing and should be refactored
     // Variables c1, c2, len are re-purposed multiple times for different contexts
     c1 = dest_ptr;
@@ -587,8 +591,8 @@ int main(int argc, char* argv[])
                 const int base_append_flag = MDB_APPEND;
                 if ((flags & MDB_DUPSORT) != 0)
                 {
-                    const bool same_key = (prevk.mv_size == key.mv_size &&
-                                         (memcmp(prevk.mv_data, key.mv_data, key.mv_size) == 0));
+                    const bool same_key =
+                        (prevk.mv_size == key.mv_size && (memcmp(prevk.mv_data, key.mv_data, key.mv_size) == 0));
                     if (same_key)
                         appflag = MDB_CURRENT | MDB_APPENDDUP;
                     else
