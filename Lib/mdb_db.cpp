@@ -14,9 +14,8 @@ static void mdb_default_cmp(MDB_txn* txn, MDB_dbi dbi)
 {
     uint16_t f = txn->mt_dbs[dbi].md_flags;
 
-    txn->mt_dbxs[dbi].md_cmp = ((f & MDB_REVERSEKEY) != 0)   ? mdb_cmp_memnr
-                               : ((f & MDB_INTEGERKEY) != 0) ? mdb_cmp_cint
-                                                             : mdb_cmp_memn;
+    txn->mt_dbxs[dbi].md_cmp = ((f & MDB_REVERSEKEY) != 0) ? mdb_cmp_memnr
+                                                            : mdb_cmp_memn;
 
     txn->mt_dbxs[dbi].md_dcmp = 0;
 }
@@ -76,9 +75,7 @@ int mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* db
     if ((unused == 0U) && txn->mt_numdbs >= txn->mt_env->me_maxdbs)
         return MDB_DBS_FULL;
 
-    // Cannot mix named databases with some mainDB flags
-    if ((txn->mt_dbs[MAIN_DBI].md_flags & MDB_INTEGERKEY) != 0)
-        return ((flags & MDB_CREATE) != 0U) ? MDB_INCOMPATIBLE : MDB_NOTFOUND;
+    // Cannot mix named databases with some mainDB flags - removed MDB_INTEGERKEY check
 
     // Find the DB info
     int dbflag{DB_NEW | DB_VALID | DB_USRVALID};

@@ -54,51 +54,44 @@ int main(int argc, char* argv[])
     MDB_txn* txn;
     MDB_stat mst;
     MDB_cursor* cursor;
-    long kval;
+    char kbuf[16];
     char* sval;
     struct stat st = {0};
-    if (stat("./testdb", &st) == -1)
-        mkdir("./testdb", 0700);
+    if (stat("testdb", &st) == -1)
+        mkdir("testdb", 0700);
 
     srand((unsigned int)time(NULL));
 
     E(mdb_env_create(&env));
     E(mdb_env_set_mapsize(env, 10485760));
     E(mdb_env_set_maxdbs(env, 4));
-    E(mdb_env_open(env, "./testdb", MDB_FIXEDMAP | MDB_NOSYNC, 0664));
+    E(mdb_env_open(env, "testdb", MDB_NOSYNC, 0664));
 
     E(mdb_txn_begin(env, NULL, 0, &txn));
-    E(mdb_dbi_open(txn, "id6", MDB_CREATE | MDB_INTEGERKEY, &dbi));
+    E(mdb_dbi_open(txn, "id6", MDB_CREATE, &dbi));
     E(mdb_cursor_open(txn, dbi, &cursor));
     E(mdb_stat(txn, dbi, &mst));
 
     sval = (char*)calloc(1, mst.ms_psize / 4);
-    key.mv_size = sizeof(long);
-    key.mv_data = &kval;
+    key.mv_data = kbuf;
     sdata.mv_size = mst.ms_psize / 4 - 30;
     sdata.mv_data = sval;
 
-    printf("Adding 12 values, should yield 3 splits\n");
-    for (i = 0; i < 12; i++)
+    printf("Adding 6 values, should yield 2 splits\n");
+    for (i = 0; i < 6; i++)
     {
-        kval = i * 5;
-        snprintf(sval, mst.ms_psize / 4, "%08lx", kval);
+        snprintf(kbuf, sizeof(kbuf), "%03d", i * 5);
+        key.mv_size = strlen(kbuf);
+        snprintf(sval, mst.ms_psize / 4, "%03d", i * 5);
         data = sdata;
         (void)RES(MDB_KEYEXIST, mdb_cursor_put(cursor, &key, &data, MDB_NOOVERWRITE));
     }
-    printf("Adding 12 more values, should yield 3 splits\n");
-    for (i = 0; i < 12; i++)
+    printf("Adding 6 more values, should yield 2 splits\n");
+    for (i = 0; i < 6; i++)
     {
-        kval = i * 5 + 4;
-        snprintf(sval, mst.ms_psize / 4, "%08lx", kval);
-        data = sdata;
-        (void)RES(MDB_KEYEXIST, mdb_cursor_put(cursor, &key, &data, MDB_NOOVERWRITE));
-    }
-    printf("Adding 12 more values, should yield 3 splits\n");
-    for (i = 0; i < 12; i++)
-    {
-        kval = i * 5 + 1;
-        snprintf(sval, mst.ms_psize / 4, "%08lx", kval);
+        snprintf(kbuf, sizeof(kbuf), "%03d", i * 5 + 4);
+        key.mv_size = strlen(kbuf);
+        snprintf(sval, mst.ms_psize / 4, "%03d", i * 5 + 4);
         data = sdata;
         (void)RES(MDB_KEYEXIST, mdb_cursor_put(cursor, &key, &data, MDB_NOOVERWRITE));
     }

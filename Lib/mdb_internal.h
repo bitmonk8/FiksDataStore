@@ -499,7 +499,7 @@ enum
 #define MDB_VALID 0x8000  // DB handle is valid, for me_dbflags
 #define PERSISTENT_FLAGS (0xffff & ~(MDB_VALID))
 // mdb_dbi_open() flags
-#define VALID_FLAGS (MDB_REVERSEKEY | MDB_INTEGERKEY | MDB_CREATE)
+#define VALID_FLAGS (MDB_REVERSEKEY | MDB_CREATE)
 
 // Handle for the DB used to track free pages.
 #define FREE_DBI 0

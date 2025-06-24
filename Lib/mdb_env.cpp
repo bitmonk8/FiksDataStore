@@ -552,7 +552,6 @@ void ESECT mdb_env_init_meta0(MDB_env* env, MDB_meta* meta)
     meta->mm_psize = env->me_psize;
     meta->mm_last_pg = NUM_METAS - 1;
     meta->mm_flags = env->me_flags & 0xffff;
-    meta->mm_flags |= MDB_INTEGERKEY;  // this is mm_dbs[FREE_DBI].md_flags
     meta->mm_dbs[FREE_DBI].md_root = P_INVALID;
     meta->mm_dbs[MAIN_DBI].md_root = P_INVALID;
 }

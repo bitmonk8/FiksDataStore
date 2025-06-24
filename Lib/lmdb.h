@@ -320,10 +320,6 @@ typedef void(MDB_rel_func)(MDB_val* item, void* oldptr, void* newptr, void* relc
 
 // use reverse string keys
 #define MDB_REVERSEKEY 0x02
-// numeric keys in native byte order, either unsigned int or #mdb_size_t.
-// (lmdb expects 32-bit int <= size_t <= 32/64-bit mdb_size_t.)
-// The keys must all be of the same size.
-#define MDB_INTEGERKEY 0x08
 // create DB if not already existing
 #define MDB_CREATE 0x40000
 // @}
@@ -402,7 +398,6 @@ typedef enum MDB_cursor_op
 // Database contents grew beyond environment mapsize
 #define MDB_MAP_RESIZED (-30785)
 // Operation and DB incompatible, or DB type changed. This can mean:
-// Opening a named DB when the unnamed DB has #MDB_INTEGERKEY.
 // Accessing a data record as a database, or vice versa.
 // The database was dropped and recreated with different flags.
 #define MDB_INCOMPATIBLE (-30784)
@@ -995,11 +990,6 @@ int mdb_txn_renew(MDB_txn* txn);
 // Keys are strings to be compared in reverse order, from the end
 // of the strings to the beginning. By default, Keys are treated as strings and
 // compared from beginning to end.
-// #MDB_INTEGERKEY
-// Keys are binary integers in native byte order, either unsigned int
-// or #mdb_size_t, and will be sorted as such.
-// (lmdb expects 32-bit int <= size_t <= 32/64-bit mdb_size_t.)
-// The keys must all be of the same size.
 // #MDB_CREATE
 // Create the named database if it doesn't exist. This option is not
 // allowed in a read-only transaction or a read-only environment.

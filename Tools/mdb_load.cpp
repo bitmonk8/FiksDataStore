@@ -64,7 +64,6 @@ struct flagbit
 
 flagbit dbflags[] = {
     {MDB_REVERSEKEY, S("reversekey")},
-    {MDB_INTEGERKEY, S("integerkey")},
     {0, NULL, 0}
 };
 
