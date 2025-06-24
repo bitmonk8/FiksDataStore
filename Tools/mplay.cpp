@@ -298,6 +298,10 @@ static void delcrs(void* tcrs)
     lastcrs = NULL;
 }
 
+// TODO: Fix Single-Purpose Variable violations in child() function
+// This function has extensive variable re-purposing in the massive switch statement (Lines 316-561)
+// Variables rc, ptr are extensively re-purposed throughout
+// Requires major refactoring to break into smaller functions
 void child()
 {
     int rc;
@@ -355,8 +359,8 @@ void child()
             if (maxkey == 0)
             {
                 maxkey = mdb_env_get_maxkeysize(ep->renv);
-                kbuf = malloc(maxkey + 2);
-                dbuf = malloc(maxkey + 2);
+                kbuf = (char*)malloc(maxkey + 2);
+                dbuf = (char*)malloc(maxkey + 2);
                 dbufsize = maxkey;
             }
         }
@@ -468,7 +472,7 @@ void child()
             sscanf(ptr + 1, "%" MDB_SCNy(u) "%n", &data.mv_size, &len);
             if (data.mv_size > dbufsize)
             {
-                dbuf = realloc(dbuf, data.mv_size + 2);
+                dbuf = (char*)realloc(dbuf, data.mv_size + 2);
                 assert(dbuf != NULL);
                 dbufsize = data.mv_size;
             }
@@ -511,7 +515,7 @@ void child()
             sscanf(ptr + 1, "%" MDB_SCNy(u) "%n", &data.mv_size, &len);
             if (data.mv_size > dbufsize)
             {
-                dbuf = realloc(dbuf, data.mv_size + 2);
+                dbuf = (char*)realloc(dbuf, data.mv_size + 2);
                 assert(dbuf != NULL);
                 dbufsize = data.mv_size;
             }
@@ -543,7 +547,7 @@ void child()
             sscanf(ptr + 1, "%" MDB_SCNy(u) "%n", &data.mv_size, &len);
             if (data.mv_size > dbufsize)
             {
-                dbuf = realloc(dbuf, data.mv_size + 2);
+                dbuf = (char*)realloc(dbuf, data.mv_size + 2);
                 assert(dbuf != NULL);
                 dbufsize = data.mv_size;
             }
@@ -628,7 +632,7 @@ static void delpid(int tpid)
 static void reaper(int sig)
 {
     int status;
-    int i;
+    int pid_index;
     pid_t pid = waitpid(-1, &status, 0);
     if (pid > 0)
     {
@@ -646,6 +650,9 @@ static void reaper(int sig)
     }
 }
 
+// TODO: Fix Single-Purpose Variable violations in main() function
+// Lines 655-681: variables pp, ptr re-purposed for different purposes
+// Generic variable names like len, c should be more descriptive
 int main(int argc, char* argv[])
 {
     signal(SIGCHLD, reaper);
