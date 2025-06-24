@@ -149,6 +149,101 @@ int readers = 0, writers, max_readers = DEFAULT_READERS;
 char *buffer, filename[256];  // Only buffer is a pointer!
 ```
 
+## Variables and Immutability
+
+### Single-Purpose, Single-Assignment Variables
+**MANDATORY**: A local (automatic) variable represents exactly one logical value/purpose in its lifetime. Once that value has been defined, the identifier must not be reassigned to hold a different, unrelated value. If a second, independent value is needed, declare a new variable—preferably const—with its own descriptive name.
+
+**Rationale**:
+- Improves readability: the meaning of every identifier is stable and obvious
+- Reduces bugs: accidental reuse or stale data cannot occur
+- Enables more const correctness and compiler optimisations
+- Simplifies maintenance and code reviews; you can reason about a variable by reading only its declaration
+
+**Guidelines**:
+a. Prefer const for every variable that is not meant to change
+b. If an algorithm really requires mutation (e.g. a loop counter), the variable may be reassigned, but its semantic role must remain the same
+c. Do not "re-purpose" a variable, even if scopes do not overlap. Instead, create a new identifier with a clear name
+d. Nested scopes may shadow an outer const variable with a new one of the same name only if the meaning is identical but a narrower, more precise type/value is needed
+e. Temporary throw-away names such as t1, t2, tmp are discouraged; give meaningful identifiers
+
+**Exceptions**:
+- Loop indices and accumulators that naturally mutate as part of their single purpose are exempt
+- Performance-critical code that demonstrably benefits from reuse may be allowed, but must be documented with a comment and reviewed by a peer
+
+**Enforcement**:
+- During code review, flag any variable whose meaning visibly changes after its first assignment
+- Static-analysis checks can warn on multiple unrelated writes
+- Unit tests must not rely on variable reuse for side effects
+
+**Examples**:
+```cpp
+// ✅ Correct - Single-purpose variables with const preference
+int mdb_page_search(MDB_page *page, MDB_val *key)
+{
+    const int num_keys = NUMKEYS(page);
+    const char *base_ptr = NODEPTR(page, 0);
+    
+    for (int index = 0; index < num_keys; index++)
+    {
+        const MDB_node *current_node = NODEPTR(page, index);
+        const int comparison_result = mdb_cmp(key, &current_node->mn_data);
+        
+        if (comparison_result == 0)
+            return index;
+    }
+    
+    return -1;
+}
+
+// ✅ Correct - Loop counter mutation is acceptable (single purpose)
+int mdb_cursor_count(MDB_cursor *cursor)
+{
+    int total_count = 0;
+    
+    for (int page_index = 0; page_index < cursor->mc_snum; page_index++)
+    {
+        const MDB_page *current_page = cursor->mc_pg[page_index];
+        total_count += NUMKEYS(current_page);
+    }
+    
+    return total_count;
+}
+
+// ❌ Incorrect - Variable repurposed for different meanings
+int mdb_bad_example(MDB_env *env)
+{
+    int result = mdb_env_open(env, "/tmp/db", 0, 0644);  // result = status code
+    if (result != MDB_SUCCESS)
+        return result;
+    
+    result = env->me_maxreaders;  // ❌ Now result = reader count (different purpose!)
+    
+    if (result > 100)
+    {
+        result = EINVAL;  // ❌ Now result = error code again (confusing!)
+        return result;
+    }
+    
+    return MDB_SUCCESS;
+}
+
+// ✅ Correct - Separate variables for different purposes
+int mdb_good_example(MDB_env *env)
+{
+    const int open_status = mdb_env_open(env, "/tmp/db", 0, 0644);
+    if (open_status != MDB_SUCCESS)
+        return open_status;
+    
+    const int max_readers = env->me_maxreaders;
+    
+    if (max_readers > 100)
+        return EINVAL;
+    
+    return MDB_SUCCESS;
+}
+```
+
 ## Code Organization
 
 ### 1. Header Inclusion Order
