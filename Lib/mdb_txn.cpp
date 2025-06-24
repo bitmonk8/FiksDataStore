@@ -206,41 +206,45 @@ int mdb_txn_renew(MDB_txn* txn)
 // Back up parent txn's cursors, then grab the originals for tracking
 static int mdb_cursor_shadow(MDB_txn* src, MDB_txn* dst)
 {
-    MDB_cursor* mc{nullptr};
-    MDB_cursor* bk{nullptr};
-    MDB_xcursor* mx{nullptr};
-    size_t size{};
     int i{};
 
     for (i = src->mt_numdbs; --i >= 0;)
     {
-        mc = src->mt_cursors[i];
-        if (mc != NULL)
+        MDB_cursor* current_cursor = src->mt_cursors[i];
+        if (current_cursor != NULL)
         {
-            size = sizeof(MDB_cursor);
-            if (mc->mc_xcursor != nullptr)
-                size += sizeof(MDB_xcursor);
-            for (; mc != nullptr; mc = bk->mc_next)
+            const size_t base_cursor_size = sizeof(MDB_cursor);
+            const size_t total_cursor_size = (current_cursor->mc_xcursor != nullptr) 
+                                           ? base_cursor_size + sizeof(MDB_xcursor)
+                                           : base_cursor_size;
+            
+            for (; current_cursor != nullptr; )
             {
-                bk = (MDB_cursor*)malloc(size);
-                if (bk == nullptr)
+                MDB_cursor* const backup_cursor = (MDB_cursor*)malloc(total_cursor_size);
+                if (backup_cursor == nullptr)
                     return ENOMEM;
-                *bk = *mc;
-                mc->mc_backup = bk;
-                mc->mc_db = &dst->mt_dbs[i];
+                
+                *backup_cursor = *current_cursor;
+                current_cursor->mc_backup = backup_cursor;
+                current_cursor->mc_db = &dst->mt_dbs[i];
                 // Kill pointers into src to reduce abuse: The
                 // user may not use mc until dst ends. But we need a valid
                 // txn pointer here for cursor fixups to keep working.
-                mc->mc_txn = dst;
-                mc->mc_dbflag = &dst->mt_dbflags[i];
-                mx = mc->mc_xcursor;
-                if (mx != NULL)
+                current_cursor->mc_txn = dst;
+                current_cursor->mc_dbflag = &dst->mt_dbflags[i];
+                
+                MDB_xcursor* const xcursor = current_cursor->mc_xcursor;
+                if (xcursor != NULL)
                 {
-                    *(MDB_xcursor*)(bk + 1) = *mx;
-                    mx->mx_cursor.mc_txn = dst;
+                    *(MDB_xcursor*)(backup_cursor + 1) = *xcursor;
+                    xcursor->mx_cursor.mc_txn = dst;
                 }
-                mc->mc_next = dst->mt_cursors[i];
-                dst->mt_cursors[i] = mc;
+                
+                current_cursor->mc_next = dst->mt_cursors[i];
+                dst->mt_cursors[i] = current_cursor;
+                
+                // Move to next cursor in chain
+                current_cursor = backup_cursor->mc_next;
             }
         }
     }
@@ -854,6 +858,10 @@ int mdb_freelist_save(MDB_txn* txn)
     return rc;
 }
 
+// TODO: Fix Single-Purpose Variable violations in mdb_txn_commit_impl()
+// This function has extensive variable re-assignments that violate single-purpose principle
+// Variables rc, i, x, y, len, ps_len are re-purposed throughout the function
+// Requires careful refactoring to maintain complex transaction commit logic
 int mdb_txn_commit_impl(MDB_txn* txn)
 {
     int rc{};
