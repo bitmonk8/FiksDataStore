@@ -28,16 +28,16 @@ static void mdb_default_cmp(MDB_txn* txn, MDB_dbi dbi)
 
 int mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* dbi)
 {
-    if ((flags & ~VALID_FLAGS) != 0u)
+    if ((flags & ~VALID_FLAGS) != 0U)
         return EINVAL;
-    if ((txn->mt_flags & MDB_TXN_BLOCKED) != 0u)
+    if ((txn->mt_flags & MDB_TXN_BLOCKED) != 0U)
         return MDB_BAD_TXN;
 
     // main DB?
     if (name == nullptr)
     {
         *dbi = MAIN_DBI;
-        if ((flags & PERSISTENT_FLAGS) != 0u)
+        if ((flags & PERSISTENT_FLAGS) != 0U)
         {
             uint16_t f2 = flags & PERSISTENT_FLAGS;
             // make sure flag changes get committed
@@ -62,10 +62,10 @@ int mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* db
     unsigned int unused{};
     for (MDB_dbi i{CORE_DBS}; i < txn->mt_numdbs; i++)
     {
-        if (txn->mt_dbxs[i].md_name.mv_size == 0u)
+        if (txn->mt_dbxs[i].md_name.mv_size == 0U)
         {
             // Remember this free slot
-            if (unused == 0u)
+            if (unused == 0U)
                 unused = i;
             continue;
         }
@@ -78,12 +78,12 @@ int mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* db
     }
 
     // If no free slot and max hit, fail
-    if ((unused == 0u) && txn->mt_numdbs >= txn->mt_env->me_maxdbs)
+    if ((unused == 0U) && txn->mt_numdbs >= txn->mt_env->me_maxdbs)
         return MDB_DBS_FULL;
 
     // Cannot mix named databases with some mainDB flags
     if ((txn->mt_dbs[MAIN_DBI].md_flags & (MDB_DUPSORT | MDB_INTEGERKEY)) != 0)
-        return ((flags & MDB_CREATE) != 0u) ? MDB_INCOMPATIBLE : MDB_NOTFOUND;
+        return ((flags & MDB_CREATE) != 0U) ? MDB_INCOMPATIBLE : MDB_NOTFOUND;
 
     // Find the DB info
     int dbflag{DB_NEW | DB_VALID | DB_USRVALID};
@@ -104,7 +104,7 @@ int mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* db
     }
     else
     {
-        if (rc != MDB_NOTFOUND || ((flags & MDB_CREATE) == 0u))
+        if (rc != MDB_NOTFOUND || ((flags & MDB_CREATE) == 0U))
             return rc;
         if (F_ISSET(txn->mt_flags, MDB_TXN_RDONLY))
             return EACCES;
@@ -135,7 +135,7 @@ int mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* db
     else
     {
         // Got info, register DBI in this txn
-        unsigned int slot = (unused != 0u) ? unused : txn->mt_numdbs;
+        unsigned int slot = (unused != 0U) ? unused : txn->mt_numdbs;
         txn->mt_dbxs[slot].md_name.mv_data = namedup;
         txn->mt_dbxs[slot].md_name.mv_size = len;
         txn->mt_dbxs[slot].md_rel = NULL;
@@ -148,7 +148,7 @@ int mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* db
         memcpy(&txn->mt_dbs[slot], data.mv_data, sizeof(MDB_db));
         *dbi = slot;
         mdb_default_cmp(txn, slot);
-        if (unused == 0u)
+        if (unused == 0U)
         {
             txn->mt_numdbs++;
         }
@@ -199,7 +199,7 @@ int mdb_drop0(MDB_cursor* mc, int subs)
         // This also avoids any P_LEAF2 pages, which have no nodes.
         // Also if the DB doesn't have sub-DBs and has no overflow
         // pages, omit scanning leaves.
-        if (((mc->mc_flags & C_SUB) != 0u) || ((subs == 0) && (mc->mc_db->md_overflow_pages == 0u)))
+        if (((mc->mc_flags & C_SUB) != 0U) || ((subs == 0) && (mc->mc_db->md_overflow_pages == 0U)))
             mdb_cursor_pop(mc);
 
         MDB_cursor mx{};
@@ -226,7 +226,7 @@ int mdb_drop0(MDB_cursor* mc, int subs)
                         if (rc != 0)
                             goto done;
                         mc->mc_db->md_overflow_pages -= omp->mp_pages;
-                        if ((mc->mc_db->md_overflow_pages == 0u) && (subs == 0))
+                        if ((mc->mc_db->md_overflow_pages == 0U) && (subs == 0))
                             break;
                     }
                     else if ((subs != 0) && ((ni->mn_flags & F_SUBDATA) != 0))
@@ -237,7 +237,7 @@ int mdb_drop0(MDB_cursor* mc, int subs)
                             goto done;
                     }
                 }
-                if ((subs == 0) && (mc->mc_db->md_overflow_pages == 0u))
+                if ((subs == 0) && (mc->mc_db->md_overflow_pages == 0U))
                     goto pop;
             }
             else
@@ -254,7 +254,7 @@ int mdb_drop0(MDB_cursor* mc, int subs)
                     mdb_midl_xappend(txn->mt_free_pgs, pg);
                 }
             }
-            if (mc->mc_top == 0u)
+            if (mc->mc_top == 0U)
                 break;
             mc->mc_ki[mc->mc_top] = n;
             rc = mdb_cursor_sibling(mc, 1);
@@ -339,8 +339,8 @@ int mdb_del(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data)
     if ((key == nullptr) || !TXN_DBI_EXIST(txn, dbi, DB_USRVALID))
         return EINVAL;
 
-    if ((txn->mt_flags & (MDB_TXN_RDONLY | MDB_TXN_BLOCKED)) != 0u)
-        return ((txn->mt_flags & MDB_TXN_RDONLY) != 0u) ? EACCES : MDB_BAD_TXN;
+    if ((txn->mt_flags & (MDB_TXN_RDONLY | MDB_TXN_BLOCKED)) != 0U)
+        return ((txn->mt_flags & MDB_TXN_RDONLY) != 0U) ? EACCES : MDB_BAD_TXN;
 
     if (!F_ISSET(txn->mt_dbs[dbi].md_flags, MDB_DUPSORT))
     {
@@ -422,11 +422,11 @@ int mdb_put(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data, unsigned int
     if ((key == nullptr) || (data == nullptr) || !TXN_DBI_EXIST(txn, dbi, DB_USRVALID))
         return EINVAL;
 
-    if ((flags & ~(MDB_NOOVERWRITE | MDB_NODUPDATA | MDB_RESERVE | MDB_APPEND | MDB_APPENDDUP)) != 0u)
+    if ((flags & ~(MDB_NOOVERWRITE | MDB_NODUPDATA | MDB_RESERVE | MDB_APPEND | MDB_APPENDDUP)) != 0U)
         return EINVAL;
 
-    if ((txn->mt_flags & (MDB_TXN_RDONLY | MDB_TXN_BLOCKED)) != 0u)
-        return ((txn->mt_flags & MDB_TXN_RDONLY) != 0u) ? EACCES : MDB_BAD_TXN;
+    if ((txn->mt_flags & (MDB_TXN_RDONLY | MDB_TXN_BLOCKED)) != 0U)
+        return ((txn->mt_flags & MDB_TXN_RDONLY) != 0U) ? EACCES : MDB_BAD_TXN;
 
     MDB_TRACE(("%p, %u, %" Z "u[%s], %" Z "u%s, %u",
                txn,
@@ -491,7 +491,7 @@ int mdb_get(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data)
     if ((key == nullptr) || (data == nullptr) || !TXN_DBI_EXIST(txn, dbi, DB_USRVALID))
         return EINVAL;
 
-    if ((txn->mt_flags & MDB_TXN_BLOCKED) != 0u)
+    if ((txn->mt_flags & MDB_TXN_BLOCKED) != 0U)
         return MDB_BAD_TXN;
 
     MDB_cursor mc{};

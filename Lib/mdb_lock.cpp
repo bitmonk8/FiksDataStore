@@ -196,8 +196,8 @@ int ESECT mdb_mutex_failed(MDB_env* env, mdb_mutexref_t mutex, int rc)
         }
         return cleanup_result;
     }
-    else
-    {
+    
+    
 #ifdef _WIN32
         const int error_code = ErrCode();
         DPRINTF(("LOCK_MUTEX failed, %s", mdb_strerror(error_code)));
@@ -206,7 +206,7 @@ int ESECT mdb_mutex_failed(MDB_env* env, mdb_mutexref_t mutex, int rc)
         DPRINTF(("LOCK_MUTEX failed, %s", mdb_strerror(rc)));
         return rc;
 #endif
-    }
+   
 }
 
 // As #mdb_reader_check(). rlocked is set if caller locked #me_rmutex.

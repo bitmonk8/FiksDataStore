@@ -358,7 +358,7 @@ static int readline(MDB_val* out, MDB_val* buf)
     else
     {
         // odd length not allowed
-        if ((len & 1) != 0u)
+        if ((len & 1) != 0U)
         {
             Eof = 1;
             badend();
@@ -509,10 +509,10 @@ int main(int argc, char* argv[])
 
     mdb_env_set_maxdbs(env, 2);
 
-    if (info.me_maxreaders != 0u)
+    if (info.me_maxreaders != 0U)
         mdb_env_set_maxreaders(env, info.me_maxreaders);
 
-    if (info.me_mapsize != 0u)
+    if (info.me_mapsize != 0U)
         mdb_env_set_mapsize(env, info.me_mapsize);
 
     if (info.me_mapaddr != nullptr)

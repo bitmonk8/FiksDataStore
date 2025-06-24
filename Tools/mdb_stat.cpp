@@ -190,7 +190,7 @@ int main(int argc, char* argv[])
             printf("  %d stale readers cleared.\n", dead);
             rc = mdb_reader_list(env, (MDB_msg_func*)fputs, stdout);
         }
-        if (!((subname != nullptr) || (alldbs != 0) || (freinfo != 0)))
+        if ((subname == nullptr) && (alldbs == 0) && (freinfo == 0))
             goto env_close;
     }
 

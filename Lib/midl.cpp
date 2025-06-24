@@ -209,7 +209,7 @@ int mdb_midl_append_range(MDB_IDL* idp, MDB_ID id, unsigned n)
     }
     ids[0] = len + n;
     ids += len;
-    while (n != 0u)
+    while (n != 0U)
         ids[n--] = id++;
     return 0;
 }
@@ -227,7 +227,7 @@ void mdb_midl_xmerge(MDB_IDL idl, const MDB_IDL merge)
     MDB_ID write_pos = total_count;
     MDB_ID current_idl_value = idl[remaining_idl];
 
-    while (remaining_merge != 0u)
+    while (remaining_merge != 0U)
     {
         const MDB_ID current_merge_value = merge[remaining_merge--];
         for (; current_idl_value < current_merge_value; current_idl_value = idl[--remaining_idl])

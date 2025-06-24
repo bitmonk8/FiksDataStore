@@ -461,7 +461,7 @@ void child()
             cp = findcrs(tcrs);
             ptr = strchr(ptr + SOFF("mdb_cursor_put"), ',');
             sscanf(ptr + 1, "%" MDB_SCNy(u) ",", &key.mv_size);
-            if (key.mv_size != 0u)
+            if (key.mv_size != 0U)
             {
                 ptr = strchr(ptr, '[');
                 inhex(ptr + 1, kbuf);

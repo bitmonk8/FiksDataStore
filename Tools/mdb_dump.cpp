@@ -142,11 +142,11 @@ static int dumpit(MDB_txn* txn, MDB_dbi dbi, char* name)
         printf("mapaddr=%p\n", info.me_mapaddr);
     printf("maxreaders=%u\n", info.me_maxreaders);
 
-    if ((flags & MDB_DUPSORT) != 0u)
+    if ((flags & MDB_DUPSORT) != 0U)
         printf("duplicates=1\n");
 
     for (int flag_idx = 0; dbflags[flag_idx].bit != 0; flag_idx++)
-        if ((flags & dbflags[flag_idx].bit) != 0u)
+        if ((flags & dbflags[flag_idx].bit) != 0U)
             printf("%s=1\n", dbflags[flag_idx].name);
 
     printf("db_pagesize=%d\n", ms.ms_psize);
