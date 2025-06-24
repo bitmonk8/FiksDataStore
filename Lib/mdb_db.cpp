@@ -14,8 +14,7 @@ static void mdb_default_cmp(MDB_txn* txn, MDB_dbi dbi)
 {
     uint16_t f = txn->mt_dbs[dbi].md_flags;
 
-    txn->mt_dbxs[dbi].md_cmp = ((f & MDB_REVERSEKEY) != 0) ? mdb_cmp_memnr
-                                                            : mdb_cmp_memn;
+    txn->mt_dbxs[dbi].md_cmp = ((f & MDB_REVERSEKEY) != 0) ? mdb_cmp_memnr : mdb_cmp_memn;
 
     txn->mt_dbxs[dbi].md_dcmp = 0;
 }
@@ -291,7 +290,7 @@ static int mdb_del0(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data, unsi
     MDB_val* xdata{nullptr};
     if (data != nullptr)
     {
-        op = MDB_SET;  // Simplified without MDB_GET_BOTH
+        op = MDB_SET;     // Simplified without MDB_GET_BOTH
         xdata = nullptr;  // Ignore data parameter since no duplicates
     }
     else
@@ -436,8 +435,6 @@ int mdb_set_compare(MDB_txn* txn, MDB_dbi dbi, MDB_cmp_func* cmp)
     txn->mt_dbxs[dbi].md_cmp = cmp;
     return MDB_SUCCESS;
 }
-
-
 
 int mdb_get(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data)
 {

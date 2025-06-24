@@ -76,7 +76,6 @@ struct MDB_page2
 #define MDB_PS_FIRST 4
 #define MDB_PS_LAST 8
 
-
 /* from mdb.c, for MDB_cursor */
 #define C_INITIALIZED 0x01           // cursor has been initialized and is valid
 #define C_EOF 0x02                   // No more data
@@ -103,7 +102,6 @@ struct MDB_page2
 
 // Split flags
 #define MDB_SPLIT_REPLACE 0x01  // replace existing item (removed but kept for compatibility)
-
 
 // The amount of space remaining in the page
 #define SIZELEFT(p) (indx_t)(MP_UPPER(p) - MP_LOWER(p))

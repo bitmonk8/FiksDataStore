@@ -89,9 +89,9 @@ int main(int argc, char* argv[])
     printf("Adding 6 more values, should yield 2 splits\n");
     for (i = 0; i < 6; i++)
     {
-        snprintf(kbuf, sizeof(kbuf), "%03d", i * 5 + 4);
+        snprintf(kbuf, sizeof(kbuf), "%03d", (i * 5) + 4);
         key.mv_size = strlen(kbuf);
-        snprintf(sval, mst.ms_psize / 4, "%03d", i * 5 + 4);
+        snprintf(sval, mst.ms_psize / 4, "%03d", (i * 5) + 4);
         data = sdata;
         (void)RES(MDB_KEYEXIST, mdb_cursor_put(cursor, &key, &data, MDB_NOOVERWRITE));
     }

@@ -272,7 +272,6 @@ struct MDB_val
 // @brief A callback function used to compare two keys in a database
 typedef int(MDB_cmp_func)(const MDB_val* a, const MDB_val* b);
 
-
 // @defgroup mdb_env Environment Flags
 // @{
 
@@ -1040,8 +1039,6 @@ int mdb_drop(MDB_txn* txn, MDB_dbi dbi, int del);
 // EINVAL - an invalid parameter was specified.
 int mdb_set_compare(MDB_txn* txn, MDB_dbi dbi, MDB_cmp_func* cmp);
 
-
-
 // @brief Get items from a database.
 // This function retrieves key/data pairs from the database. The address
 // and length of the data associated with the specified \b key are returned
@@ -1239,7 +1236,6 @@ int mdb_cursor_put(MDB_cursor* cursor, MDB_val* key, MDB_val* data, unsigned int
 // EINVAL - an invalid parameter was specified.
 int mdb_cursor_del(MDB_cursor* cursor, unsigned int flags);
 
-
 // @brief Compare two data items according to a particular database.
 // This returns a comparison as if the two data items were keys in the
 // specified database.
@@ -1249,7 +1245,6 @@ int mdb_cursor_del(MDB_cursor* cursor, unsigned int flags);
 // @param[in] b The second item to compare
 // @return < 0 if a < b, 0 if a == b, > 0 if a > b
 int mdb_cmp(MDB_txn* txn, MDB_dbi dbi, const MDB_val* a, const MDB_val* b);
-
 
 // @brief A callback function used to print a message from the library.
 // @param[in] msg The string to be printed.

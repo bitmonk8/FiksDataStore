@@ -286,7 +286,7 @@ int mdb_cursor_next(MDB_cursor* mc, MDB_val* key, MDB_val* data, MDB_cursor_op o
             return rc;
         }
         mp = mc->mc_pg[mc->mc_top];
-        
+
         DPRINTF(("next page is %" Yu ", key index %u", mp->mp_pgno, mc->mc_ki[mc->mc_top]));
     }
     else
@@ -356,7 +356,7 @@ int mdb_cursor_prev(MDB_cursor* mc, MDB_val* key, MDB_val* data, MDB_cursor_op o
         }
         mp = mc->mc_pg[mc->mc_top];
         mc->mc_ki[mc->mc_top] = NUMKEYS(mp) - 1;
-        
+
         DPRINTF(("prev page is %" Yu ", key index %u", mp->mp_pgno, mc->mc_ki[mc->mc_top]));
     }
     else
@@ -413,7 +413,7 @@ int mdb_cursor_set(MDB_cursor* mc, MDB_val* key, MDB_val* data, MDB_cursor_op op
         // No LEAF2 support - use standard nodes
         leaf = NODEPTR(mp, 0);
         MDB_GET_KEY2(leaf, nodekey);
-        
+
         rc = mc->mc_dbx->md_cmp(key, &nodekey);
         if (rc == 0)
         {
@@ -433,7 +433,7 @@ int mdb_cursor_set(MDB_cursor* mc, MDB_val* key, MDB_val* data, MDB_cursor_op op
                 // No LEAF2 support - use standard nodes
                 leaf = NODEPTR(mp, nkeys - 1);
                 MDB_GET_KEY2(leaf, nodekey);
-                
+
                 rc = mc->mc_dbx->md_cmp(key, &nodekey);
                 if (rc == 0)
                 {
@@ -450,7 +450,7 @@ int mdb_cursor_set(MDB_cursor* mc, MDB_val* key, MDB_val* data, MDB_cursor_op op
                         // This is definitely the right page, skip search_page
                         leaf = NODEPTR(mp, mc->mc_ki[mc->mc_top]);
                         MDB_GET_KEY2(leaf, nodekey);
-                        
+
                         rc = mc->mc_dbx->md_cmp(key, &nodekey);
                         if (rc == 0)
                         {
@@ -533,7 +533,7 @@ set1:
     if (data != nullptr)
     {
         // No duplicate operations supported - all handled in switch statement
-        
+
         rc = mdb_node_read(mc, leaf, data);
         if (rc != MDB_SUCCESS)
             return rc;
@@ -884,7 +884,7 @@ int mdb_cursor_put_impl(MDB_cursor* mc, MDB_val* key, MDB_val* data, unsigned in
         // there's only a key anyway, so this is a no-op
         // No LEAF2 support - use standard nodes
         leaf = NODEPTR(mc->mc_pg[mc->mc_top], mc->mc_ki[mc->mc_top]);
-        
+
         // if overwriting slot 0 of leaf, need to
         // update branch key if there is a parent page
         if ((mc->mc_top != 0U) && (mc->mc_ki[mc->mc_top] == 0U))
@@ -1004,11 +1004,11 @@ int mdb_cursor_put_impl(MDB_cursor* mc, MDB_val* key, MDB_val* data, unsigned in
             }
             return MDB_SUCCESS;
         }
-        new_ksize:
-            mdb_node_del(mc, 0);
-        }
-    
-        rdata = data;
+    new_ksize:
+        mdb_node_del(mc, 0);
+    }
+
+    rdata = data;
 
     // Simplified node addition - no duplicate support
     nflags = flags & NODE_ADD_FLAGS;
@@ -1107,7 +1107,7 @@ int mdb_cursor_del_impl(MDB_cursor* mc, unsigned int flags)
     mp = mc->mc_pg[mc->mc_top];
     if (!IS_LEAF(mp))
         return MDB_CORRUPTED;
-    
+
     // No LEAF2 support - use standard nodes
     leaf = NODEPTR(mp, mc->mc_ki[mc->mc_top]);
 
@@ -1149,7 +1149,6 @@ int mdb_cursor_del(MDB_cursor* mc, unsigned int flags)
     MDB_TRACE(("%p, %u", mc, flags));
     return mdb_cursor_del_impl(mc, flags);
 }
-
 
 // Initialize a cursor for a given transaction and database.
 void mdb_cursor_init(MDB_cursor* mc, MDB_txn* txn, MDB_dbi dbi, MDB_xcursor* mx)

@@ -1642,7 +1642,6 @@ int mdb_node_add(MDB_cursor* mc, indx_t indx, MDB_val* key, MDB_val* data, pgno_
              key ? key->mv_size : 0,
              key ? DKEY(key) : "null"));
 
-
     room = (ssize_t)SIZELEFT(mp) - (ssize_t)sizeof(indx_t);
     if (key != NULL)
         node_size += key->mv_size;
@@ -1757,7 +1756,6 @@ void mdb_node_del(MDB_cursor* mc, int ksize)
     DPRINTF(("delete node %u on %s page %" Yu, indx, IS_LEAF(mp) ? "leaf" : "branch", mdb_dbg_pgno(mp)));
     numkeys = NUMKEYS(mp);
     mdb_cassert(mc, indx < numkeys);
-
 
     node = NODEPTR(mp, indx);
     sz = NODESIZE + node->mn_ksize;

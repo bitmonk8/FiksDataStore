@@ -140,11 +140,7 @@ void mdb_page_list(MDB_page* mp)
         }
         total = EVEN(total);
     }
-    fprintf(stderr,
-            "Total: header %d + contents %d + unused %d\n",
-            PAGEBASE + MP_LOWER(mp),
-            total,
-            SIZELEFT(mp));
+    fprintf(stderr, "Total: header %d + contents %d + unused %d\n", PAGEBASE + MP_LOWER(mp), total, SIZELEFT(mp));
 }
 #endif
 

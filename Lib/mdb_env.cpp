@@ -1548,8 +1548,7 @@ fail:
 // environment and re-opening it with the new flags.
 #define CHANGEABLE (MDB_NOSYNC | MDB_NOMETASYNC | MDB_MAPASYNC | MDB_NOMEMINIT)
 #define CHANGELESS                                                                                                     \
-    (MDB_NOSUBDIR | MDB_RDONLY | MDB_WRITEMAP | MDB_NOTLS | MDB_NOLOCK | MDB_NORDAHEAD |                \
-     MDB_PREVSNAPSHOT)
+    (MDB_NOSUBDIR | MDB_RDONLY | MDB_WRITEMAP | MDB_NOTLS | MDB_NOLOCK | MDB_NORDAHEAD | MDB_PREVSNAPSHOT)
 
 #if VALID_FLAGS & PERSISTENT_FLAGS & (CHANGEABLE | CHANGELESS)
 #error "Persistent DB flags & env flags overlap, but both go in mm_flags"
@@ -1594,7 +1593,7 @@ int ESECT mdb_env_open(MDB_env* env, const char* path, unsigned int flags, mdb_m
     env->me_dbflags = (uint16_t*)calloc(env->me_maxdbs, sizeof(uint16_t));
     env->me_dbiseqs = (unsigned int*)calloc(env->me_maxdbs, sizeof(unsigned int));
     if ((env->me_dbxs == nullptr) || (env->me_path == nullptr) || (env->me_dbflags == nullptr) ||
-          (env->me_dbiseqs == nullptr))
+        (env->me_dbiseqs == nullptr))
     {
         rc = ENOMEM;
         goto leave;
@@ -1911,11 +1910,9 @@ THREAD_RET ESECT CALL_CONV mdb_env_copythr(void* arg)
                 wsize -= len;
                 continue;
             }
-            
-            
-                rc = EIO;
-                break;
-           
+
+            rc = EIO;
+            break;
         }
         if (rc != 0)
         {
@@ -2364,12 +2361,10 @@ int ESECT mdb_env_copyfd0(MDB_env* env, HANDLE fd)
             w2 -= len;
             continue;
         }
-        
-        
-            // Non-blocking or async handles are not supported
-            rc = EIO;
-            break;
-       
+
+        // Non-blocking or async handles are not supported
+        rc = EIO;
+        break;
     }
     if (wmutex != nullptr)
         UNLOCK_MUTEX(wmutex);
@@ -2406,11 +2401,9 @@ int ESECT mdb_env_copyfd0(MDB_env* env, HANDLE fd)
             wsize -= len;
             continue;
         }
-        
-        
-            rc = EIO;
-            break;
-       
+
+        rc = EIO;
+        break;
     }
 
 leave:

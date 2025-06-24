@@ -64,15 +64,17 @@ struct MDB_txn
 #define MDB_TXN_BEGIN_FLAGS (MDB_NOMETASYNC | MDB_NOSYNC | MDB_RDONLY)
 #define MDB_TXN_NOMETASYNC MDB_NOMETASYNC  // don't sync meta for this txn on commit
 #define MDB_TXN_NOSYNC MDB_NOSYNC          // don't sync this txn on commit
-#define MDB_TXN_RDONLY MDB_RDONLY          // read-only transaction
-                                           // internal txn flags
-#define MDB_TXN_WRITEMAP MDB_WRITEMAP      // copy of MDB_env flag in writers
-#define MDB_TXN_FINISHED 0x01              // txn is finished or never began
-#define MDB_TXN_ERROR 0x02                 // txn is unusable after an error
-#define MDB_TXN_DIRTY 0x04                 // must write, even if dirty list is empty
-#define MDB_TXN_SPILLS 0x08                // txn or a parent has spilled pages
-#define MDB_TXN_HAS_CHILD 0x10             // txn has an MDB_txn.mt_child
-                                           // most operations on the txn are currently illegal
+#define MDB_TXN_RDONLY                                                                                                 \
+    MDB_RDONLY                         // read-only transaction
+                                       // internal txn flags
+#define MDB_TXN_WRITEMAP MDB_WRITEMAP  // copy of MDB_env flag in writers
+#define MDB_TXN_FINISHED 0x01          // txn is finished or never began
+#define MDB_TXN_ERROR 0x02             // txn is unusable after an error
+#define MDB_TXN_DIRTY 0x04             // must write, even if dirty list is empty
+#define MDB_TXN_SPILLS 0x08            // txn or a parent has spilled pages
+#define MDB_TXN_HAS_CHILD                                                                                              \
+    0x10  // txn has an MDB_txn.mt_child
+          // most operations on the txn are currently illegal
 #define MDB_TXN_BLOCKED (MDB_TXN_FINISHED | MDB_TXN_ERROR | MDB_TXN_HAS_CHILD)
 
     unsigned int mt_flags;  // Transaction Flags

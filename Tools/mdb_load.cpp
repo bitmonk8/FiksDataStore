@@ -490,7 +490,6 @@ int main(int argc, char* argv[])
     if (info.me_mapsize != 0U)
         mdb_env_set_mapsize(env, info.me_mapsize);
 
-
     rc = mdb_env_open(env, envname, envflags, 0664);
     if (rc != 0)
     {
