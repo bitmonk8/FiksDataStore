@@ -619,14 +619,9 @@ int ESECT mdb_env_init_meta(MDB_env* env, MDB_meta* meta)
 // Update the environment info to commit a transaction.
 // txn the transaction that's being committed
 // Return 0 on success, non-zero on failure.
+#ifdef _WIN32
 int mdb_env_write_meta(MDB_txn* txn)
 {
-#ifdef _WIN32
-    OVERLAPPED ov;
-#else
-    int r2;
-#endif
-
     int toggle{static_cast<int>(txn->mt_txnid & 1)};
     DPRINTF(("writing meta page %d for root page %" Yu, toggle, txn->mt_dbs[MAIN_DBI].md_root));
 
@@ -638,37 +633,6 @@ int mdb_env_write_meta(MDB_txn* txn)
     if (mapsize < env->me_mapsize)
         mapsize = env->me_mapsize;
 
-#ifndef _WIN32  // We don't want to ever use MSYNC/FlushViewOfFile in Windows
-    if (flags & MDB_WRITEMAP)
-    {
-        mp->mm_mapsize = mapsize;
-        mp->mm_dbs[FREE_DBI] = txn->mt_dbs[FREE_DBI];
-        mp->mm_dbs[MAIN_DBI] = txn->mt_dbs[MAIN_DBI];
-        mp->mm_last_pg = txn->mt_next_pgno - 1;
-#if (__GNUC__ * 100 + __GNUC_MINOR__ >= 404) && /* TODO: portability */                                                \
-    !(defined(__i386__) || defined(__x86_64__))
-        // LY: issue a memory barrier, if not x86. ITS#7969
-        __sync_synchronize();
-#endif
-        mp->mm_txnid = txn->mt_txnid;
-        if (!(flags & (MDB_NOMETASYNC | MDB_NOSYNC)))
-        {
-            unsigned meta_size = env->me_psize;
-            int rc = (env->me_flags & MDB_MAPASYNC) ? MS_ASYNC : MS_SYNC;
-            ptr = (char*)mp - PAGEHDRSZ;
-            // POSIX msync() requires ptr = start of OS page
-            r2 = (ptr - env->me_map) & (env->me_os_psize - 1);
-            ptr -= r2;
-            meta_size += r2;
-            if (MDB_MSYNC(ptr, meta_size, rc))
-            {
-                rc = ErrCode();
-                goto fail;
-            }
-        }
-        goto done;
-    }
-#endif
     MDB_meta metab{};
     metab.mm_txnid = mp->mm_txnid;
     metab.mm_last_pg = mp->mm_last_pg;
@@ -690,43 +654,30 @@ int mdb_env_write_meta(MDB_txn* txn)
     // also syncs to disk.  Avoids a separate fdatasync() call.)
     HANDLE mfd{(flags & (MDB_NOSYNC | MDB_NOMETASYNC)) ? env->me_fd : env->me_mfd};
     int rc{};
-#ifdef _WIN32
     {
+        OVERLAPPED ov;
         memset(&ov, 0, sizeof(ov));
         ov.Offset = off;
         if (!WriteFile(mfd, ptr, len, (DWORD*)&rc, &ov))
             rc = -1;
     }
-#else
-retry_write:
-    rc = pwrite(mfd, ptr, len, off);
-#endif
     if (rc != len)
     {
         rc = rc < 0 ? ErrCode() : EIO;
-#ifndef _WIN32
-        if (rc == EINTR)
-            goto retry_write;
-#endif
         DPUTS("write failed, disk error?");
         // On a failure, the pagecache still contains the new data.
         // Write some old data back, to prevent it from being used.
         // Use the non-SYNC fd; we know it will fail anyway.
         meta.mm_last_pg = metab.mm_last_pg;
         meta.mm_txnid = metab.mm_txnid;
-#ifdef _WIN32
+        OVERLAPPED ov;
         memset(&ov, 0, sizeof(ov));
         ov.Offset = off;
         WriteFile(env->me_fd, ptr, len, NULL, &ov);
-#else
-        r2 = pwrite(env->me_fd, ptr, len, off);
-        (void)r2;  // Silence warnings. We don't care about pwrite's return value
-#endif
-    fail:
         env->me_flags |= MDB_FATAL_ERROR;
         return rc;
     }
-done:
+
     // Memory ordering issues are irrelevant; since the entire writer
     // is wrapped by wmutex, all of these changes will become visible
     // after the wmutex is unlocked. Since the DB is multi-version,
@@ -737,6 +688,113 @@ done:
 
     return MDB_SUCCESS;
 }
+#else
+int mdb_env_write_meta(MDB_txn* txn)
+{
+    int toggle{static_cast<int>(txn->mt_txnid & 1)};
+    DPRINTF(("writing meta page %d for root page %" Yu, toggle, txn->mt_dbs[MAIN_DBI].md_root));
+
+    MDB_env* env{txn->mt_env};
+    unsigned flags{txn->mt_flags | env->me_flags};
+    MDB_meta* mp{env->me_metas[toggle]};
+    mdb_size_t mapsize{env->me_metas[toggle ^ 1]->mm_mapsize};
+    // Persist any increases of mapsize config
+    if (mapsize < env->me_mapsize)
+        mapsize = env->me_mapsize;
+
+    if (flags & MDB_WRITEMAP)
+    {
+        mp->mm_mapsize = mapsize;
+        mp->mm_dbs[FREE_DBI] = txn->mt_dbs[FREE_DBI];
+        mp->mm_dbs[MAIN_DBI] = txn->mt_dbs[MAIN_DBI];
+        mp->mm_last_pg = txn->mt_next_pgno - 1;
+#if (__GNUC__ * 100 + __GNUC_MINOR__ >= 404) && /* TODO: portability */                                                \
+    !(defined(__i386__) || defined(__x86_64__))
+        // LY: issue a memory barrier, if not x86. ITS#7969
+        __sync_synchronize();
+#endif
+        mp->mm_txnid = txn->mt_txnid;
+        if (!(flags & (MDB_NOMETASYNC | MDB_NOSYNC)))
+        {
+            unsigned meta_size = env->me_psize;
+            int rc = (env->me_flags & MDB_MAPASYNC) ? MS_ASYNC : MS_SYNC;
+            char* ptr = (char*)mp - PAGEHDRSZ;
+            // POSIX msync() requires ptr = start of OS page
+            int r2 = (ptr - env->me_map) & (env->me_os_psize - 1);
+            ptr -= r2;
+            meta_size += r2;
+            if (MDB_MSYNC(ptr, meta_size, rc))
+            {
+                rc = ErrCode();
+                env->me_flags |= MDB_FATAL_ERROR;
+                return rc;
+            }
+        }
+
+        // Memory ordering issues are irrelevant; since the entire writer
+        // is wrapped by wmutex, all of these changes will become visible
+        // after the wmutex is unlocked. Since the DB is multi-version,
+        // readers will get consistent data regardless of how fresh or
+        // how stale their view of these values is.
+        if (env->me_txns)
+            env->me_txns->mti_txnid = txn->mt_txnid;
+
+        return MDB_SUCCESS;
+    }
+
+    MDB_meta metab{};
+    metab.mm_txnid = mp->mm_txnid;
+    metab.mm_last_pg = mp->mm_last_pg;
+
+    MDB_meta meta{};
+    meta.mm_mapsize = mapsize;
+    meta.mm_dbs[FREE_DBI] = txn->mt_dbs[FREE_DBI];
+    meta.mm_dbs[MAIN_DBI] = txn->mt_dbs[MAIN_DBI];
+    meta.mm_last_pg = txn->mt_next_pgno - 1;
+    meta.mm_txnid = txn->mt_txnid;
+
+    MDB_OFF_T off{offsetof(MDB_meta, mm_mapsize)};
+    char* ptr{(char*)&meta + off};
+    int len{static_cast<int>(sizeof(MDB_meta) - off)};
+    off += (char*)mp - env->me_map;
+
+    while (true)
+    {
+        // Write to the SYNC fd unless MDB_NOSYNC/MDB_NOMETASYNC.
+        // (me_mfd goes to the same file as me_fd, but writing to it
+        // also syncs to disk.  Avoids a separate fdatasync() call.)
+        HANDLE mfd{(flags & (MDB_NOSYNC | MDB_NOMETASYNC)) ? env->me_fd : env->me_mfd};
+        int rc{};
+        rc = pwrite(mfd, ptr, len, off);
+        if (rc == len)
+            break;
+
+        rc = rc < 0 ? ErrCode() : EIO;
+        if (rc == EINTR)
+            continue;
+
+        DPUTS("write failed, disk error?");
+        // On a failure, the pagecache still contains the new data.
+        // Write some old data back, to prevent it from being used.
+        // Use the non-SYNC fd; we know it will fail anyway.
+        meta.mm_last_pg = metab.mm_last_pg;
+        meta.mm_txnid = metab.mm_txnid;
+        pwrite(env->me_fd, ptr, len, off);
+        env->me_flags |= MDB_FATAL_ERROR;
+        return rc;
+    }
+
+    // Memory ordering issues are irrelevant; since the entire writer
+    // is wrapped by wmutex, all of these changes will become visible
+    // after the wmutex is unlocked. Since the DB is multi-version,
+    // readers will get consistent data regardless of how fresh or
+    // how stale their view of these values is.
+    if (env->me_txns)
+        env->me_txns->mti_txnid = txn->mt_txnid;
+
+    return MDB_SUCCESS;
+}
+#endif
 
 // Check both meta pages to see which one is newer.
 // env the environment handle
