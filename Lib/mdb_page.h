@@ -95,7 +95,8 @@ enum
     F_SUBDATA = 0x02,  // data is a sub-database
     F_DUPDATA = 0x04   // data has duplicates (removed but kept for compatibility)
 };
-#define NODE_ADD_FLAGS (F_SUBDATA | MDB_RESERVE | MDB_APPEND)
+#define NODE_ADD_FLAGS                                                                                                 \
+    (static_cast<unsigned>(F_SUBDATA) | static_cast<unsigned>(MDB_RESERVE) | static_cast<unsigned>(MDB_APPEND))
 
 // Split flags
 enum
