@@ -216,22 +216,25 @@ int mdb_midl_append_range(MDB_IDL* idp, MDB_ID id, unsigned n)
 
 void mdb_midl_xmerge(MDB_IDL idl, const MDB_IDL merge)
 {
-    MDB_ID old_id;
-    MDB_ID merge_id;
-    MDB_ID i = merge[0];
-    MDB_ID j = idl[0];
-    MDB_ID k = i + j;
-    MDB_ID total = k;
+    const MDB_ID merge_count = merge[0];
+    const MDB_ID idl_count = idl[0];
+    const MDB_ID total_count = merge_count + idl_count;
+    
     idl[0] = (MDB_ID)-1; /* delimiter for idl scan below */
-    old_id = idl[j];
-    while (i != 0u)
+    
+    MDB_ID remaining_merge = merge_count;
+    MDB_ID remaining_idl = idl_count;
+    MDB_ID write_pos = total_count;
+    MDB_ID current_idl_value = idl[remaining_idl];
+    
+    while (remaining_merge != 0u)
     {
-        merge_id = merge[i--];
-        for (; old_id < merge_id; old_id = idl[--j])
-            idl[k--] = old_id;
-        idl[k--] = merge_id;
+        const MDB_ID current_merge_value = merge[remaining_merge--];
+        for (; current_idl_value < current_merge_value; current_idl_value = idl[--remaining_idl])
+            idl[write_pos--] = current_idl_value;
+        idl[write_pos--] = current_merge_value;
     }
-    idl[0] = total;
+    idl[0] = total_count;
 }
 
 /* Quicksort + Insertion sort for small arrays */

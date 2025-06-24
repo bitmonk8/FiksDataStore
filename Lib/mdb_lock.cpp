@@ -164,8 +164,8 @@ int ESECT mdb_mutex_failed(MDB_env* env, mdb_mutexref_t mutex, int rc)
     if (rc == MDB_OWNERDEAD)
     {
         // We own the mutex. Clean up after dead previous owner.
-        rc = MDB_SUCCESS;
-        int rlocked{static_cast<int>(mutex == env->me_rmutex)};
+        int cleanup_result{MDB_SUCCESS};
+        const int rlocked{static_cast<int>(mutex == env->me_rmutex)};
         if (rlocked == 0)
         {
             // Keep mti_txnid updated, otherwise next writer can
@@ -177,30 +177,34 @@ int ESECT mdb_mutex_failed(MDB_env* env, mdb_mutexref_t mutex, int rc)
             {
                 env->me_flags |= MDB_FATAL_ERROR;
                 env->me_txn = NULL;
-                rc = MDB_PANIC;
+                cleanup_result = MDB_PANIC;
             }
         }
-        DPRINTF(("%cmutex owner died, %s", (rlocked ? 'r' : 'w'), (rc ? "this process' env is hosed" : "recovering")));
-        int rc2{mdb_reader_check0(env, rlocked, NULL)};
-        if (rc2 == 0)
-            rc2 = mdb_mutex_consistent(mutex);
-        if (rc == 0)
-            rc = rc2;
-        if (rc != 0)
+        DPRINTF(("%cmutex owner died, %s", (rlocked ? 'r' : 'w'), (cleanup_result ? "this process' env is hosed" : "recovering")));
+        const int reader_check_result{mdb_reader_check0(env, rlocked, NULL)};
+        int consistency_result = reader_check_result;
+        if (reader_check_result == 0)
+            consistency_result = mdb_mutex_consistent(mutex);
+        if (cleanup_result == 0)
+            cleanup_result = consistency_result;
+        if (cleanup_result != 0)
         {
-            DPRINTF(("LOCK_MUTEX recovery failed, %s", mdb_strerror(rc)));
+            DPRINTF(("LOCK_MUTEX recovery failed, %s", mdb_strerror(cleanup_result)));
             UNLOCK_MUTEX(mutex);
         }
+        return cleanup_result;
     }
     else
     {
 #ifdef _WIN32
-        rc = ErrCode();
-#endif
+        const int error_code = ErrCode();
+        DPRINTF(("LOCK_MUTEX failed, %s", mdb_strerror(error_code)));
+        return error_code;
+#else
         DPRINTF(("LOCK_MUTEX failed, %s", mdb_strerror(rc)));
+        return rc;
+#endif
     }
-
-    return rc;
 }
 
 // As #mdb_reader_check(). rlocked is set if caller locked #me_rmutex.
