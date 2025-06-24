@@ -130,16 +130,15 @@ static void readhdr(void)
         }
         else if (strncmp((char*)dbuf.mv_data, "mapaddr=", STRLENOF("mapaddr=")) == 0)
         {
-            int i;
             ptr = (char*)memchr(dbuf.mv_data, '\n', dbuf.mv_size);
             if (ptr != nullptr)
                 *ptr = '\0';
 #ifdef _WIN32
-            i = sscanf_s((char*)dbuf.mv_data + STRLENOF("mapaddr="), "%p", &info.me_mapaddr);
+            const int mapaddr_result = sscanf_s((char*)dbuf.mv_data + STRLENOF("mapaddr="), "%p", &info.me_mapaddr);
 #else
-            i = sscanf((char*)dbuf.mv_data + STRLENOF("mapaddr="), "%p", &info.me_mapaddr);
+            const int mapaddr_result = sscanf((char*)dbuf.mv_data + STRLENOF("mapaddr="), "%p", &info.me_mapaddr);
 #endif
-            if (i != 1)
+            if (mapaddr_result != 1)
             {
                 fprintf(stderr,
                         "%s: line %" Yu ": invalid mapaddr %s\n",
@@ -151,16 +150,15 @@ static void readhdr(void)
         }
         else if (strncmp((char*)dbuf.mv_data, "mapsize=", STRLENOF("mapsize=")) == 0)
         {
-            int i;
             ptr = (char*)memchr(dbuf.mv_data, '\n', dbuf.mv_size);
             if (ptr != nullptr)
                 *ptr = '\0';
 #ifdef _WIN32
-            i = sscanf_s((char*)dbuf.mv_data + STRLENOF("mapsize="), "%" MDB_SCNy(u), &info.me_mapsize);
+            const int mapsize_result = sscanf_s((char*)dbuf.mv_data + STRLENOF("mapsize="), "%" MDB_SCNy(u), &info.me_mapsize);
 #else
-            i = sscanf((char*)dbuf.mv_data + STRLENOF("mapsize="), "%" MDB_SCNy(u), &info.me_mapsize);
+            const int mapsize_result = sscanf((char*)dbuf.mv_data + STRLENOF("mapsize="), "%" MDB_SCNy(u), &info.me_mapsize);
 #endif
-            if (i != 1)
+            if (mapsize_result != 1)
             {
                 fprintf(stderr,
                         "%s: line %" Yu ": invalid mapsize %s\n",
@@ -172,16 +170,15 @@ static void readhdr(void)
         }
         else if (strncmp((char*)dbuf.mv_data, "maxreaders=", STRLENOF("maxreaders=")) == 0)
         {
-            int i;
             ptr = (char*)memchr(dbuf.mv_data, '\n', dbuf.mv_size);
             if (ptr != nullptr)
                 *ptr = '\0';
 #ifdef _WIN32
-            i = sscanf_s((char*)dbuf.mv_data + STRLENOF("maxreaders="), "%u", &info.me_maxreaders);
+            const int maxreaders_result = sscanf_s((char*)dbuf.mv_data + STRLENOF("maxreaders="), "%u", &info.me_maxreaders);
 #else
-            i = sscanf((char*)dbuf.mv_data + STRLENOF("maxreaders="), "%u", &info.me_maxreaders);
+            const int maxreaders_result = sscanf((char*)dbuf.mv_data + STRLENOF("maxreaders="), "%u", &info.me_maxreaders);
 #endif
-            if (i != 1)
+            if (maxreaders_result != 1)
             {
                 fprintf(stderr,
                         "%s: line %" Yu ": invalid maxreaders %s\n",
@@ -193,17 +190,17 @@ static void readhdr(void)
         }
         else
         {
-            int i;
-            for (i = 0; dbflags[i].bit != 0; i++)
+            int flag_idx;
+            for (flag_idx = 0; dbflags[flag_idx].bit != 0; flag_idx++)
             {
-                if ((strncmp((char*)dbuf.mv_data, dbflags[i].name, dbflags[i].len) == 0) &&
-                    ((char*)dbuf.mv_data)[dbflags[i].len] == '=')
+                if ((strncmp((char*)dbuf.mv_data, dbflags[flag_idx].name, dbflags[flag_idx].len) == 0) &&
+                    ((char*)dbuf.mv_data)[dbflags[flag_idx].len] == '=')
                 {
-                    flags |= dbflags[i].bit;
+                    flags |= dbflags[flag_idx].bit;
                     break;
                 }
             }
-            if (dbflags[i].bit == 0)
+            if (dbflags[flag_idx].bit == 0)
             {
                 ptr = (char*)memchr(dbuf.mv_data, '=', dbuf.mv_size);
                 if (ptr == nullptr)
@@ -284,12 +281,13 @@ static int readline(MDB_val* out, MDB_val* buf)
     }
     lineno++;
 
-    c1 = (unsigned char*)buf->mv_data;
-    len = strlen((char*)c1);
-    l2 = len;
+    unsigned char* const initial_data = (unsigned char*)buf->mv_data;
+    const size_t initial_len = strlen((char*)initial_data);
+    size_t total_len = initial_len;
 
     // Is buffer too short?
-    while (c1[len - 1] != '\n')
+    unsigned char* current_pos = initial_data;
+    while (current_pos[initial_len - 1] != '\n')
     {
         void* new_data = realloc(buf->mv_data, buf->mv_size * 2);
         if (new_data == nullptr)
@@ -299,22 +297,30 @@ static int readline(MDB_val* out, MDB_val* buf)
             return EOF;
         }
         buf->mv_data = new_data;
-        c1 = (unsigned char*)buf->mv_data;
-        c1 += l2;
-        if (fgets((char*)c1, (int)buf->mv_size + 1, stdin) == NULL)
+        unsigned char* const buffer_base = (unsigned char*)buf->mv_data;
+        unsigned char* const append_pos = buffer_base + total_len;
+        if (fgets((char*)append_pos, (int)buf->mv_size + 1, stdin) == NULL)
         {
             Eof = 1;
             badend();
             return EOF;
         }
         buf->mv_size *= 2;
-        len = strlen((char*)c1);
-        l2 += len;
+        const size_t append_len = strlen((char*)append_pos);
+        total_len += append_len;
+        current_pos = buffer_base;
     }
-    c1 = c2 = (unsigned char*)buf->mv_data;
-    len = l2;
-    c1[--len] = '\0';
-    end = c1 + len;
+    unsigned char* const source_ptr = (unsigned char*)buf->mv_data;
+    unsigned char* dest_ptr = source_ptr;
+    const size_t final_len = total_len - 1; // Remove newline
+    source_ptr[final_len] = '\0';
+    end = source_ptr + final_len;
+    
+    // TODO: This function has extensive variable re-purposing and should be refactored
+    // Variables c1, c2, len are re-purposed multiple times for different contexts
+    c1 = dest_ptr;
+    c2 = source_ptr;
+    len = final_len;
 
     if ((mode & PRINT) != 0)
     {
@@ -578,16 +584,23 @@ int main(int argc, char* argv[])
 
             if (append != 0)
             {
-                appflag = MDB_APPEND;
+                const int base_append_flag = MDB_APPEND;
                 if ((flags & MDB_DUPSORT) != 0)
                 {
-                    if (prevk.mv_size == key.mv_size && (memcmp(prevk.mv_data, key.mv_data, key.mv_size) == 0))
+                    const bool same_key = (prevk.mv_size == key.mv_size &&
+                                         (memcmp(prevk.mv_data, key.mv_data, key.mv_size) == 0));
+                    if (same_key)
                         appflag = MDB_CURRENT | MDB_APPENDDUP;
                     else
                     {
                         memcpy(prevk.mv_data, key.mv_data, key.mv_size);
                         prevk.mv_size = key.mv_size;
+                        appflag = base_append_flag;
                     }
+                }
+                else
+                {
+                    appflag = base_append_flag;
                 }
             }
             else
@@ -610,31 +623,34 @@ int main(int argc, char* argv[])
             batch++;
             if (batch == 100)
             {
-                rc = mdb_txn_commit(txn);
-                if (rc != 0)
+                const int commit_rc = mdb_txn_commit(txn);
+                if (commit_rc != 0)
                 {
-                    fprintf(stderr, "%s: line %" Yu ": txn_commit: %s\n", prog, lineno, mdb_strerror(rc));
+                    fprintf(stderr, "%s: line %" Yu ": txn_commit: %s\n", prog, lineno, mdb_strerror(commit_rc));
+                    rc = commit_rc;
                     goto env_close;
                 }
-                rc = mdb_txn_begin(env, NULL, 0, &txn);
-                if (rc != 0)
+                const int begin_rc = mdb_txn_begin(env, NULL, 0, &txn);
+                if (begin_rc != 0)
                 {
-                    fprintf(stderr, "mdb_txn_begin failed, error %d %s\n", rc, mdb_strerror(rc));
+                    fprintf(stderr, "mdb_txn_begin failed, error %d %s\n", begin_rc, mdb_strerror(begin_rc));
+                    rc = begin_rc;
                     goto env_close;
                 }
-                rc = mdb_cursor_open(txn, dbi, &mc);
-                if (rc != 0)
+                const int cursor_rc = mdb_cursor_open(txn, dbi, &mc);
+                if (cursor_rc != 0)
                 {
-                    fprintf(stderr, "mdb_cursor_open failed, error %d %s\n", rc, mdb_strerror(rc));
+                    fprintf(stderr, "mdb_cursor_open failed, error %d %s\n", cursor_rc, mdb_strerror(cursor_rc));
+                    rc = cursor_rc;
                     goto txn_abort;
                 }
                 if (append != 0)
                 {
-                    MDB_val k;
-                    MDB_val d;
-                    mdb_cursor_get(mc, &k, &d, MDB_LAST);
-                    memcpy(prevk.mv_data, k.mv_data, k.mv_size);
-                    prevk.mv_size = k.mv_size;
+                    MDB_val last_key;
+                    MDB_val last_data;
+                    mdb_cursor_get(mc, &last_key, &last_data, MDB_LAST);
+                    memcpy(prevk.mv_data, last_key.mv_data, last_key.mv_size);
+                    prevk.mv_size = last_key.mv_size;
                 }
                 batch = 0;
             }

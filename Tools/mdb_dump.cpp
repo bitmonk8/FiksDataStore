@@ -145,9 +145,9 @@ static int dumpit(MDB_txn* txn, MDB_dbi dbi, char* name)
     if ((flags & MDB_DUPSORT) != 0u)
         printf("duplicates=1\n");
 
-    for (i = 0; dbflags[i].bit != 0; i++)
-        if ((flags & dbflags[i].bit) != 0u)
-            printf("%s=1\n", dbflags[i].name);
+    for (int flag_idx = 0; dbflags[flag_idx].bit != 0; flag_idx++)
+        if ((flags & dbflags[flag_idx].bit) != 0u)
+            printf("%s=1\n", dbflags[flag_idx].name);
 
     printf("db_pagesize=%d\n", ms.ms_psize);
     printf("HEADER=END\n");
@@ -376,6 +376,7 @@ int main(int argc, char* argv[])
                 if (list != 0)
                 {
                     printf("%s\n", str);
+                    // Note: list variable re-purposed as counter here - should be refactored
                     list++;
                 }
                 else
