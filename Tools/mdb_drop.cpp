@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
 
     envname = argv[arg_index];
     rc = mdb_env_create(&env);
-    if (rc)
+    if (rc != 0)
     {
         fprintf(stderr, "mdb_env_create failed, error %d %s\n", rc, mdb_strerror(rc));
         return EXIT_FAILURE;
@@ -115,34 +115,34 @@ int main(int argc, char* argv[])
     mdb_env_set_maxdbs(env, 2);
 
     rc = mdb_env_open(env, envname, envflags, 0664);
-    if (rc)
+    if (rc != 0)
     {
         fprintf(stderr, "mdb_env_open failed, error %d %s\n", rc, mdb_strerror(rc));
         goto env_close;
     }
 
     rc = mdb_txn_begin(env, NULL, 0, &txn);
-    if (rc)
+    if (rc != 0)
     {
         fprintf(stderr, "mdb_txn_begin failed, error %d %s\n", rc, mdb_strerror(rc));
         goto env_close;
     }
 
     rc = mdb_open(txn, subname, 0, &dbi);
-    if (rc)
+    if (rc != 0)
     {
         fprintf(stderr, "mdb_open failed, error %d %s\n", rc, mdb_strerror(rc));
         goto txn_abort;
     }
 
     rc = mdb_drop(txn, dbi, _delete);
-    if (rc)
+    if (rc != 0)
     {
         fprintf(stderr, "mdb_drop failed, error %d %s\n", rc, mdb_strerror(rc));
         goto txn_abort;
     }
     rc = mdb_txn_commit(txn);
-    if (rc)
+    if (rc != 0)
     {
         fprintf(stderr, "mdb_txn_commit failed, error %d %s\n", rc, mdb_strerror(rc));
         goto txn_abort;
@@ -150,10 +150,10 @@ int main(int argc, char* argv[])
     txn = NULL;
 
 txn_abort:
-    if (txn)
+    if (txn != nullptr)
         mdb_txn_abort(txn);
 env_close:
     mdb_env_close(env);
 
-    return rc ? EXIT_FAILURE : EXIT_SUCCESS;
+    return (rc != 0) ? EXIT_FAILURE : EXIT_SUCCESS;
 }

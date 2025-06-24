@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
         if (RES(MDB_KEYEXIST, mdb_put(txn, dbi, &key, &data, MDB_NODUPDATA)))
             j++;
     }
-    if (j)
+    if (j != 0)
         printf("%d duplicates skipped\n", j);
     E(mdb_txn_commit(txn));
     E(mdb_env_stat(env, &mst));

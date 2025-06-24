@@ -11,11 +11,11 @@
 // Return the library version info.
 const char* mdb_version(int* major, int* minor, int* patch)
 {
-    if (major)
+    if (major != nullptr)
         *major = MDB_VERSION_MAJOR;
-    if (minor)
+    if (minor != nullptr)
         *minor = MDB_VERSION_MINOR;
-    if (patch)
+    if (patch != nullptr)
         *patch = MDB_VERSION_PATCH;
     return MDB_VERSION_STRING;
 }
@@ -56,7 +56,7 @@ const char* mdb_strerror(int err)
 #define PADSIZE 4096
     static char buf[MSGSIZE + PADSIZE], *ptr = buf;
 #endif
-    if (!err)
+    if (err == 0)
         return ("Successful return: 0");
 
     if (err >= MDB_KEYEXIST && err <= MDB_LAST_ERRCODE)

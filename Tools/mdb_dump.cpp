@@ -69,15 +69,15 @@ static void hex(unsigned char c)
 
 static void text(MDB_val* v)
 {
-    unsigned char *c;
-    unsigned char *end;
+    unsigned char* c;
+    unsigned char* end;
 
     putchar(' ');
     c = (unsigned char*)v->mv_data;
     end = c + v->mv_size;
     while (c < end)
     {
-        if (isprint(*c))
+        if (isprint(*c) != 0)
         {
             if (*c == '\\')
                 putchar('\\');
@@ -95,8 +95,8 @@ static void text(MDB_val* v)
 
 static void byte2(MDB_val* v)
 {
-    unsigned char *c;
-    unsigned char *end;
+    unsigned char* c;
+    unsigned char* end;
 
     putchar(' ');
     c = (unsigned char*)v->mv_data;
@@ -121,49 +121,49 @@ static int dumpit(MDB_txn* txn, MDB_dbi dbi, char* name)
     int i;
 
     rc = mdb_dbi_flags(txn, dbi, &flags);
-    if (rc)
+    if (rc != 0)
         return rc;
 
     rc = mdb_stat(txn, dbi, &ms);
-    if (rc)
+    if (rc != 0)
         return rc;
 
     rc = mdb_env_info(mdb_txn_env(txn), &info);
-    if (rc)
+    if (rc != 0)
         return rc;
 
     printf("VERSION=3\n");
-    printf("format=%s\n", mode & PRINT ? "print" : "bytevalue");
-    if (name)
+    printf("format=%s\n", ((mode & PRINT) != 0) ? "print" : "bytevalue");
+    if (name != nullptr)
         printf("database=%s\n", name);
     printf("type=btree\n");
     printf("mapsize=%" Yu "\n", info.me_mapsize);
-    if (info.me_mapaddr)
+    if (info.me_mapaddr != nullptr)
         printf("mapaddr=%p\n", info.me_mapaddr);
     printf("maxreaders=%u\n", info.me_maxreaders);
 
-    if (flags & MDB_DUPSORT)
+    if ((flags & MDB_DUPSORT) != 0u)
         printf("duplicates=1\n");
 
-    for (i = 0; dbflags[i].bit; i++)
-        if (flags & dbflags[i].bit)
+    for (i = 0; dbflags[i].bit != 0; i++)
+        if ((flags & dbflags[i].bit) != 0u)
             printf("%s=1\n", dbflags[i].name);
 
     printf("db_pagesize=%d\n", ms.ms_psize);
     printf("HEADER=END\n");
 
     rc = mdb_cursor_open(txn, dbi, &mc);
-    if (rc)
+    if (rc != 0)
         return rc;
 
-    while ((rc = mdb_cursor_get(mc, &key, &data, MDB_NEXT) == MDB_SUCCESS))
+    while ((rc = static_cast<int>(mdb_cursor_get(mc, &key, &data, MDB_NEXT) == MDB_SUCCESS)) != 0)
     {
-        if (gotsig)
+        if (gotsig != 0)
         {
             rc = EINTR;
             break;
         }
-        if (mode & PRINT)
+        if ((mode & PRINT) != 0)
         {
             text(&key);
             text(&data);
@@ -230,7 +230,7 @@ int main(int argc, char* argv[])
                 list = 1;
                 // FALLTHROUGH
             case 'a':
-                if (subname)
+                if (subname != nullptr)
                     usage(prog);
                 ++alldbs;
                 break;
@@ -285,7 +285,7 @@ int main(int argc, char* argv[])
                 }
                 else
                 {  // opt == 's'
-                    if (alldbs)
+                    if (alldbs != 0)
                         usage(prog);
                     subname = optarg;
                 }
@@ -316,46 +316,46 @@ int main(int argc, char* argv[])
     signal(SIGTERM, dumpsig);
 
     int rc = mdb_env_create(&env);
-    if (rc)
+    if (rc != 0)
     {
         fprintf(stderr, "mdb_env_create failed, error %d %s\n", rc, mdb_strerror(rc));
         return EXIT_FAILURE;
     }
 
-    if (alldbs || subname)
+    if ((alldbs != 0) || (subname != nullptr))
     {
         mdb_env_set_maxdbs(env, 2);
     }
 
     rc = mdb_env_open(env, envname, envflags | MDB_RDONLY, 0664);
-    if (rc)
+    if (rc != 0)
     {
         fprintf(stderr, "mdb_env_open failed, error %d %s\n", rc, mdb_strerror(rc));
         goto env_close;
     }
 
     rc = mdb_txn_begin(env, NULL, MDB_RDONLY, &txn);
-    if (rc)
+    if (rc != 0)
     {
         fprintf(stderr, "mdb_txn_begin failed, error %d %s\n", rc, mdb_strerror(rc));
         goto env_close;
     }
 
     rc = mdb_open(txn, subname, 0, &dbi);
-    if (rc)
+    if (rc != 0)
     {
         fprintf(stderr, "mdb_open failed, error %d %s\n", rc, mdb_strerror(rc));
         goto txn_abort;
     }
 
-    if (alldbs)
+    if (alldbs != 0)
     {
         MDB_cursor* cursor;
         MDB_val key;
         int count = 0;
 
         rc = mdb_cursor_open(txn, dbi, &cursor);
-        if (rc)
+        if (rc != 0)
         {
             fprintf(stderr, "mdb_cursor_open failed, error %d %s\n", rc, mdb_strerror(rc));
             goto txn_abort;
@@ -364,7 +364,7 @@ int main(int argc, char* argv[])
         {
             char* str;
             MDB_dbi db2;
-            if (memchr(key.mv_data, '\0', key.mv_size))
+            if (memchr(key.mv_data, '\0', key.mv_size) != nullptr)
                 continue;
             count++;
             str = (char*)malloc(key.mv_size + 1);
@@ -373,7 +373,7 @@ int main(int argc, char* argv[])
             rc = mdb_open(txn, str, 0, &db2);
             if (rc == MDB_SUCCESS)
             {
-                if (list)
+                if (list != 0)
                 {
                     printf("%s\n", str);
                     list++;
@@ -381,17 +381,17 @@ int main(int argc, char* argv[])
                 else
                 {
                     rc = dumpit(txn, db2, str);
-                    if (rc)
+                    if (rc != 0)
                         break;
                 }
                 mdb_close(env, db2);
             }
             free(str);
-            if (rc)
+            if (rc != 0)
                 continue;
         }
         mdb_cursor_close(cursor);
-        if (!count)
+        if (count == 0)
         {
             fprintf(stderr, "%s: %s does not contain multiple databases\n", prog, envname);
             rc = MDB_NOTFOUND;
@@ -405,7 +405,7 @@ int main(int argc, char* argv[])
     {
         rc = dumpit(txn, dbi, subname);
     }
-    if (rc && rc != MDB_NOTFOUND)
+    if ((rc != 0) && rc != MDB_NOTFOUND)
         fprintf(stderr, "%s: %s: %s\n", prog, envname, mdb_strerror(rc));
 
     mdb_close(env, dbi);
@@ -414,5 +414,5 @@ txn_abort:
 env_close:
     mdb_env_close(env);
 
-    return rc ? EXIT_FAILURE : EXIT_SUCCESS;
+    return (rc != 0) ? EXIT_FAILURE : EXIT_SUCCESS;
 }

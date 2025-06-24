@@ -31,8 +31,8 @@ int main(int argc, char* argv[])
 {
     int rc;
     MDB_env* env;
-    const char *progname = argv[0];
-    const char *act;
+    const char* progname = argv[0];
+    const char* act;
     unsigned flags = MDB_RDONLY;
     unsigned cpflags = 0;
 
@@ -82,9 +82,9 @@ int main(int argc, char* argv[])
         else
             rc = mdb_env_copy2(env, argv[2], cpflags);
     }
-    if (rc)
+    if (rc != 0)
         fprintf(stderr, "%s: %s failed, error %d (%s)\n", progname, act, rc, mdb_strerror(rc));
     mdb_env_close(env);
 
-    return rc ? EXIT_FAILURE : EXIT_SUCCESS;
+    return (rc != 0) ? EXIT_FAILURE : EXIT_SUCCESS;
 }

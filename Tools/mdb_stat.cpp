@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
             break;
 
         // walk through the cluster, skipping the leading “-”
-        for (size_t pos = 1; arg[pos]; ++pos)
+        for (size_t pos = 1; arg[pos] != 0; ++pos)
         {
             char opt = arg[pos];
 
@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
                 return 0;
 
             case 'a':
-                if (subname)
+                if (subname != nullptr)
                     usage(prog);
                 alldbs = 1;
                 break;
@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
 
             case 's': /* needs an argument */
                       // if characters remain in the same token, use them
-                if (arg[pos + 1])
+                if (arg[pos + 1] != 0)
                 {
                     subname = &arg[pos + 1];
                     pos = strlen(arg) - 1; /* exit inner loop */
@@ -126,7 +126,7 @@ int main(int argc, char* argv[])
                         usage(prog);
                     subname = argv[optind++];
                 }
-                if (alldbs) /* -s conflicts with -a */
+                if (alldbs != 0) /* -s conflicts with -a */
                     usage(prog);
                 // stop processing the rest of this cluster
                 pos = strlen(arg) - 1;
@@ -144,25 +144,25 @@ int main(int argc, char* argv[])
         usage(prog);
     envname = argv[optind];
     rc = mdb_env_create(&env);
-    if (rc)
+    if (rc != 0)
     {
         fprintf(stderr, "mdb_env_create failed, error %d %s\n", rc, mdb_strerror(rc));
         return EXIT_FAILURE;
     }
 
-    if (alldbs || subname)
+    if ((alldbs != 0) || (subname != nullptr))
     {
         mdb_env_set_maxdbs(env, 4);
     }
 
     rc = mdb_env_open(env, envname, envflags | MDB_RDONLY, 0664);
-    if (rc)
+    if (rc != 0)
     {
         fprintf(stderr, "mdb_env_open failed, error %d %s\n", rc, mdb_strerror(rc));
         goto env_close;
     }
 
-    if (envinfo)
+    if (envinfo != 0)
     {
         (void)mdb_env_stat(env, &mst);
         (void)mdb_env_info(env, &mei);
@@ -177,7 +177,7 @@ int main(int argc, char* argv[])
         printf("  Number of readers used: %u\n", mei.me_numreaders);
     }
 
-    if (rdrinfo)
+    if (rdrinfo != 0)
     {
         printf("Reader Table Status\n");
         rc = mdb_reader_list(env, (MDB_msg_func*)fputs, stdout);
@@ -188,35 +188,35 @@ int main(int argc, char* argv[])
             printf("  %d stale readers cleared.\n", dead);
             rc = mdb_reader_list(env, (MDB_msg_func*)fputs, stdout);
         }
-        if (!(subname || alldbs || freinfo))
+        if (!((subname != nullptr) || (alldbs != 0) || (freinfo != 0)))
             goto env_close;
     }
 
     rc = mdb_txn_begin(env, NULL, MDB_RDONLY, &txn);
-    if (rc)
+    if (rc != 0)
     {
         fprintf(stderr, "mdb_txn_begin failed, error %d %s\n", rc, mdb_strerror(rc));
         goto env_close;
     }
 
-    if (freinfo)
+    if (freinfo != 0)
     {
         MDB_cursor* cursor;
         MDB_val key;
         MDB_val data;
         mdb_size_t pages = 0;
-        mdb_size_t *iptr;
+        mdb_size_t* iptr;
 
         printf("Freelist Status\n");
         dbi = 0;
         rc = mdb_cursor_open(txn, dbi, &cursor);
-        if (rc)
+        if (rc != 0)
         {
             fprintf(stderr, "mdb_cursor_open failed, error %d %s\n", rc, mdb_strerror(rc));
             goto txn_abort;
         }
         rc = mdb_stat(txn, dbi, &mst);
-        if (rc)
+        if (rc != 0)
         {
             fprintf(stderr, "mdb_stat failed, error %d %s\n", rc, mdb_strerror(rc));
             goto txn_abort;
@@ -271,28 +271,28 @@ int main(int argc, char* argv[])
     }
 
     rc = mdb_open(txn, subname, 0, &dbi);
-    if (rc)
+    if (rc != 0)
     {
         fprintf(stderr, "mdb_open failed, error %d %s\n", rc, mdb_strerror(rc));
         goto txn_abort;
     }
 
     rc = mdb_stat(txn, dbi, &mst);
-    if (rc)
+    if (rc != 0)
     {
         fprintf(stderr, "mdb_stat failed, error %d %s\n", rc, mdb_strerror(rc));
         goto txn_abort;
     }
-    printf("Status of %s\n", subname ? subname : "Main DB");
+    printf("Status of %s\n", (subname != nullptr) ? subname : "Main DB");
     prstat(&mst);
 
-    if (alldbs)
+    if (alldbs != 0)
     {
         MDB_cursor* cursor;
         MDB_val key;
 
         rc = mdb_cursor_open(txn, dbi, &cursor);
-        if (rc)
+        if (rc != 0)
         {
             fprintf(stderr, "mdb_cursor_open failed, error %d %s\n", rc, mdb_strerror(rc));
             goto txn_abort;
@@ -301,7 +301,7 @@ int main(int argc, char* argv[])
         {
             char* str;
             MDB_dbi db2;
-            if (memchr(key.mv_data, '\0', key.mv_size))
+            if (memchr(key.mv_data, '\0', key.mv_size) != nullptr)
                 continue;
             str = (char*)malloc(key.mv_size + 1);
             memcpy(str, key.mv_data, key.mv_size);
@@ -310,10 +310,10 @@ int main(int argc, char* argv[])
             if (rc == MDB_SUCCESS)
                 printf("Status of %s\n", str);
             free(str);
-            if (rc)
+            if (rc != 0)
                 continue;
             rc = mdb_stat(txn, db2, &mst);
-            if (rc)
+            if (rc != 0)
             {
                 fprintf(stderr, "mdb_stat failed, error %d %s\n", rc, mdb_strerror(rc));
                 goto txn_abort;
@@ -333,5 +333,5 @@ txn_abort:
 env_close:
     mdb_env_close(env);
 
-    return rc ? EXIT_FAILURE : EXIT_SUCCESS;
+    return (rc != 0) ? EXIT_FAILURE : EXIT_SUCCESS;
 }

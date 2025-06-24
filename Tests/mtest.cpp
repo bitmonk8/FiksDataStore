@@ -49,8 +49,8 @@ int main(int argc, char* argv[])
     MDB_val data;
     MDB_txn* txn;
     MDB_stat mst;
-    MDB_cursor *cursor;
-    MDB_cursor *cur2;
+    MDB_cursor* cursor;
+    MDB_cursor* cur2;
     MDB_cursor_op op;
     int count;
     int* values;
@@ -95,7 +95,7 @@ int main(int argc, char* argv[])
             data.mv_data = sval;
         }
     }
-    if (j)
+    if (j != 0)
         printf("%d duplicates skipped\n", j);
     E(mdb_txn_commit(txn));
     E(mdb_env_stat(env, &mst));

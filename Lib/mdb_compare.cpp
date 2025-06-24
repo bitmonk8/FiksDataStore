@@ -6,8 +6,9 @@
 // Compare two items pointing at aligned mdb_size_t's
 int mdb_cmp_long(const MDB_val* a, const MDB_val* b)
 {
-    return (*(mdb_size_t*)a->mv_data < *(mdb_size_t*)b->mv_data) ? -1
-                                                                 : *(mdb_size_t*)a->mv_data > *(mdb_size_t*)b->mv_data;
+    return (*(mdb_size_t*)a->mv_data < *(mdb_size_t*)b->mv_data)
+               ? -1
+               : static_cast<int>(*(mdb_size_t*)a->mv_data > *(mdb_size_t*)b->mv_data);
 }
 
 // Compare two items pointing at aligned unsigned int's.
@@ -18,7 +19,7 @@ int mdb_cmp_int(const MDB_val* a, const MDB_val* b)
 {
     return (*(unsigned int*)a->mv_data < *(unsigned int*)b->mv_data)
                ? -1
-               : *(unsigned int*)a->mv_data > *(unsigned int*)b->mv_data;
+               : static_cast<int>(*(unsigned int*)a->mv_data > *(unsigned int*)b->mv_data);
 }
 
 // Compare two items pointing at unsigned ints of unknown alignment.
@@ -31,7 +32,8 @@ int mdb_cmp_cint(const MDB_val* a, const MDB_val* b)
     do
     {
         int x{*--u - *--c};
-        if (x) return x;
+        if (x != 0)
+            return x;
     } while (u > (unsigned short*)a->mv_data);
     return 0;
 #else
@@ -41,7 +43,8 @@ int mdb_cmp_cint(const MDB_val* a, const MDB_val* b)
     do
     {
         int x{*u++ - *c++};
-        if (x) return x;
+        if (x)
+            return x;
     } while (u < end);
     return 0;
 #endif
@@ -59,7 +62,7 @@ int mdb_cmp_memn(const MDB_val* a, const MDB_val* b)
     }
 
     int diff{memcmp(a->mv_data, b->mv_data, len)};
-    return diff ? diff : len_diff < 0 ? -1 : len_diff;
+    return (diff != 0) ? diff : len_diff < 0 ? -1 : len_diff;
 }
 
 // Compare two items in reverse byte order
@@ -79,7 +82,7 @@ int mdb_cmp_memnr(const MDB_val* a, const MDB_val* b)
     while (p1 > p1_lim)
     {
         int diff{*--p1 - *--p2};
-        if (diff)
+        if (diff != 0)
             return diff;
     }
     return len_diff < 0 ? -1 : len_diff;

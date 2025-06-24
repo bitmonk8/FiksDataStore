@@ -19,7 +19,7 @@ void ESECT mdb_assert_fail(MDB_env* env, const char* expr_txt, const char* func,
     if (n < 0 || static_cast<size_t>(n) >= sizeof(buf))
         buf[sizeof(buf) - 1] = '\0';
 
-    if (env->me_assert_func)
+    if (env->me_assert_func != nullptr)
         env->me_assert_func(env, buf);
 
     fprintf(stderr, "%s\n", buf);
@@ -51,7 +51,7 @@ char* mdb_dkey(MDB_val* key, char* buf)
 
     if (key->mv_size > DKBUF_MAXKEYSIZE)
         return "MDB_MAXKEYSIZE";
-    
+
     // may want to make this a dynamic check: if the key is mostly
     // printable characters, print it as-is instead of converting to hex.
     char* ptr{buf};
@@ -180,7 +180,7 @@ void mdb_audit(MDB_txn* txn)
 {
     MDB_cursor mc{};
     MDB_val key{}, data{};
-    
+
     MDB_ID freecount{0};
     mdb_cursor_init(&mc, txn, FREE_DBI, NULL);
     int rc{};

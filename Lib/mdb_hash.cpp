@@ -55,7 +55,7 @@ static const char mdb_a85[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklm
  */
 void mdb_pack85(unsigned long long l, char* out)
 {
-    for (int i{}; i < 10 && l; ++i)
+    for (int i{}; i < 10 && (l != 0u); ++i)
     {
         *out++ = mdb_a85[l % 85];
         l /= 85;

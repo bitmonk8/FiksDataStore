@@ -29,7 +29,7 @@
 //
 #define CMP(x, y) ((x) < (y) ? -1 : (x) > (y))
 
-unsigned mdb_midl_search(MDB_IDL ids, MDB_ID id)
+unsigned mdb_midl_search(const MDB_IDL ids, MDB_ID id)
 {
     //
     // binary search of id in ids
@@ -107,7 +107,7 @@ unsigned mdb_midl_search(MDB_IDL ids, MDB_ID id)
 MDB_IDL mdb_midl_alloc(int num)
 {
     MDB_IDL ids = (MDB_IDL)malloc((num + 2) * sizeof(MDB_ID));
-    if (ids)
+    if (ids != nullptr)
     {
         *ids++ = num;
         *ids = 0;
@@ -117,7 +117,7 @@ MDB_IDL mdb_midl_alloc(int num)
 
 void mdb_midl_free(MDB_IDL ids)
 {
-    if (ids)
+    if (ids != nullptr)
         free(ids - 1);
 }
 
@@ -128,7 +128,7 @@ void mdb_midl_shrink(MDB_IDL* idp)
     if (*ids > MDB_IDL_UM_MAX)
     {
         MDB_IDL new_ids = (MDB_IDL)realloc(ids, (MDB_IDL_UM_MAX + 2) * sizeof(MDB_ID));
-        if (new_ids)
+        if (new_ids != nullptr)
         {
             ids = new_ids;
             *ids++ = MDB_IDL_UM_MAX;
@@ -142,7 +142,7 @@ static int mdb_midl_grow(MDB_IDL* idp, int num)
     MDB_IDL idn = *idp - 1;
     /* grow it */
     MDB_IDL new_idn = (MDB_IDL)realloc(idn, (*idn + num + 2) * sizeof(MDB_ID));
-    if (!new_idn)
+    if (new_idn == nullptr)
         return ENOMEM;
     idn = new_idn;
     *idn++ += num;
@@ -158,7 +158,7 @@ int mdb_midl_need(MDB_IDL* idp, unsigned num)
     {
         num = (num + num / 4 + (256 + 2)) & -256;
         ids = (MDB_IDL)realloc(ids - 1, num * sizeof(MDB_ID));
-        if (!ids)
+        if (ids == nullptr)
             return ENOMEM;
         *ids++ = num - 2;
         *idp = ids;
@@ -172,7 +172,7 @@ int mdb_midl_append(MDB_IDL* idp, MDB_ID id)
     /* Too big? */
     if (ids[0] >= ids[-1])
     {
-        if (mdb_midl_grow(idp, MDB_IDL_UM_MAX))
+        if (mdb_midl_grow(idp, MDB_IDL_UM_MAX) != 0)
             return ENOMEM;
         ids = *idp;
     }
@@ -187,7 +187,7 @@ int mdb_midl_append_list(MDB_IDL* idp, MDB_IDL app)
     /* Too big? */
     if (ids[0] + app[0] >= ids[-1])
     {
-        if (mdb_midl_grow(idp, (int)app[0]))
+        if (mdb_midl_grow(idp, (int)app[0]) != 0)
             return ENOMEM;
         ids = *idp;
     }
@@ -198,23 +198,23 @@ int mdb_midl_append_list(MDB_IDL* idp, MDB_IDL app)
 
 int mdb_midl_append_range(MDB_IDL* idp, MDB_ID id, unsigned n)
 {
-    MDB_ID *ids = *idp;
+    MDB_ID* ids = *idp;
     MDB_ID len = ids[0];
     /* Too big? */
     if (len + n > ids[-1])
     {
-        if (mdb_midl_grow(idp, n | MDB_IDL_UM_MAX))
+        if (mdb_midl_grow(idp, n | MDB_IDL_UM_MAX) != 0)
             return ENOMEM;
         ids = *idp;
     }
     ids[0] = len + n;
     ids += len;
-    while (n)
+    while (n != 0u)
         ids[n--] = id++;
     return 0;
 }
 
-void mdb_midl_xmerge(MDB_IDL idl, MDB_IDL merge)
+void mdb_midl_xmerge(MDB_IDL idl, const MDB_IDL merge)
 {
     MDB_ID old_id;
     MDB_ID merge_id;
@@ -224,7 +224,7 @@ void mdb_midl_xmerge(MDB_IDL idl, MDB_IDL merge)
     MDB_ID total = k;
     idl[0] = (MDB_ID)-1; /* delimiter for idl scan below */
     old_id = idl[j];
-    while (i)
+    while (i != 0u)
     {
         merge_id = merge[i--];
         for (; old_id < merge_id; old_id = idl[--j])
@@ -385,14 +385,12 @@ int mdb_mid2l_insert(MDB_ID2L ids, MDB_ID2* id)
         /* too big */
         return -2;
     }
-    else
-    {
-        /* insert id */
-        ids[0].mid++;
-        for (unsigned i{(unsigned)ids[0].mid}; i > x; i--)
-            ids[i] = ids[i - 1];
-        ids[x] = *id;
-    }
+
+    /* insert id */
+    ids[0].mid++;
+    for (unsigned i{(unsigned)ids[0].mid}; i > x; i--)
+        ids[i] = ids[i - 1];
+    ids[x] = *id;
 
     return 0;
 }
