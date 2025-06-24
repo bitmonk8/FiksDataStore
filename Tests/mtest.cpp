@@ -82,21 +82,22 @@ int main(int argc, char* argv[])
     key.mv_data = sval;
 
     printf("Adding %d values\n", count);
-    for (i = 0; i < count; i++)
+    int duplicate_count = 0;
+    for (int insert_idx = 0; insert_idx < count; insert_idx++)
     {
-        snprintf(sval, sizeof(sval), "%03x %d foo bar", values[i], values[i]);
+        snprintf(sval, sizeof(sval), "%03x %d foo bar", values[insert_idx], values[insert_idx]);
         // Set <data> in each iteration, since MDB_NOOVERWRITE may modify it
         data.mv_size = sizeof(sval);
         data.mv_data = sval;
         if (RES(MDB_KEYEXIST, mdb_put(txn, dbi, &key, &data, MDB_NOOVERWRITE)))
         {
-            j++;
+            duplicate_count++;
             data.mv_size = sizeof(sval);
             data.mv_data = sval;
         }
     }
-    if (j != 0)
-        printf("%d duplicates skipped\n", j);
+    if (duplicate_count != 0)
+        printf("%d duplicates skipped\n", duplicate_count);
     E(mdb_txn_commit(txn));
     E(mdb_env_stat(env, &mst));
 
@@ -116,17 +117,17 @@ int main(int argc, char* argv[])
     mdb_cursor_close(cursor);
     mdb_txn_abort(txn);
 
-    j = 0;
+    int deletion_count = 0;
     key.mv_data = sval;
-    for (i = count - 1; i > -1; i -= (rand() % 5))
+    for (int delete_idx = count - 1; delete_idx > -1; delete_idx -= (rand() % 5))
     {
-        j++;
+        deletion_count++;
         txn = NULL;
         E(mdb_txn_begin(env, NULL, 0, &txn));
-        snprintf(sval, sizeof(sval), "%03x ", values[i]);
+        snprintf(sval, sizeof(sval), "%03x ", values[delete_idx]);
         if (RES(MDB_NOTFOUND, mdb_del(txn, dbi, &key, NULL)))
         {
-            j--;
+            deletion_count--;
             mdb_txn_abort(txn);
         }
         else
@@ -135,7 +136,7 @@ int main(int argc, char* argv[])
         }
     }
     free(values);
-    printf("Deleted %d values\n", j);
+    printf("Deleted %d values\n", deletion_count);
 
     E(mdb_env_stat(env, &mst));
     E(mdb_txn_begin(env, NULL, MDB_RDONLY, &txn));
@@ -187,7 +188,7 @@ int main(int argc, char* argv[])
     printf("Deleting with cursor\n");
     E(mdb_txn_begin(env, NULL, 0, &txn));
     E(mdb_cursor_open(txn, dbi, &cur2));
-    for (i = 0; i < 50; i++)
+    for (int cursor_del_idx = 0; cursor_del_idx < 50; cursor_del_idx++)
     {
         if (RES(MDB_NOTFOUND, mdb_cursor_get(cur2, &key, &data, MDB_NEXT)))
             break;
@@ -202,9 +203,9 @@ int main(int argc, char* argv[])
     }
 
     printf("Restarting cursor in txn\n");
-    for (op = MDB_FIRST, i = 0; i <= 32; op = MDB_NEXT, i++)
+    for (MDB_cursor_op cursor_op = MDB_FIRST; ; cursor_op = MDB_NEXT)
     {
-        if (RES(MDB_NOTFOUND, mdb_cursor_get(cur2, &key, &data, op)))
+        if (RES(MDB_NOTFOUND, mdb_cursor_get(cur2, &key, &data, cursor_op)))
             break;
         printf("key: %p %.*s, data: %p %.*s\n",
                key.mv_data,
@@ -220,9 +221,9 @@ int main(int argc, char* argv[])
     printf("Restarting cursor outside txn\n");
     E(mdb_txn_begin(env, NULL, 0, &txn));
     E(mdb_cursor_open(txn, dbi, &cursor));
-    for (op = MDB_FIRST, i = 0; i <= 32; op = MDB_NEXT, i++)
+    for (MDB_cursor_op final_cursor_op = MDB_FIRST; ; final_cursor_op = MDB_NEXT)
     {
-        if (RES(MDB_NOTFOUND, mdb_cursor_get(cursor, &key, &data, op)))
+        if (RES(MDB_NOTFOUND, mdb_cursor_get(cursor, &key, &data, final_cursor_op)))
             break;
         printf("key: %p %.*s, data: %p %.*s\n",
                key.mv_data,

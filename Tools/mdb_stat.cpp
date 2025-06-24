@@ -65,22 +65,23 @@ int main(int argc, char* argv[])
     unsigned envflags = 0;
 
     // ------------- option parser (replaces getopt) -------------
-    int optind = 1; /* first argv index to examine       */
+    int current_arg_index = 1; /* first argv index to examine */
 
-    while (optind < argc && argv[optind][0] == '-')
+    while (current_arg_index < argc && argv[current_arg_index][0] == '-')
     {
-        const char* arg = argv[optind++];
+        const char* const current_arg = argv[current_arg_index];
+        ++current_arg_index;
 
-        // lone “--” terminates option scanning
-        if (strcmp(arg, "--") == 0)
+        // lone "--" terminates option scanning
+        if (strcmp(current_arg, "--") == 0)
             break;
 
-        // walk through the cluster, skipping the leading “-”
-        for (size_t pos = 1; arg[pos] != 0; ++pos)
+        // walk through the cluster, skipping the leading "-"
+        for (size_t char_pos = 1; current_arg[char_pos] != 0; ++char_pos)
         {
-            char opt = arg[pos];
+            const char current_option = current_arg[char_pos];
 
-            switch (opt)
+            switch (current_option)
             {
             case 'V':
                 printf("%s\n", MDB_VERSION_STRING);
@@ -114,22 +115,23 @@ int main(int argc, char* argv[])
 
             case 's': /* needs an argument */
                       // if characters remain in the same token, use them
-                if (arg[pos + 1] != 0)
+                if (current_arg[char_pos + 1] != 0)
                 {
-                    subname = &arg[pos + 1];
-                    pos = strlen(arg) - 1; /* exit inner loop */
+                    subname = &current_arg[char_pos + 1];
+                    char_pos = strlen(current_arg) - 1; /* exit inner loop */
                 }
                 else
                 {
                     // otherwise take the next argv element
-                    if (optind >= argc)
+                    if (current_arg_index >= argc)
                         usage(prog);
-                    subname = argv[optind++];
+                    subname = argv[current_arg_index];
+                    ++current_arg_index;
                 }
                 if (alldbs != 0) /* -s conflicts with -a */
                     usage(prog);
                 // stop processing the rest of this cluster
-                pos = strlen(arg) - 1;
+                char_pos = strlen(current_arg) - 1;
                 break;
 
             default:
@@ -140,9 +142,9 @@ int main(int argc, char* argv[])
     // ------------- end of option parser ------------------------
 
     // exactly one non-option argument (the environment path)
-    if (optind != argc - 1)
+    if (current_arg_index != argc - 1)
         usage(prog);
-    envname = argv[optind];
+    envname = argv[current_arg_index];
     rc = mdb_env_create(&env);
     if (rc != 0)
     {
@@ -225,43 +227,63 @@ int main(int argc, char* argv[])
         while ((rc = mdb_cursor_get(cursor, &key, &data, MDB_NEXT)) == 0)
         {
             iptr = (mdb_size_t*)data.mv_data;
-            pages += *iptr;
+            const mdb_size_t entry_page_count = *iptr;
+            pages += entry_page_count;
+            
             if (freinfo > 1)
             {
-                const char* bad = "";
-                mdb_size_t pg;
-                mdb_size_t prev;
-                ssize_t i;
-                ssize_t j;
-                ssize_t span = 0;
-                j = *iptr++;
-                for (i = j, prev = 1; --i >= 0;)
+                const char* sequence_status = "";
+                const mdb_size_t* const page_list = iptr + 1;
+                const ssize_t total_pages = entry_page_count;
+                ssize_t max_span = 0;
+                
+                // Check sequence validity and find max span
+                mdb_size_t previous_page = 1;
+                for (ssize_t page_idx = total_pages - 1; page_idx >= 0; --page_idx)
                 {
-                    pg = iptr[i];
-                    if (pg <= prev)
-                        bad = " [bad sequence]";
-                    prev = pg;
-                    pg += span;
-                    for (; i >= span && iptr[i - span] == pg + span; span++, pg++)
+                    const mdb_size_t current_page = page_list[page_idx];
+                    if (current_page <= previous_page)
+                        sequence_status = " [bad sequence]";
+                    previous_page = current_page;
+                    
+                    // Calculate span for this page
+                    mdb_size_t span_base = current_page;
+                    ssize_t current_span = 0;
+                    for (ssize_t span_idx = page_idx;
+                         span_idx >= current_span && page_list[span_idx - current_span] == span_base + current_span;
+                         ++current_span, ++span_base)
                         ;
+                    if (current_span > max_span)
+                        max_span = current_span;
                 }
+                
                 printf("    Transaction %" Yu ", %" Z "d pages, maxspan %" Z "d%s\n",
                        *(mdb_size_t*)key.mv_data,
-                       j,
-                       span,
-                       bad);
+                       total_pages,
+                       max_span,
+                       sequence_status);
+                
                 if (freinfo > 2)
                 {
-                    for (--j; j >= 0;)
+                    // Print detailed page ranges
+                    for (ssize_t detail_idx = total_pages - 1; detail_idx >= 0;)
                     {
-                        pg = iptr[j];
-                        for (span = 1; j > 0; span++)
+                        const mdb_size_t range_start = page_list[detail_idx];
+                        ssize_t range_length = 1;
+                        
+                        // Find consecutive pages
+                        while (detail_idx > 0)
                         {
-                            --j;
-                            if (iptr[j] != pg + span)
+                            const ssize_t next_idx = detail_idx - 1;
+                            if (page_list[next_idx] != range_start + range_length)
                                 break;
+                            ++range_length;
+                            detail_idx = next_idx;
                         }
-                        printf(span > 1 ? "     %9" Yu "[%" Z "d]\n" : "     %9" Yu "\n", pg, span);
+                        --detail_idx;
+                        
+                        printf(range_length > 1 ? "     %9" Yu "[%" Z "d]\n" : "     %9" Yu "\n",
+                               range_start, range_length);
                     }
                 }
             }

@@ -35,40 +35,45 @@ static void usage(char* prog)
 
 static int parse_cmdline(int argc, char** argv, int* envflags, int* do_delete, char** subname)
 {
-    int i = 1;  // skip argv[0]
-    for (; i < argc; ++i)
+    int current_arg_index = 1;  // skip argv[0]
+    
+    while (current_arg_index < argc)
     {
-        char* arg = argv[i];
+        const char* const current_arg = argv[current_arg_index];
 
         // stop when the first non-option is seen
-        if (arg[0] != '-')
+        if (current_arg[0] != '-')
             break;
 
-        if (strcmp(arg, "-d") == 0)
+        if (strcmp(current_arg, "-d") == 0)
         {
             *do_delete = 1;
+            ++current_arg_index;
         }
-        else if (strcmp(arg, "-n") == 0)
+        else if (strcmp(current_arg, "-n") == 0)
         {
             *envflags |= MDB_NOSUBDIR;
+            ++current_arg_index;
         }
-        else if (strcmp(arg, "-V") == 0)
+        else if (strcmp(current_arg, "-V") == 0)
         {
             printf("%s\n", MDB_VERSION_STRING);
             exit(EXIT_SUCCESS);
         }
-        else if (strcmp(arg, "-s") == 0)
+        else if (strcmp(current_arg, "-s") == 0)
         {
-            if (++i == argc)  // need a value after -s
+            const int next_arg_index = current_arg_index + 1;
+            if (next_arg_index == argc)  // need a value after -s
                 usage(argv[0]);
-            *subname = argv[i];
+            *subname = argv[next_arg_index];
+            current_arg_index = next_arg_index + 1;  // skip both -s and its argument
         }
         else
         {
             usage(argv[0]);  // unknown option
         }
     }
-    return i;
+    return current_arg_index;
 }
 
 int main(int argc, char* argv[])

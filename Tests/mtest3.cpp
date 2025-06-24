@@ -91,16 +91,17 @@ int main(int argc, char* argv[])
     data.mv_data = sval;
 
     printf("Adding %d values\n", count);
-    for (i = 0; i < count; i++)
+    int duplicate_count = 0;
+    for (int insert_idx = 0; insert_idx < count; insert_idx++)
     {
-        if ((i & 0x0f) == 0)
-            snprintf(kval, sizeof(kval), "%03x", values[i]);
-        snprintf(sval, sizeof(sval), "%03x %d foo bar", values[i], values[i]);
+        if ((insert_idx & 0x0f) == 0)
+            snprintf(kval, sizeof(kval), "%03x", values[insert_idx]);
+        snprintf(sval, sizeof(sval), "%03x %d foo bar", values[insert_idx], values[insert_idx]);
         if (RES(MDB_KEYEXIST, mdb_put(txn, dbi, &key, &data, MDB_NODUPDATA)))
-            j++;
+            duplicate_count++;
     }
-    if (j != 0)
-        printf("%d duplicates skipped\n", j);
+    if (duplicate_count != 0)
+        printf("%d duplicates skipped\n", duplicate_count);
     E(mdb_txn_commit(txn));
     E(mdb_env_stat(env, &mst));
 
@@ -120,22 +121,22 @@ int main(int argc, char* argv[])
     mdb_cursor_close(cursor);
     mdb_txn_abort(txn);
 
-    j = 0;
+    int deletion_count = 0;
 
-    for (i = count - 1; i > -1; i -= (rand() % 5))
+    for (int delete_idx = count - 1; delete_idx > -1; delete_idx -= (rand() % 5))
     {
-        j++;
+        deletion_count++;
         txn = NULL;
         E(mdb_txn_begin(env, NULL, 0, &txn));
-        snprintf(kval, sizeof(kval), "%03x", values[i & ~0x0f]);
-        snprintf(sval, sizeof(sval), "%03x %d foo bar", values[i], values[i]);
+        snprintf(kval, sizeof(kval), "%03x", values[delete_idx & ~0x0f]);
+        snprintf(sval, sizeof(sval), "%03x %d foo bar", values[delete_idx], values[delete_idx]);
         key.mv_size = sizeof(int);
         key.mv_data = kval;
         data.mv_size = sizeof(sval);
         data.mv_data = sval;
         if (RES(MDB_NOTFOUND, mdb_del(txn, dbi, &key, &data)))
         {
-            j--;
+            deletion_count--;
             mdb_txn_abort(txn);
         }
         else
@@ -144,7 +145,7 @@ int main(int argc, char* argv[])
         }
     }
     free(values);
-    printf("Deleted %d values\n", j);
+    printf("Deleted %d values\n", deletion_count);
 
     E(mdb_env_stat(env, &mst));
     E(mdb_txn_begin(env, NULL, MDB_RDONLY, &txn));

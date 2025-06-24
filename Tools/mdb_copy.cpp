@@ -31,29 +31,41 @@ int main(int argc, char* argv[])
 {
     int rc;
     MDB_env* env;
-    const char* progname = argv[0];
+    const char* const progname = argv[0];
     const char* act;
     unsigned flags = MDB_RDONLY;
     unsigned cpflags = 0;
 
-    for (; argc > 1 && argv[1][0] == '-'; argc--, argv++)
+    // Parse options without modifying original argc/argv
+    int remaining_args = argc;
+    char** current_argv = argv;
+    
+    while (remaining_args > 1 && current_argv[1][0] == '-')
     {
-        if (argv[1][1] == 'n' && argv[1][2] == '\0')
+        const char* const option = current_argv[1];
+        
+        if (option[1] == 'n' && option[2] == '\0')
             flags |= MDB_NOSUBDIR;
-        else if (argv[1][1] == 'v' && argv[1][2] == '\0')
+        else if (option[1] == 'v' && option[2] == '\0')
             flags |= MDB_PREVSNAPSHOT;
-        else if (argv[1][1] == 'c' && argv[1][2] == '\0')
+        else if (option[1] == 'c' && option[2] == '\0')
             cpflags |= MDB_CP_COMPACT;
-        else if (argv[1][1] == 'V' && argv[1][2] == '\0')
+        else if (option[1] == 'V' && option[2] == '\0')
         {
             printf("%s\n", MDB_VERSION_STRING);
             exit(0);
         }
         else
-            argc = 0;
+        {
+            remaining_args = 0; // Invalid option - force usage error
+            break;
+        }
+        
+        --remaining_args;
+        ++current_argv;
     }
 
-    if (argc < 2 || argc > 3)
+    if (remaining_args < 2 || remaining_args > 3)
     {
         fprintf(stderr, "usage: %s [-V] [-c] [-n] [-v] srcpath [dstpath]\n", progname);
         exit(EXIT_FAILURE);
@@ -72,15 +84,15 @@ int main(int argc, char* argv[])
     rc = mdb_env_create(&env);
     if (rc == MDB_SUCCESS)
     {
-        rc = mdb_env_open(env, argv[1], flags, 0600);
+        rc = mdb_env_open(env, current_argv[1], flags, 0600);
     }
     if (rc == MDB_SUCCESS)
     {
         act = "copying";
-        if (argc == 2)
+        if (remaining_args == 2)
             rc = mdb_env_copyfd2(env, MDB_STDOUT, cpflags);
         else
-            rc = mdb_env_copy2(env, argv[2], cpflags);
+            rc = mdb_env_copy2(env, current_argv[2], cpflags);
     }
     if (rc != 0)
         fprintf(stderr, "%s: %s failed, error %d (%s)\n", progname, act, rc, mdb_strerror(rc));
