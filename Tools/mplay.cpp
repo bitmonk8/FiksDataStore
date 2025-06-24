@@ -17,10 +17,11 @@
 #include <unistd.h>
 #endif
 
+#include <sys/types.h>
+
 #include <cassert>
 #include <cctype>
 #include <cstring>
-#include <sys/types.h>
 #include <ctime>
 #ifndef _WIN32
 #include <sys/wait.h>
@@ -41,14 +42,16 @@ int maxkey;
 
 #define SOFF(s) (sizeof(s) + 1)
 
-enum {
-MAXENVS = 16,
-MAXTXNS = 16,
-MAXCRSS = 16
+enum
+{
+    MAXENVS = 16,
+    MAXTXNS = 16,
+    MAXCRSS = 16
 };
 
-enum {
-MAXPIDS = 16
+enum
+{
+    MAXPIDS = 16
 };
 
 /** A pair of cursors, one for scanned text and one for MDB.

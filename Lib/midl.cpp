@@ -17,11 +17,12 @@
 
 #include "midl.h"
 
+#include <sys/types.h>
+
 #include <cerrno>
 #include <climits>
 #include <cstdlib>
 #include <cstring>
-#include <sys/types.h>
 
 // LMDB Internals
 //
@@ -239,8 +240,9 @@ void mdb_midl_xmerge(MDB_IDL idl, const MDB_IDL merge)
 
 /* Quicksort + Insertion sort for small arrays */
 
-enum {
-SMALL = 8
+enum
+{
+    SMALL = 8
 };
 #define MIDL_SWAP(a, b)                                                                                                \
     {                                                                                                                  \

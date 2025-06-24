@@ -37,20 +37,23 @@
 // 2 because then there would no longer be a tree structure. With this
 // value, items larger than 2KB will go into overflow pages, and on
 // average only 1KB will be wasted.
-enum {
-MDB_MINKEYS = 2
+enum
+{
+    MDB_MINKEYS = 2
 };
 
 // A stamp that identifies a file as an LMDB file.
 // There's nothing special about this value other than that it is easily
 // recognizable, and it will reflect any byte order mismatches.
-enum {
-MDB_MAGIC = 0xBEEFC0DE
+enum
+{
+    MDB_MAGIC = 0xBEEFC0DE
 };
 
 // The version number for a database's datafile format.
-enum {
-MDB_DATA_VERSION = 1
+enum
+{
+    MDB_DATA_VERSION = 1
 };
 
 static void mdb_env_reader_dest(void* ptr);
@@ -127,7 +130,7 @@ void NTAPI mdb_tls_callback(PVOID module, DWORD reason, PVOID ptr)
 // declare them here. We get pointers to these functions from
 // NTDLL.DLL at runtime, to avoid buildtime dependencies on any
 // NTDLL import libraries.
-using NtCreateSectionFunc = NTSTATUS(WINAPI )(OUT PHANDLE sh,
+using NtCreateSectionFunc = NTSTATUS(WINAPI)(OUT PHANDLE sh,
                                              IN ACCESS_MASK acc,
                                              IN void* oa OPTIONAL,
                                              IN PLARGE_INTEGER ms OPTIONAL,
@@ -135,13 +138,9 @@ using NtCreateSectionFunc = NTSTATUS(WINAPI )(OUT PHANDLE sh,
                                              IN ULONG aa,
                                              IN HANDLE fh OPTIONAL);
 
-using SECTION_INHERIT = enum SECTION_INHERIT_ENUM
-{
-    ViewShare = 1,
-    ViewUnmap = 2
-};
+using SECTION_INHERIT = enum SECTION_INHERIT_ENUM { ViewShare = 1, ViewUnmap = 2 };
 
-using NtMapViewOfSectionFunc = NTSTATUS(WINAPI )(IN HANDLE sh,
+using NtMapViewOfSectionFunc = NTSTATUS(WINAPI)(IN HANDLE sh,
                                                 IN HANDLE ph,
                                                 IN OUT PVOID* addr,
                                                 IN ULONG_PTR zbits,
@@ -152,7 +151,7 @@ using NtMapViewOfSectionFunc = NTSTATUS(WINAPI )(IN HANDLE sh,
                                                 IN ULONG at,
                                                 IN ULONG pp);
 
-using NtCloseFunc = NTSTATUS(WINAPI )(HANDLE h);
+using NtCloseFunc = NTSTATUS(WINAPI)(HANDLE h);
 
 static int mdb_sec_inited;
 static SECURITY_DESCRIPTOR mdb_null_sd;
@@ -223,8 +222,9 @@ static const mdb_nchar_t* const mdb_suffixes[2][2] = {
     {MDB_NAME("/lock.mdb"), MDB_NAME("-lock")}
 };
 
-enum {
-MDB_SUFFLEN = 9  // Max string length in #mdb_suffixes[]
+enum
+{
+    MDB_SUFFLEN = 9  // Max string length in #mdb_suffixes[]
 };
 
 // Destroy fname from #mdb_fname_init()
@@ -327,7 +327,8 @@ enum mdb_fopen_type
 // mode	The Unix permissions for the file, if we create it.
 // res	Resulting file handle.
 // Return 0 on success, non-zero on failure.
-static auto ESECT mdb_fopen(const MDB_env* env, MDB_name* fname, enum mdb_fopen_type which, mdb_mode_t mode, HANDLE* res) -> int
+static auto ESECT
+mdb_fopen(const MDB_env* env, MDB_name* fname, enum mdb_fopen_type which, mdb_mode_t mode, HANDLE* res) -> int
 {
     int rc = MDB_SUCCESS;
     HANDLE fd;
@@ -1838,8 +1839,9 @@ void ESECT mdb_env_close(MDB_env* env)
 #ifndef MDB_WBUF
 #define MDB_WBUF (1024 * 1024)
 #endif
-enum {
-MDB_EOF = 0x10  // mdb_env_copyfd1() is done reading
+enum
+{
+    MDB_EOF = 0x10  // mdb_env_copyfd1() is done reading
 };
 
 // State needed for a double-buffering compacting copy.
@@ -1971,7 +1973,7 @@ auto ESECT mdb_env_cthr_toggle(mdb_copy* my, int adjust) -> int
 // pg database root.
 auto ESECT mdb_env_cwalk(mdb_copy* my, pgno_t* pg) -> int
 {
-    MDB_cursor mc = {.mc_next=nullptr};
+    MDB_cursor mc = {.mc_next = nullptr};
     MDB_node* ni;
     MDB_page* mo;
     MDB_page* mp;
@@ -2153,7 +2155,7 @@ auto ESECT mdb_env_copyfd1(MDB_env* env, HANDLE fd) -> int
 {
     MDB_meta* mm;
     MDB_page* mp;
-    mdb_copy my = {.mc_env=nullptr};
+    mdb_copy my = {.mc_env = nullptr};
     MDB_txn* txn = nullptr;
     pthread_t thr;
     pgno_t root;

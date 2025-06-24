@@ -20,7 +20,7 @@ struct MDB_db
 // only a single copy of this record in the environment.
 struct MDB_dbx
 {
-    MDB_val md_name;        // name of the database
+    MDB_val md_name;       // name of the database
     MDB_cmp_func md_cmp;   // function for comparing keys
     MDB_cmp_func md_dcmp;  // function for comparing data items
 };

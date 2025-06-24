@@ -1,9 +1,9 @@
 #include "mdb_lock.h"
 
-#include <utility>
-
 #include "mdb_debug.h"
 #include "mdb_env.h"
+
+#include <utility>
 
 #ifdef _WIN32
 #define MDB_OWNERDEAD ((int)WAIT_ABANDONED)

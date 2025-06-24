@@ -215,12 +215,13 @@ typedef int mdb_filehandle_t;
 // @{
 
 // Library major version
-enum {
-MDB_VERSION_MAJOR = 0,
-// Library minor version
-MDB_VERSION_MINOR = 9,
-// Library patch version
-MDB_VERSION_PATCH = 70
+enum
+{
+    MDB_VERSION_MAJOR = 0,
+    // Library minor version
+    MDB_VERSION_MINOR = 9,
+    // Library patch version
+    MDB_VERSION_PATCH = 70
 };
 
 // Combine args a,b,c into a single integer for easy version comparisons
@@ -272,34 +273,35 @@ struct MDB_val
 };
 
 // @brief A callback function used to compare two keys in a database
-using MDB_cmp_func = int(*)(const MDB_val* a, const MDB_val* b);
+using MDB_cmp_func = int (*)(const MDB_val* a, const MDB_val* b);
 
 // @defgroup mdb_env Environment Flags
 // @{
 
 // no environment directory
-enum {
-MDB_NOSUBDIR = 0x4000,
-// don't fsync after commit
-MDB_NOSYNC = 0x10000,
-// read only
-MDB_RDONLY = 0x20000,
-// don't fsync metapage after commit
-MDB_NOMETASYNC = 0x40000,
-// use writable mmap
-MDB_WRITEMAP = 0x80000,
-// use asynchronous msync when #MDB_WRITEMAP is used
-MDB_MAPASYNC = 0x100000,
-// tie reader locktable slots to #MDB_txn objects instead of to threads
-MDB_NOTLS = 0x200000,
-// don't do any locking, caller must manage their own locks
-MDB_NOLOCK = 0x400000,
-// don't do readahead (no effect on Windows)
-MDB_NORDAHEAD = 0x800000,
-// don't initialize malloc'd memory before writing to datafile
-MDB_NOMEMINIT = 0x1000000,
-// use the previous snapshot rather than the latest one
-MDB_PREVSNAPSHOT = 0x2000000
+enum
+{
+    MDB_NOSUBDIR = 0x4000,
+    // don't fsync after commit
+    MDB_NOSYNC = 0x10000,
+    // read only
+    MDB_RDONLY = 0x20000,
+    // don't fsync metapage after commit
+    MDB_NOMETASYNC = 0x40000,
+    // use writable mmap
+    MDB_WRITEMAP = 0x80000,
+    // use asynchronous msync when #MDB_WRITEMAP is used
+    MDB_MAPASYNC = 0x100000,
+    // tie reader locktable slots to #MDB_txn objects instead of to threads
+    MDB_NOTLS = 0x200000,
+    // don't do any locking, caller must manage their own locks
+    MDB_NOLOCK = 0x400000,
+    // don't do readahead (no effect on Windows)
+    MDB_NORDAHEAD = 0x800000,
+    // don't initialize malloc'd memory before writing to datafile
+    MDB_NOMEMINIT = 0x1000000,
+    // use the previous snapshot rather than the latest one
+    MDB_PREVSNAPSHOT = 0x2000000
 };
 // @}
 
@@ -307,10 +309,11 @@ MDB_PREVSNAPSHOT = 0x2000000
 // @{
 
 // use reverse string keys
-enum {
-MDB_REVERSEKEY = 0x02,
-// create DB if not already existing
-MDB_CREATE = 0x40000
+enum
+{
+    MDB_REVERSEKEY = 0x02,
+    // create DB if not already existing
+    MDB_CREATE = 0x40000
 };
 // @}
 
@@ -318,15 +321,16 @@ MDB_CREATE = 0x40000
 // @{
 
 // For put: Don't write if the key already exists.
-enum {
-MDB_NOOVERWRITE = 0x10,
-// For mdb_cursor_put: overwrite the current key/data pair
-MDB_CURRENT = 0x40,
-// For put: Just reserve space for data, don't copy it. Return a
-// pointer to the reserved space.
-MDB_RESERVE = 0x10000,
-// Data is being appended, don't split full pages.
-MDB_APPEND = 0x20000
+enum
+{
+    MDB_NOOVERWRITE = 0x10,
+    // For mdb_cursor_put: overwrite the current key/data pair
+    MDB_CURRENT = 0x40,
+    // For put: Just reserve space for data, don't copy it. Return a
+    // pointer to the reserved space.
+    MDB_RESERVE = 0x10000,
+    // Data is being appended, don't split full pages.
+    MDB_APPEND = 0x20000
 };
 // @}
 
@@ -335,16 +339,16 @@ MDB_APPEND = 0x20000
 
 // Compacting copy: Omit free space from copy, and renumber all
 // pages sequentially.
-enum {
-MDB_CP_COMPACT = 0x01
+enum
+{
+    MDB_CP_COMPACT = 0x01
 };
 // @}
 
 // @brief Cursor Get operations.
 // This is the set of all operations for retrieving data
 // using a cursor.
-using MDB_cursor_op = enum MDB_cursor_op
-{
+using MDB_cursor_op = enum MDB_cursor_op {
     MDB_FIRST,        // Position at first key/data item
     MDB_GET_CURRENT,  // Return key/data at current cursor position
     MDB_LAST,         // Position at last key/data item
@@ -360,52 +364,53 @@ using MDB_cursor_op = enum MDB_cursor_op
 // @{
 
 // Successful result
-enum {
-MDB_SUCCESS = 0,
-// key/data pair already exists
-MDB_KEYEXIST = (-30799),
-// key/data pair not found (EOF)
-MDB_NOTFOUND = (-30798),
-// Requested page not found - this usually indicates corruption
-MDB_PAGE_NOTFOUND = (-30797),
-// Located page was wrong type
-MDB_CORRUPTED = (-30796),
-// Update of meta page failed or environment had fatal error
-MDB_PANIC = (-30795),
-// Environment version mismatch
-MDB_VERSION_MISMATCH = (-30794),
-// File is not a valid FiksStore file
-MDB_INVALID = (-30793),
-// Environment mapsize reached
-MDB_MAP_FULL = (-30792),
-// Environment maxdbs reached
-MDB_DBS_FULL = (-30791),
-// Environment maxreaders reached
-MDB_READERS_FULL = (-30790),
-// Too many TLS keys in use - Windows only
-MDB_TLS_FULL = (-30789),
-// Txn has too many dirty pages
-MDB_TXN_FULL = (-30788),
-// Cursor stack too deep - internal error
-MDB_CURSOR_FULL = (-30787),
-// Page has not enough space - internal error
-MDB_PAGE_FULL = (-30786),
-// Database contents grew beyond environment mapsize
-MDB_MAP_RESIZED = (-30785),
-// Operation and DB incompatible, or DB type changed. This can mean:
-// Accessing a data record as a database, or vice versa.
-// The database was dropped and recreated with different flags.
-MDB_INCOMPATIBLE = (-30784),
-// Invalid reuse of reader locktable slot
-MDB_BAD_RSLOT = (-30783),
-// Transaction must abort, has a child, or is invalid
-MDB_BAD_TXN = (-30782),
-// Unsupported size of key/DB name/data
-MDB_BAD_VALSIZE = (-30781),
-// The specified DBI was changed unexpectedly
-MDB_BAD_DBI = (-30780),
-// Unexpected problem - txn should abort
-MDB_PROBLEM = (-30779)
+enum
+{
+    MDB_SUCCESS = 0,
+    // key/data pair already exists
+    MDB_KEYEXIST = (-30799),
+    // key/data pair not found (EOF)
+    MDB_NOTFOUND = (-30798),
+    // Requested page not found - this usually indicates corruption
+    MDB_PAGE_NOTFOUND = (-30797),
+    // Located page was wrong type
+    MDB_CORRUPTED = (-30796),
+    // Update of meta page failed or environment had fatal error
+    MDB_PANIC = (-30795),
+    // Environment version mismatch
+    MDB_VERSION_MISMATCH = (-30794),
+    // File is not a valid FiksStore file
+    MDB_INVALID = (-30793),
+    // Environment mapsize reached
+    MDB_MAP_FULL = (-30792),
+    // Environment maxdbs reached
+    MDB_DBS_FULL = (-30791),
+    // Environment maxreaders reached
+    MDB_READERS_FULL = (-30790),
+    // Too many TLS keys in use - Windows only
+    MDB_TLS_FULL = (-30789),
+    // Txn has too many dirty pages
+    MDB_TXN_FULL = (-30788),
+    // Cursor stack too deep - internal error
+    MDB_CURSOR_FULL = (-30787),
+    // Page has not enough space - internal error
+    MDB_PAGE_FULL = (-30786),
+    // Database contents grew beyond environment mapsize
+    MDB_MAP_RESIZED = (-30785),
+    // Operation and DB incompatible, or DB type changed. This can mean:
+    // Accessing a data record as a database, or vice versa.
+    // The database was dropped and recreated with different flags.
+    MDB_INCOMPATIBLE = (-30784),
+    // Invalid reuse of reader locktable slot
+    MDB_BAD_RSLOT = (-30783),
+    // Transaction must abort, has a child, or is invalid
+    MDB_BAD_TXN = (-30782),
+    // Unsupported size of key/DB name/data
+    MDB_BAD_VALSIZE = (-30781),
+    // The specified DBI was changed unexpectedly
+    MDB_BAD_DBI = (-30780),
+    // Unexpected problem - txn should abort
+    MDB_PROBLEM = (-30779)
 };
 // The last defined error code
 #define MDB_LAST_ERRCODE MDB_PROBLEM
@@ -826,7 +831,7 @@ auto mdb_env_get_userctx(MDB_env* env) -> void*;
 //
 // @param[in] env An environment handle returned by #mdb_env_create().
 // @param[in] msg The assertion message, not including newline.
-using MDB_assert_func = void (MDB_env* env, const char* msg);
+using MDB_assert_func = void(MDB_env* env, const char* msg);
 
 // Set or reset the assert() callback of the environment.
 // Disabled if liblmdb is built with NDEBUG.
@@ -1262,7 +1267,7 @@ auto mdb_cmp(MDB_txn* txn, MDB_dbi dbi, const MDB_val* a, const MDB_val* b) -> i
 // @param[in] msg The string to be printed.
 // @param[in] ctx An arbitrary context pointer for the callback.
 // @return < 0 on failure, >= 0 on success.
-using MDB_msg_func = int(*)(const char* msg, void* ctx);
+using MDB_msg_func = int (*)(const char* msg, void* ctx);
 
 // @brief Dump the entries in the reader lock table.
 // @param[in] env An environment handle returned by #mdb_env_create()

@@ -1,12 +1,12 @@
 #include "mdb_page.h"
 
-#include <utility>
-
 #include "mdb_cursor.h"
 #include "mdb_db.h"
 #include "mdb_debug.h"
 #include "mdb_env.h"
 #include "mdb_txn.h"
+
+#include <utility>
 
 // Page Management Operations
 //

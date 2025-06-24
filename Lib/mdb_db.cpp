@@ -16,7 +16,7 @@ static void mdb_default_cmp(MDB_txn* txn, MDB_dbi dbi)
 
     txn->mt_dbxs[dbi].md_cmp = ((f & MDB_REVERSEKEY) != 0) ? mdb_cmp_memnr : mdb_cmp_memn;
 
-    txn->mt_dbxs[dbi].md_dcmp = 0;
+    txn->mt_dbxs[dbi].md_dcmp = nullptr;
 }
 
 auto mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* dbi) -> int
@@ -45,7 +45,7 @@ auto mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* d
         return MDB_SUCCESS;
     }
 
-    if (txn->mt_dbxs[MAIN_DBI].md_cmp == NULL)
+    if (txn->mt_dbxs[MAIN_DBI].md_cmp == nullptr)
     {
         mdb_default_cmp(txn, MAIN_DBI);
     }

@@ -14,11 +14,12 @@
 // Tests for DB splits and merges
 #include "lmdb.h"
 
+#include <sys/stat.h>
+
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <sys/stat.h>
 #include <ctime>
 
 #ifdef _WIN32
@@ -56,7 +57,7 @@ auto main(int argc, char* argv[]) -> int
     MDB_cursor* cursor;
     char kbuf[16];
     char* sval;
-    struct stat st = {.st_dev=0};
+    struct stat st = {.st_dev = 0};
     if (stat("testdb", &st) == -1)
         mkdir("testdb", 0700);
 

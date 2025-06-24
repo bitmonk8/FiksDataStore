@@ -29,9 +29,10 @@
 #define mdb_strdup strdup
 #endif
 
-enum {
-PRINT = 1,
-NOHDR = 2
+enum
+{
+    PRINT = 1,
+    NOHDR = 2
 };
 static int mode;
 
@@ -66,7 +67,7 @@ struct flagbit
 
 flagbit dbflags[] = {
     {MDB_REVERSEKEY, S("reversekey")},
-    {.bit=0, .name=nullptr, .len=0}
+    {.bit = 0, .name = nullptr, .len = 0}
 };
 
 static void readhdr()

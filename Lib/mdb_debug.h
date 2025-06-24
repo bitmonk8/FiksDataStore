@@ -23,9 +23,10 @@ void ESECT mdb_assert_fail(MDB_env* env, const char* expr_txt, const char* func,
 #define MDB_DEBUG 0
 #endif
 
-enum {
-MDB_DBG_INFO = 1,
-MDB_DBG_TRACE = 2
+enum
+{
+    MDB_DBG_INFO = 1,
+    MDB_DBG_TRACE = 2
 };
 
 #if MDB_DEBUG

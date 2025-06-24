@@ -33,8 +33,9 @@ using ssize_t = SSIZE_T;
 
 #define Yu MDB_PRIy(u)
 
-enum {
-PRINT = 1
+enum
+{
+    PRINT = 1
 };
 static int mode;
 
@@ -45,8 +46,8 @@ struct flagbit
 };
 
 flagbit dbflags[] = {
-    {.bit=MDB_REVERSEKEY, .name="reversekey"},
-    {             .bit=0,         .name=nullptr}
+    {.bit = MDB_REVERSEKEY, .name = "reversekey"},
+    {             .bit = 0,      .name = nullptr}
 };
 
 static volatile sig_atomic_t gotsig;

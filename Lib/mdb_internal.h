@@ -167,8 +167,9 @@ union semun
 #endif
 
 #if defined(__i386) || defined(__x86_64) || defined(_M_IX86)
-enum {
-MISALIGNED_OK = 1
+enum
+{
+    MISALIGNED_OK = 1
 };
 #endif
 
@@ -228,8 +229,9 @@ MISALIGNED_OK = 1
 #endif  // MDB_USE_POSIX_MUTEX
 
 #ifdef _WIN32
-enum {
-MDB_PIDLOCK = 0
+enum
+{
+    MDB_PIDLOCK = 0
 };
 #define THREAD_RET DWORD
 #define pthread_t HANDLE
@@ -366,12 +368,13 @@ typedef pthread_mutex_t* mdb_mutexref_t;
 
 //
 // The version number for a database's lockfile format.
-enum {
-MDB_LOCK_VERSION = 2,
-// Number of bits representing MDB_LOCK_VERSION in MDB_LOCK_FORMAT.
-// The remaining bits must leave room for MDB_lock_desc.
-//
-MDB_LOCK_VERSION_BITS = 12
+enum
+{
+    MDB_LOCK_VERSION = 2,
+    // Number of bits representing MDB_LOCK_VERSION in MDB_LOCK_FORMAT.
+    // The remaining bits must leave room for MDB_lock_desc.
+    //
+    MDB_LOCK_VERSION_BITS = 12
 };
 
 // The max size of a key we can write, or 0 for computed max.
@@ -403,8 +406,9 @@ MDB_LOCK_VERSION_BITS = 12
 //
 // We only store a 32 bit value for node sizes.
 //
-enum {
-MAXDATASIZE = 0xffffffffUL
+enum
+{
+    MAXDATASIZE = 0xffffffffUL
 };
 
 // An invalid page number.
@@ -416,8 +420,9 @@ MAXDATASIZE = 0xffffffffUL
 // This is certainly too small for any actual applications. Apps should always set
 // the size explicitly using mdb_env_set_mapsize().
 //
-enum {
-DEFAULT_MAPSIZE = 1048576
+enum
+{
+    DEFAULT_MAPSIZE = 1048576
 };
 
 // Reader Lock Table
@@ -463,8 +468,9 @@ DEFAULT_MAPSIZE = 1048576
 // couple mutexes fit exactly into 8KB on my development machine.
 // Applications should set the table size using mdb_env_set_maxreaders().
 //
-enum {
-DEFAULT_READERS = 126
+enum
+{
+    DEFAULT_READERS = 126
 };
 
 // The size of a CPU cache line in bytes. We want our lock structures
@@ -480,8 +486,9 @@ DEFAULT_READERS = 126
 // At 4 keys per node, enough for 2^64 nodes, so there's probably no need to
 // raise this on a 64 bit machine.
 //
-enum {
-CURSOR_STACK = 32
+enum
+{
+    CURSOR_STACK = 32
 };
 
 // Lockfile format signature: version, features and field layout
@@ -511,25 +518,28 @@ enum
 };
 //
 
-enum {
-MDB_VALID = 0x8000  // DB handle is valid, for me_dbflags
+enum
+{
+    MDB_VALID = 0x8000  // DB handle is valid, for me_dbflags
 };
 #define PERSISTENT_FLAGS (0xffff & ~(MDB_VALID))
 // mdb_dbi_open() flags
 #define VALID_FLAGS (MDB_REVERSEKEY | MDB_CREATE)
 
 // Handle for the DB used to track free pages.
-enum {
-FREE_DBI = 0,
-// Handle for the default DB.
-MAIN_DBI = 1,
-// Number of DBs in metapage (free and main) - also hardcoded elsewhere
-CORE_DBS = 2
+enum
+{
+    FREE_DBI = 0,
+    // Handle for the default DB.
+    MAIN_DBI = 1,
+    // Number of DBs in metapage (free and main) - also hardcoded elsewhere
+    CORE_DBS = 2
 };
 
 // Number of meta pages - also hardcoded elsewhere
-enum {
-NUM_METAS = 2
+enum
+{
+    NUM_METAS = 2
 };
 
 // A transaction ID.
@@ -545,8 +555,9 @@ using indx_t = uint16_t;
 
 // max bytes to write in one call
 static_assert(sizeof(ssize_t) == 8);  // MAX_WRITE depends on 64 bit architecture
-enum {
-MAX_WRITE = 0x40000000U
+enum
+{
+    MAX_WRITE = 0x40000000U
 };
 
 // A page number in the database.

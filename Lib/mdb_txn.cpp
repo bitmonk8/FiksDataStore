@@ -1,13 +1,13 @@
 #include "mdb_txn.h"
 
-#include <utility>
-
 #include "mdb_cursor.h"
 #include "mdb_db.h"
 #include "mdb_debug.h"
 #include "mdb_env.h"
 #include "mdb_lock.h"
 #include "mdb_page.h"
+
+#include <utility>
 
 // Nested transaction
 struct MDB_ntxn
@@ -42,7 +42,7 @@ auto mdb_txn_renew0(MDB_txn* txn) -> int
         else
         {
             auto* r = (MDB_reader*)(((env->me_flags & MDB_NOTLS) != 0U) ? txn->mt_u.reader
-                                                                              : pthread_getspecific(env->me_txkey));
+                                                                        : pthread_getspecific(env->me_txkey));
             if (r != nullptr)
             {
                 if ((r->mr_pid != env->me_pid) || (r->mr_txnid != -1))

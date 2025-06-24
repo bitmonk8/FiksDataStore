@@ -71,11 +71,12 @@ struct MDB_page2
 #define P_KEEP 0x8000    // leave this page alone during spill
 
 // Page search flags
-enum {
-MDB_PS_MODIFY = 1,
-MDB_PS_ROOTONLY = 2,
-MDB_PS_FIRST = 4,
-MDB_PS_LAST = 8
+enum
+{
+    MDB_PS_MODIFY = 1,
+    MDB_PS_ROOTONLY = 2,
+    MDB_PS_FIRST = 4,
+    MDB_PS_LAST = 8
 };
 
 /* from mdb.c, for MDB_cursor */
@@ -88,16 +89,18 @@ MDB_PS_LAST = 8
 #define C_ORIG_RDONLY MDB_TXN_RDONLY
 
 /* from mdb.c, for MDB_node */
-enum {
-F_BIGDATA = 0x01,  // data put on overflow page
-F_SUBDATA = 0x02,  // data is a sub-database
-F_DUPDATA = 0x04  // data has duplicates (removed but kept for compatibility)
+enum
+{
+    F_BIGDATA = 0x01,  // data put on overflow page
+    F_SUBDATA = 0x02,  // data is a sub-database
+    F_DUPDATA = 0x04   // data has duplicates (removed but kept for compatibility)
 };
 #define NODE_ADD_FLAGS (F_SUBDATA | MDB_RESERVE | MDB_APPEND)
 
 // Split flags
-enum {
-MDB_SPLIT_REPLACE = 0x01  // replace existing item (removed but kept for compatibility)
+enum
+{
+    MDB_SPLIT_REPLACE = 0x01  // replace existing item (removed but kept for compatibility)
 };
 
 // The amount of space remaining in the page
@@ -107,8 +110,9 @@ MDB_SPLIT_REPLACE = 0x01  // replace existing item (removed but kept for compati
 #define PAGEFILL(env, p) (1000L * ((env)->me_psize - PAGEHDRSZ - SIZELEFT(p)) / ((env)->me_psize - PAGEHDRSZ))
 // The minimum page fill factor, in tenths of a percent.
 // Pages emptier than this are candidates for merging.
-enum {
-FILL_THRESHOLD = 250
+enum
+{
+    FILL_THRESHOLD = 250
 };
 
 // Test if a page is a leaf page

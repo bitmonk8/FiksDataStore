@@ -1,13 +1,13 @@
 #include "mdb_cursor.h"
 
-#include <utility>
-
 #include "mdb_compare.h"
 #include "mdb_db.h"
 #include "mdb_debug.h"
 #include "mdb_env.h"
 #include "mdb_page.h"
 #include "mdb_txn.h"
+
+#include <utility>
 
 #if MDB_DEBUG
 void mdb_cursor_chk(MDB_cursor* mc)
@@ -726,8 +726,9 @@ auto mdb_cursor_touch(MDB_cursor* mc) -> int
 }
 
 // Do not spill pages to disk if txn is getting full, may fail instead
-enum {
-MDB_NOSPILL = 0x8000
+enum
+{
+    MDB_NOSPILL = 0x8000
 };
 
 // Internal error codes, not exposed outside liblmdb
