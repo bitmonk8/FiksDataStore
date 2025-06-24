@@ -586,7 +586,9 @@ void mdb_txn_abort_impl(MDB_txn* txn)
     if (txn->mt_child != nullptr)
         mdb_txn_abort_impl(txn->mt_child);
 
-    mdb_txn_end(txn, MDB_END_ABORT | MDB_END_SLOT | MDB_END_FREE);
+    mdb_txn_end(txn,
+                static_cast<unsigned>(MDB_END_ABORT) | static_cast<unsigned>(MDB_END_SLOT) |
+                    static_cast<unsigned>(MDB_END_FREE));
 }
 
 void mdb_txn_abort(MDB_txn* txn)
@@ -866,7 +868,8 @@ auto mdb_txn_commit_impl(MDB_txn* txn) -> int
         return EINVAL;
 
     // mdb_txn_end() mode for a commit which writes nothing
-    end_mode = MDB_END_EMPTY_COMMIT | MDB_END_UPDATE | MDB_END_SLOT | MDB_END_FREE;
+    end_mode = static_cast<unsigned>(MDB_END_EMPTY_COMMIT) | static_cast<unsigned>(MDB_END_UPDATE) |
+               static_cast<unsigned>(MDB_END_SLOT) | static_cast<unsigned>(MDB_END_FREE);
 
     if (txn->mt_child != nullptr)
     {
@@ -1117,7 +1120,7 @@ auto mdb_txn_commit_impl(MDB_txn* txn) -> int
     rc = mdb_env_write_meta(txn);
     if (rc != 0)
         goto fail;
-    end_mode = MDB_END_COMMITTED | MDB_END_UPDATE;
+    end_mode = static_cast<unsigned>(MDB_END_COMMITTED) | static_cast<unsigned>(MDB_END_UPDATE);
     if ((env->me_flags & MDB_PREVSNAPSHOT) != 0U)
     {
         if ((env->me_flags & MDB_NOLOCK) == 0U)
