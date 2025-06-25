@@ -44,7 +44,7 @@ struct MDB_page2
 
 #define MP_PGNO(p) (reinterpret_cast<MDB_page2*>(p)->mp2_p)
 #define MP_PAD(p) (reinterpret_cast<MDB_page2*>(p)->mp2_pad)
-#define MP_FLAGS(p) (reinterpret_cast<MDB_page2*>(p)->mp2_flags)
+#define MP_FLAGS(p) (reinterpret_cast<const MDB_page2*>(p)->mp2_flags)
 #define MP_LOWER(p) (reinterpret_cast<MDB_page2*>(p)->mp2_lower)
 #define MP_UPPER(p) (reinterpret_cast<MDB_page2*>(p)->mp2_upper)
 #define MP_PTRS(p) (reinterpret_cast<MDB_page2*>(p)->mp2_ptrs)
