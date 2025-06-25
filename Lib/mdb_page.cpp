@@ -180,7 +180,7 @@ auto mdb_pages_xkeep(MDB_cursor* mc, unsigned pflags, int all) -> int
         Mask = P_SUBP | P_DIRTY | P_LOOSE | P_KEEP
     };
     const auto* const txn = mc->mc_txn;
-    auto* const m0 = mc; // Keep the starting cursor
+    auto* const m0 = mc;  // Keep the starting cursor
 
     unsigned i = txn->mt_numdbs;
     while (true)
@@ -201,14 +201,14 @@ auto mdb_pages_xkeep(MDB_cursor* mc, unsigned pflags, int all) -> int
                 // Check if we can and should proceed to a sub-cursor (xcursor).
                 auto* const mx = m3->mc_xcursor;
                 if (mx == nullptr || (mx->mx_cursor.mc_flags & C_INITIALIZED) == 0U)
-                    break; // No valid sub-cursor to follow.
+                    break;  // No valid sub-cursor to follow.
 
                 if (mp == nullptr || (mp->mp_flags & P_LEAF) == 0)
-                    break; // Last page was not a leaf, cannot have a sub-db.
+                    break;  // Last page was not a leaf, cannot have a sub-db.
 
                 const auto* leaf = NODEPTR(mp, m3->mc_ki[j - 1]);
                 if ((leaf->mn_flags & F_SUBDATA) == 0)
-                    break; // Last node was not a sub-database entry.
+                    break;  // Last node was not a sub-database entry.
 
                 // Descend to the sub-cursor.
                 m3 = &mx->mx_cursor;
@@ -222,7 +222,7 @@ auto mdb_pages_xkeep(MDB_cursor* mc, unsigned pflags, int all) -> int
         while (mc == nullptr || mc == m0)
         {
             if (i == 0)
-                goto all_cursors_processed; // Exit the outer while-loop.
+                goto all_cursors_processed;  // Exit the outer while-loop.
             mc = txn->mt_cursors[--i];
         }
     }
@@ -303,7 +303,8 @@ auto mdb_page_flush(MDB_txn* txn, int keep) -> int
     if (pagecount - keep >= env->ovs)
     {
         /* ran out of room in ov array, and re-malloc, copy handles and free previous */
-        const int new_ovs_count = (pagecount - keep) * 1.5; /* provide extra padding to reduce number of re-allocations */
+        const int new_ovs_count =
+            (pagecount - keep) * 1.5; /* provide extra padding to reduce number of re-allocations */
         const auto new_size = new_ovs_count * sizeof(OVERLAPPED);
         auto* const new_ov = (OVERLAPPED*)malloc(new_size);
         if (new_ov == nullptr)
@@ -568,7 +569,7 @@ auto mdb_page_spill(MDB_cursor* m0, MDB_val* key, MDB_val* data) -> int
     if (key != nullptr)
         space_estimate += (LEAFSIZE(key, data) + txn->mt_env->me_psize) / txn->mt_env->me_psize;
 
-    space_estimate += space_estimate; // double it for good measure
+    space_estimate += space_estimate;  // double it for good measure
     unsigned int need = space_estimate;
 
     if (txn->mt_dirty_room > need)
@@ -691,9 +692,9 @@ auto mdb_find_oldest(MDB_txn* txn) -> txnid_t
 // Add a page to the txn's dirty list
 void mdb_page_dirty(MDB_txn* txn, MDB_page* mp)
 {
-#ifdef _WIN32 // With Windows we always write dirty pages with WriteFile, so we always want them ordered
+#ifdef _WIN32  // With Windows we always write dirty pages with WriteFile, so we always want them ordered
     const auto insert = mdb_mid2l_insert;
-#else // but otherwise with writemaps, we just use msync, we don't need the ordering and just append
+#else  // but otherwise with writemaps, we just use msync, we don't need the ordering and just append
     const auto insert = (txn->mt_flags & MDB_TXN_WRITEMAP) ? mdb_mid2l_append : mdb_mid2l_insert;
 #endif
 
@@ -1251,7 +1252,7 @@ auto mdb_page_get(MDB_cursor* mc, pgno_t pgno, MDB_page** ret, int* lvl) -> int
     if (lvl != nullptr)
         *lvl = 0;
 
-        return MDB_SUCCESS;
+    return MDB_SUCCESS;
 }
 
 // Finish #mdb_page_search() / #mdb_page_search_lowest().
@@ -1408,7 +1409,7 @@ auto mdb_page_search(MDB_cursor* mc, MDB_val* key, int flags) -> int
             return MDB_BAD_DBI;
 
         if ((leaf->mn_flags & (F_DUPDATA | F_SUBDATA)) != F_SUBDATA)
-            return MDB_INCOMPATIBLE; // not a named DB
+            return MDB_INCOMPATIBLE;  // not a named DB
 
         MDB_val data;
         rc = mdb_node_read(&mc2, leaf, &data);
@@ -1477,7 +1478,6 @@ auto mdb_ovpage_free(MDB_cursor* mc, MDB_page* mp) -> int
     // Won't create me_pghead: me_pglast must be inited along with it.
     // Unsupported in nested txns: They would need to hide the page
     // range in ancestor txns' dirty and spilled lists.
-    //
     const auto sl = txn->mt_spill_pgs;
     unsigned spill_idx = 0;
     bool is_spilled = false;
@@ -1513,7 +1513,7 @@ auto mdb_ovpage_free(MDB_cursor* mc, MDB_page* mp) -> int
                 {
                     mdb_cassert(mc, search_idx > 1);
                     const unsigned restored_idx = ++(dl[0].mid);
-                    dl[restored_idx] = current_item; // Unsorted. OK when MDB_TXN_ERROR.
+                    dl[restored_idx] = current_item;  // Unsorted. OK when MDB_TXN_ERROR.
                     txn->mt_flags |= MDB_TXN_ERROR;
                     return MDB_PROBLEM;
                 }
@@ -1549,7 +1549,7 @@ auto mdb_ovpage_free(MDB_cursor* mc, MDB_page* mp) -> int
         if (const int rc = mdb_midl_append_range(&txn->mt_free_pgs, pg, ovpages); rc != 0)
             return rc;
     }
-    
+
     mc->mc_db->md_overflow_pages -= ovpages;
     return 0;
 }
