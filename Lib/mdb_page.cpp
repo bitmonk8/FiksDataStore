@@ -44,7 +44,7 @@ auto mdb_page_malloc(MDB_txn* txn, unsigned num) -> MDB_page*
     // Use static_cast for related type conversions instead of C-style casts.
     auto* new_page = static_cast<MDB_page*>(malloc(total_alloc_size));
 
-    if (new_page)
+    if (new_page != nullptr)
     {
         VGMEMP_ALLOC(env, new_page, total_alloc_size);
 
@@ -698,7 +698,7 @@ void mdb_page_dirty(MDB_txn* txn, MDB_page* mp)
     const auto insert = (txn->mt_flags & MDB_TXN_WRITEMAP) ? mdb_mid2l_append : mdb_mid2l_insert;
 #endif
 
-    MDB_ID2 mid = {mp->mp_pgno, mp};
+    MDB_ID2 mid = {.mid=mp->mp_pgno, .mptr=mp};
     const auto rc = insert(txn->mt_u.dirty_list, &mid);
     mdb_tassert(txn, rc == 0);
     txn->mt_dirty_room--;
@@ -899,7 +899,7 @@ search_complete:
 
         if ((env->me_flags & MDB_WRITEMAP) != 0U)
         {
-            result_page = reinterpret_cast<MDB_page*>(static_cast<char*>(env->me_map) + env->me_psize * final_pgno);
+            result_page = reinterpret_cast<MDB_page*>(env->me_map + (env->me_psize * final_pgno));
         }
         else
         {
@@ -938,7 +938,7 @@ search_complete:
 #if defined(_WIN32)
         if ((env->me_flags & MDB_RDONLY) == 0U)
         {
-            void* p = VirtualAlloc(static_cast<char*>(env->me_map) + env->me_psize * new_pgno,
+            void* p = VirtualAlloc(env->me_map + (env->me_psize * new_pgno),
                                    static_cast<SIZE_T>(env->me_psize) * num,
                                    MEM_COMMIT,
                                    ((env->me_flags & MDB_WRITEMAP) != 0U) ? PAGE_READWRITE : PAGE_READONLY);
@@ -951,7 +951,7 @@ search_complete:
 #endif
         if ((env->me_flags & MDB_WRITEMAP) != 0U)
         {
-            result_page = reinterpret_cast<MDB_page*>(static_cast<char*>(env->me_map) + env->me_psize * final_pgno);
+            result_page = reinterpret_cast<MDB_page*>(env->me_map + (env->me_psize * final_pgno));
         }
         else
         {
@@ -1149,7 +1149,7 @@ auto mdb_page_touch(MDB_cursor* mc) -> int
         new_page = mdb_page_malloc(txn, 1);
         if (new_page == nullptr)
             return ENOMEM;
-        MDB_ID2 mid = {current_pgno, new_page};
+        MDB_ID2 mid = {.mid=current_pgno, .mptr=new_page};
         const auto rc = mdb_mid2l_insert(dl, &mid);
         mdb_cassert(mc, rc == 0);
         mdb_page_copy(new_page, mp, txn->mt_env->me_psize);
@@ -1481,7 +1481,7 @@ auto mdb_ovpage_free(MDB_cursor* mc, MDB_page* mp) -> int
     const auto sl = txn->mt_spill_pgs;
     unsigned spill_idx = 0;
     bool is_spilled = false;
-    if (sl)
+    if (sl != nullptr)
     {
         const MDB_ID pn = pg << 1;
         spill_idx = mdb_midl_search(sl, pn);
