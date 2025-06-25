@@ -130,7 +130,7 @@ void NTAPI mdb_tls_callback(PVOID module, DWORD reason, PVOID ptr)
 // declare them here. We get pointers to these functions from
 // NTDLL.DLL at runtime, to avoid buildtime dependencies on any
 // NTDLL import libraries.
-using NtCreateSectionFunc = NTSTATUS(WINAPI)(OUT PHANDLE sh,
+using NtCreateSectionFunc = NTSTATUS(WINAPI*)(OUT PHANDLE sh,
                                              IN ACCESS_MASK acc,
                                              IN void* oa OPTIONAL,
                                              IN PLARGE_INTEGER ms OPTIONAL,
@@ -140,7 +140,7 @@ using NtCreateSectionFunc = NTSTATUS(WINAPI)(OUT PHANDLE sh,
 
 using SECTION_INHERIT = enum SECTION_INHERIT_ENUM { ViewShare = 1, ViewUnmap = 2 };
 
-using NtMapViewOfSectionFunc = NTSTATUS(WINAPI)(IN HANDLE sh,
+using NtMapViewOfSectionFunc = NTSTATUS(WINAPI*)(IN HANDLE sh,
                                                 IN HANDLE ph,
                                                 IN OUT PVOID* addr,
                                                 IN ULONG_PTR zbits,
@@ -151,14 +151,14 @@ using NtMapViewOfSectionFunc = NTSTATUS(WINAPI)(IN HANDLE sh,
                                                 IN ULONG at,
                                                 IN ULONG pp);
 
-using NtCloseFunc = NTSTATUS(WINAPI)(HANDLE h);
+using NtCloseFunc = NTSTATUS(WINAPI*)(HANDLE h);
 
 static int mdb_sec_inited;
 static SECURITY_DESCRIPTOR mdb_null_sd;
 static SECURITY_ATTRIBUTES mdb_all_sa;
-static NtCloseFunc* NtClose;
-static NtCreateSectionFunc* NtCreateSection;
-static NtMapViewOfSectionFunc* NtMapViewOfSection;
+static NtCloseFunc NtClose;
+static NtCreateSectionFunc NtCreateSection;
+static NtMapViewOfSectionFunc NtMapViewOfSection;
 #endif
 
 #if defined(__FreeBSD__) && defined(__FreeBSD_version) && __FreeBSD_version >= 1100110
@@ -1043,13 +1043,13 @@ auto ESECT mdb_env_open2(MDB_env* env, int prev) -> int
         HMODULE h = GetModuleHandleW(L"NTDLL.DLL");
         if (h == nullptr)
             return MDB_PROBLEM;
-        NtClose = (NtCloseFunc*)GetProcAddress(h, "NtClose");
+        NtClose = (NtCloseFunc)GetProcAddress(h, "NtClose");
         if (NtClose == nullptr)
             return MDB_PROBLEM;
-        NtMapViewOfSection = (NtMapViewOfSectionFunc*)GetProcAddress(h, "NtMapViewOfSection");
+        NtMapViewOfSection = (NtMapViewOfSectionFunc)GetProcAddress(h, "NtMapViewOfSection");
         if (NtMapViewOfSection == nullptr)
             return MDB_PROBLEM;
-        NtCreateSection = (NtCreateSectionFunc*)GetProcAddress(h, "NtCreateSection");
+        NtCreateSection = (NtCreateSectionFunc)GetProcAddress(h, "NtCreateSection");
         if (NtCreateSection == nullptr)
             return MDB_PROBLEM;
     }
@@ -2473,12 +2473,12 @@ auto ESECT mdb_env_set_flags(MDB_env* env, unsigned int flag, int onoff) -> int
     return MDB_SUCCESS;
 }
 
-auto ESECT mdb_env_get_flags(MDB_env* env, unsigned int* arg) -> int
+auto ESECT mdb_env_get_flags(MDB_env* env, unsigned int* flags) -> int
 {
-    if ((env == nullptr) || (arg == nullptr))
+    if ((env == nullptr) || (flags == nullptr))
         return EINVAL;
 
-    *arg = env->me_flags & (CHANGEABLE | CHANGELESS);
+    *flags = env->me_flags & (CHANGEABLE | CHANGELESS);
     return MDB_SUCCESS;
 }
 
@@ -2505,21 +2505,21 @@ auto ESECT mdb_env_set_assert(MDB_env* env, MDB_assert_func* func) -> int
     return MDB_SUCCESS;
 }
 
-auto ESECT mdb_env_get_path(MDB_env* env, const char** arg) -> int
+auto ESECT mdb_env_get_path(MDB_env* env, const char** path) -> int
 {
-    if ((env == nullptr) || (arg == nullptr))
+    if ((env == nullptr) || (path == nullptr))
         return EINVAL;
 
-    *arg = env->me_path;
+    *path = env->me_path;
     return MDB_SUCCESS;
 }
 
-auto ESECT mdb_env_get_fd(MDB_env* env, mdb_filehandle_t* arg) -> int
+auto ESECT mdb_env_get_fd(MDB_env* env, mdb_filehandle_t* fd) -> int
 {
-    if ((env == nullptr) || (arg == nullptr))
+    if ((env == nullptr) || (fd == nullptr))
         return EINVAL;
 
-    *arg = env->me_fd;
+    *fd = env->me_fd;
     return MDB_SUCCESS;
 }
 
@@ -2540,9 +2540,9 @@ static auto ESECT mdb_stat0(MDB_env* env, MDB_db* db, MDB_stat* arg) -> int
     return MDB_SUCCESS;
 }
 
-auto ESECT mdb_stat(MDB_txn* txn, MDB_dbi dbi, MDB_stat* arg) -> int
+auto ESECT mdb_stat(MDB_txn* txn, MDB_dbi dbi, MDB_stat* stat) -> int
 {
-    if ((arg == nullptr) || !TXN_DBI_EXIST(txn, dbi, DB_VALID))
+    if ((stat == nullptr) || !TXN_DBI_EXIST(txn, dbi, DB_VALID))
         return EINVAL;
 
     if ((txn->mt_flags & MDB_TXN_BLOCKED) != 0U)
@@ -2554,35 +2554,35 @@ auto ESECT mdb_stat(MDB_txn* txn, MDB_dbi dbi, MDB_stat* arg) -> int
         // Stale, must read the DB's root. cursor_init does it for us.
         mdb_cursor_init(&mc, txn, dbi, nullptr);
     }
-    return mdb_stat0(txn->mt_env, &txn->mt_dbs[dbi], arg);
+    return mdb_stat0(txn->mt_env, &txn->mt_dbs[dbi], stat);
 }
 
-auto ESECT mdb_env_stat(MDB_env* env, MDB_stat* arg) -> int
+auto ESECT mdb_env_stat(MDB_env* env, MDB_stat* stat) -> int
 {
     MDB_meta* meta;
 
-    if (env == nullptr || arg == nullptr)
+    if (env == nullptr || stat == nullptr)
         return EINVAL;
 
     meta = mdb_env_pick_meta(env);
 
-    return mdb_stat0(env, &meta->mm_dbs[MAIN_DBI], arg);
+    return mdb_stat0(env, &meta->mm_dbs[MAIN_DBI], stat);
 }
 
-auto ESECT mdb_env_info(MDB_env* env, MDB_envinfo* arg) -> int
+auto ESECT mdb_env_info(MDB_env* env, MDB_envinfo* stat) -> int
 {
     MDB_meta* meta;
 
-    if (env == nullptr || arg == nullptr)
+    if (env == nullptr || stat == nullptr)
         return EINVAL;
 
     meta = mdb_env_pick_meta(env);
-    arg->me_last_pgno = meta->mm_last_pg;
-    arg->me_last_txnid = meta->mm_txnid;
+    stat->me_last_pgno = meta->mm_last_pg;
+    stat->me_last_txnid = meta->mm_txnid;
 
-    arg->me_mapsize = env->me_mapsize;
-    arg->me_maxreaders = env->me_maxreaders;
-    arg->me_numreaders = (env->me_txns != nullptr) ? env->me_txns->mti_numreaders : 0;
+    stat->me_mapsize = env->me_mapsize;
+    stat->me_maxreaders = env->me_maxreaders;
+    stat->me_numreaders = (env->me_txns != nullptr) ? env->me_txns->mti_numreaders : 0;
     return MDB_SUCCESS;
 }
 

@@ -1068,13 +1068,13 @@ auto mdb_cursor_put_impl(MDB_cursor* mc, MDB_val* key, MDB_val* data, unsigned i
     return rc;
 }
 
-auto mdb_cursor_put(MDB_cursor* mc, MDB_val* key, MDB_val* data, unsigned int flags) -> int
+auto mdb_cursor_put(MDB_cursor* cursor, MDB_val* key, MDB_val* data, unsigned int flags) -> int
 {
     DKBUF;
     DDBUF;
-    int rc = mdb_cursor_put_impl(mc, key, data, flags);
+    int rc = mdb_cursor_put_impl(cursor, key, data, flags);
     MDB_TRACE(("%p, %" Z "u[%s], %" Z "u%s, %u",
-               mc,
+               cursor,
                key ? key->mv_size : 0,
                DKEY(key),
                data ? data->mv_size : 0,
@@ -1149,10 +1149,10 @@ fail:
     return rc;
 }
 
-auto mdb_cursor_del(MDB_cursor* mc, unsigned int flags) -> int
+auto mdb_cursor_del(MDB_cursor* cursor, unsigned int flags) -> int
 {
-    MDB_TRACE(("%p, %u", mc, flags));
-    return mdb_cursor_del_impl(mc, flags);
+    MDB_TRACE(("%p, %u", cursor, flags));
+    return mdb_cursor_del_impl(cursor, flags);
 }
 
 // Initialize a cursor for a given transaction and database.

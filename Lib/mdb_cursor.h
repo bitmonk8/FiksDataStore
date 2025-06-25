@@ -3,6 +3,8 @@
 #include "mdb_db.h"
 #include "mdb_internal.h"
 
+#include <array>
+
 // Forward declaration for MDB_xcursor
 struct MDB_xcursor;
 
@@ -40,8 +42,8 @@ struct MDB_cursor
 // Set for read-only txns. Only implements code which is necessary for this.
 #define C_ORIG_RDONLY MDB_TXN_RDONLY
     unsigned int mc_flags;          // mdb_cursor
-    MDB_page* mc_pg[CURSOR_STACK];  // stack of pushed pages
-    indx_t mc_ki[CURSOR_STACK];     // stack of page indices
+    std::array<MDB_page*, CURSOR_STACK> mc_pg;  // stack of pushed pages
+    std::array<indx_t, CURSOR_STACK> mc_ki;     // stack of page indices
     // Extended cursor for duplicate data (removed but kept for compatibility)
     MDB_xcursor* mc_xcursor;
 #define MC_OVPG(mc) ((MDB_page*)0)
@@ -77,9 +79,6 @@ void mdb_cursor_init(MDB_cursor* mc, MDB_txn* txn, MDB_dbi dbi, MDB_xcursor* mx 
 void mdb_cursor_copy(const MDB_cursor* csrc, MDB_cursor* cdst);
 void mdb_cursor_pop(MDB_cursor* mc);
 auto mdb_cursor_push(MDB_cursor* mc, MDB_page* mp) -> int;
-
-auto mdb_cursor_del(MDB_cursor* mc, unsigned int flags) -> int;
-auto mdb_cursor_put(MDB_cursor* mc, MDB_val* key, MDB_val* data, unsigned int flags) -> int;
 
 // Internal implementation functions
 auto mdb_cursor_del_impl(MDB_cursor* mc, unsigned int flags) -> int;
