@@ -1200,45 +1200,41 @@ done:
 // ret address of a pointer where the page's address will be stored.
 // lvl dirty_list inheritance level of found page. 1=current txn, 0=mapped page.
 // 0 on success, non-zero on failure.
-//
 auto mdb_page_get(MDB_cursor* mc, pgno_t pgno, MDB_page** ret, int* lvl) -> int
 {
-    MDB_txn* txn = mc->mc_txn;
-    MDB_page* p = nullptr;
-    int level;
+    auto* const txn = mc->mc_txn;
 
     if ((mc->mc_flags & (C_ORIG_RDONLY | C_WRITEMAP)) == 0U)
     {
-        MDB_txn* tx2 = txn;
-        level = 1;
+        auto* tx2 = txn;
+        int search_level = 1;
         do
         {
-            MDB_ID2L dl = tx2->mt_u.dirty_list;
-            unsigned x;
-            /* Spilled pages were dirtied in this txn and flushed
-             * because the dirty list got full. Bring this page
-             * back in from the map (but don't unspill it here,
-             * leave that unless page_touch happens again).
-             */
+            // Spilled pages were dirtied in this txn and flushed
+            // because the dirty list got full. Bring this page
+            // back in from the map (but don't unspill it here,
+            // leave that unless page_touch happens again).
             if (tx2->mt_spill_pgs != nullptr)
             {
-                MDB_ID pn = pgno << 1;
-                x = mdb_midl_search(tx2->mt_spill_pgs, pn);
-                if (x <= tx2->mt_spill_pgs[0] && tx2->mt_spill_pgs[x] == pn)
-                {
-                    goto mapped;
-                }
+                const auto pn = pgno << 1;
+                const auto spill_idx = mdb_midl_search(tx2->mt_spill_pgs, pn);
+                if (spill_idx <= tx2->mt_spill_pgs[0] && tx2->mt_spill_pgs[spill_idx] == pn)
+                    break;
             }
+
+            const auto dl = tx2->mt_u.dirty_list;
             if (dl[0].mid != 0U)
             {
-                unsigned x = mdb_mid2l_search(dl, pgno);
-                if (x <= dl[0].mid && dl[x].mid == pgno)
+                const auto dirty_idx = mdb_mid2l_search(dl, pgno);
+                if (dirty_idx <= dl[0].mid && dl[dirty_idx].mid == pgno)
                 {
-                    p = (MDB_page*)dl[x].mptr;
-                    goto done;
+                    *ret = (MDB_page*)dl[dirty_idx].mptr;
+                    if (lvl != nullptr)
+                        *lvl = search_level;
+                    return MDB_SUCCESS;
                 }
             }
-            level++;
+            search_level++;
         } while ((tx2 = tx2->mt_parent) != nullptr);
     }
 
@@ -1249,42 +1245,33 @@ auto mdb_page_get(MDB_cursor* mc, pgno_t pgno, MDB_page** ret, int* lvl) -> int
         return MDB_PAGE_NOTFOUND;
     }
 
-    level = 0;
+    const auto* env = txn->mt_env;
+    *ret = (MDB_page*)(env->me_map + (env->me_psize * pgno));
 
-mapped:
-{
-    MDB_env* env = txn->mt_env;
-    p = (MDB_page*)(env->me_map + (env->me_psize * pgno));
-}
-
-done:
-    *ret = p;
     if (lvl != nullptr)
-        *lvl = level;
-    return MDB_SUCCESS;
+        *lvl = 0;
+
+        return MDB_SUCCESS;
 }
 
 // Finish #mdb_page_search() / #mdb_page_search_lowest().
 // The cursor is at the root page, set up the rest of it.
-//
 auto mdb_page_search_root(MDB_cursor* mc, MDB_val* key, int flags) -> int
 {
     MDB_page* mp = mc->mc_pg[mc->mc_top];
-    int rc;
     DKBUF;
 
     while (IS_BRANCH(mp))
     {
-        MDB_node* node;
-        indx_t i;
-
         DPRINTF(("branch page %" Yu " has %u keys", mp->mp_pgno, NUMKEYS(mp)));
-        /* Don't assert on branch pages in the FreeDB. We can get here
-         * while in the process of rebalancing a FreeDB branch page; we must
-         * let that proceed. ITS#8336
-         */
+        // Don't assert on branch pages in the FreeDB. We can get here
+        // while in the process of rebalancing a FreeDB branch page; we must
+        // let that proceed. ITS#8336
         mdb_cassert(mc, !mc->mc_dbi || NUMKEYS(mp) > 1);
         DPRINTF(("found index 0 to page %" Yu, NODEPGNO(NODEPTR(mp, 0))));
+
+        indx_t i;
+        bool descend = true;
 
         if ((flags & (MDB_PS_FIRST | MDB_PS_LAST)) != 0)
         {
@@ -1292,24 +1279,23 @@ auto mdb_page_search_root(MDB_cursor* mc, MDB_val* key, int flags) -> int
             if ((flags & MDB_PS_LAST) != 0)
             {
                 i = NUMKEYS(mp) - 1;
-                /* if already init'd, see if we're already in right place */
-                if ((mc->mc_flags & C_INITIALIZED) != 0U)
+                // if already init'd, see if we're already in right place
+                if (((mc->mc_flags & C_INITIALIZED) != 0U) && (mc->mc_ki[mc->mc_top] == i))
                 {
-                    if (mc->mc_ki[mc->mc_top] == i)
-                    {
-                        mc->mc_top = mc->mc_snum++;
-                        mp = mc->mc_pg[mc->mc_top];
-                        goto ready;
-                    }
+                    mc->mc_top = mc->mc_snum++;
+                    mp = mc->mc_pg[mc->mc_top];
+                    descend = false;
                 }
             }
         }
         else
         {
             int exact;
-            node = mdb_node_search(mc, key, &exact);
-            if (node == nullptr)
+            auto* search_node = mdb_node_search(mc, key, &exact);
+            if (search_node == nullptr)
+            {
                 i = NUMKEYS(mp) - 1;
+            }
             else
             {
                 i = mc->mc_ki[mc->mc_top];
@@ -1322,24 +1308,31 @@ auto mdb_page_search_root(MDB_cursor* mc, MDB_val* key, int flags) -> int
             DPRINTF(("following index %u for key [%s]", i, DKEY(key)));
         }
 
-        mdb_cassert(mc, i < NUMKEYS(mp));
-        node = NODEPTR(mp, i);
+        if (descend)
+        {
+            mdb_cassert(mc, i < NUMKEYS(mp));
+            const auto* node = NODEPTR(mp, i);
 
-        rc = mdb_page_get(mc, NODEPGNO(node), &mp, nullptr);
-        if (rc != 0)
-            return rc;
+            MDB_page* child_page;
+            if (const auto rc = mdb_page_get(mc, NODEPGNO(node), &child_page, nullptr); rc != 0)
+            {
+                return rc;
+            }
+            mp = child_page;
 
-        mc->mc_ki[mc->mc_top] = i;
-        rc = mdb_cursor_push(mc, mp);
-        if (rc != 0)
-            return rc;
+            mc->mc_ki[mc->mc_top] = i;
+            if (const auto rc = mdb_cursor_push(mc, mp); rc != 0)
+            {
+                return rc;
+            }
+        }
 
-    ready:
         if ((flags & MDB_PS_MODIFY) != 0)
         {
-            rc = mdb_page_touch(mc);
-            if (rc != 0)
+            if (const auto rc = mdb_page_touch(mc); rc != 0)
+            {
                 return rc;
+            }
             mp = mc->mc_pg[mc->mc_top];
         }
     }
@@ -1363,21 +1356,20 @@ auto mdb_page_search_root(MDB_cursor* mc, MDB_val* key, int flags) -> int
 // before calling mdb_page_search_root(), because the callers
 // are all in situations where the current page is known to
 // be underfilled.
-//
 auto mdb_page_search_lowest(MDB_cursor* mc) -> int
 {
-    MDB_page* mp = mc->mc_pg[mc->mc_top];
-    MDB_node* node = NODEPTR(mp, 0);
-    int rc;
+    const auto initial_page = mc->mc_pg[mc->mc_top];
+    const auto node = NODEPTR(initial_page, 0);
 
-    rc = mdb_page_get(mc, NODEPGNO(node), &mp, nullptr);
-    if (rc != 0)
+    MDB_page* new_page = nullptr;
+    if (const auto rc = mdb_page_get(mc, NODEPGNO(node), &new_page, nullptr); rc != 0)
         return rc;
 
     mc->mc_ki[mc->mc_top] = 0;
-    rc = mdb_cursor_push(mc, mp);
-    if (rc != 0)
+
+    if (const auto rc = mdb_cursor_push(mc, new_page); rc != 0)
         return rc;
+
     return mdb_page_search_root(mc, nullptr, MDB_PS_FIRST);
 }
 
@@ -1386,57 +1378,60 @@ auto mdb_page_search_lowest(MDB_cursor* mc) -> int
 // before calling mdb_page_search_root(), because the callers
 // are all in situations where the current page is known to
 // be underfilled.
-//
 auto mdb_page_search(MDB_cursor* mc, MDB_val* key, int flags) -> int
 {
-    int rc;
-    pgno_t root;
-
-    /* Make sure the txn is still viable, then find the root from
-     * the txn's db table and set it as the root of the cursor's stack.
-     */
+    // Make sure the txn is still viable, then find the root from
+    // the txn's db table and set it as the root of the cursor's stack.
     if ((mc->mc_txn->mt_flags & MDB_TXN_BLOCKED) != 0U)
     {
         DPUTS("transaction may not be used now");
         return MDB_BAD_TXN;
     }
 
-    /* Make sure we're using an up-to-date root */
+    int rc;
+
+    // Make sure we're using an up-to-date root
     if ((*mc->mc_dbflag & DB_STALE) != 0)
     {
-        MDB_cursor mc2;
         if (TXN_DBI_CHANGED(mc->mc_txn, mc->mc_dbi))
             return MDB_BAD_DBI;
+
+        MDB_cursor mc2;
         mdb_cursor_init(&mc2, mc->mc_txn, MAIN_DBI, nullptr);
         rc = mdb_page_search(&mc2, &mc->mc_dbx->md_name, 0);
         if (rc != 0)
             return rc;
-        {
-            MDB_val data;
-            int exact = 0;
-            uint16_t flags;
-            MDB_node* leaf = mdb_node_search(&mc2, &mc->mc_dbx->md_name, &exact);
-            if (exact == 0)
-                return MDB_BAD_DBI;
-            if ((leaf->mn_flags & (F_DUPDATA | F_SUBDATA)) != F_SUBDATA)
-                return MDB_INCOMPATIBLE; /* not a named DB */
-            rc = mdb_node_read(&mc2, leaf, &data);
-            if (rc != 0)
-                return rc;
-            memcpy(&flags, ((char*)data.mv_data + offsetof(MDB_db, md_flags)), sizeof(uint16_t));
-            /* The txn may not know this DBI, or another process may
-             * have dropped and recreated the DB with other flags.
-             */
-            if ((mc->mc_db->md_flags & PERSISTENT_FLAGS) != flags)
-                return MDB_INCOMPATIBLE;
-            memcpy(mc->mc_db, data.mv_data, sizeof(MDB_db));
-        }
+
+        int exact = 0;
+        const auto leaf = mdb_node_search(&mc2, &mc->mc_dbx->md_name, &exact);
+        if (exact == 0)
+            return MDB_BAD_DBI;
+
+        if ((leaf->mn_flags & (F_DUPDATA | F_SUBDATA)) != F_SUBDATA)
+            return MDB_INCOMPATIBLE; // not a named DB
+
+        MDB_val data;
+        rc = mdb_node_read(&mc2, leaf, &data);
+        if (rc != 0)
+            return rc;
+
+        uint16_t db_flags;
+        memcpy(&db_flags, (char*)data.mv_data + offsetof(MDB_db, md_flags), sizeof(uint16_t));
+        // The txn may not know this DBI, or another process may
+        // have dropped and recreated the DB with other flags.
+        if ((mc->mc_db->md_flags & PERSISTENT_FLAGS) != db_flags)
+            return MDB_INCOMPATIBLE;
+
+        memcpy(mc->mc_db, data.mv_data, sizeof(MDB_db));
+
         *mc->mc_dbflag &= ~DB_STALE;
     }
-    root = mc->mc_db->md_root;
+
+    const auto root = mc->mc_db->md_root;
 
     if (root == P_INVALID)
-    { /* Tree is empty. */
+    {
+        // Tree is empty.
         DPUTS("tree is empty");
         return MDB_NOTFOUND;
     }
@@ -1469,14 +1464,10 @@ auto mdb_page_search(MDB_cursor* mc, MDB_val* key, int flags) -> int
 
 auto mdb_ovpage_free(MDB_cursor* mc, MDB_page* mp) -> int
 {
-    MDB_txn* txn = mc->mc_txn;
-    pgno_t pg = mp->mp_pgno;
-    unsigned ovpages = mp->mp_pages;
-    MDB_env* env = txn->mt_env;
-    MDB_IDL sl = txn->mt_spill_pgs;
-    MDB_ID pn = pg << 1;
-    int rc{};
-    unsigned x{0};
+    const auto txn = mc->mc_txn;
+    auto pg = mp->mp_pgno;
+    const auto ovpages = mp->mp_pages;
+    const auto env = txn->mt_env;
 
     DPRINTF(("free ov page %" Yu " (%d)", pg, ovpages));
     // If the page is dirty or on the spill list we just acquired it,
@@ -1487,72 +1478,78 @@ auto mdb_ovpage_free(MDB_cursor* mc, MDB_page* mp) -> int
     // Unsupported in nested txns: They would need to hide the page
     // range in ancestor txns' dirty and spilled lists.
     //
-    bool spill_condition = false;
-    if (sl != nullptr)
+    const auto sl = txn->mt_spill_pgs;
+    unsigned spill_idx = 0;
+    bool is_spilled = false;
+    if (sl)
     {
-        x = mdb_midl_search(sl, pn);
-        spill_condition = x <= sl[0] && sl[x] == pn;
+        const MDB_ID pn = pg << 1;
+        spill_idx = mdb_midl_search(sl, pn);
+        is_spilled = spill_idx <= sl[0] && sl[spill_idx] == pn;
     }
-    if ((env->me_pghead != nullptr) && (txn->mt_parent == nullptr) &&
-        (((mp->mp_flags & P_DIRTY) != 0) || ((sl != nullptr) && spill_condition)))
+
+    const bool is_dirty = (mp->mp_flags & P_DIRTY) != 0;
+    if ((env->me_pghead != nullptr) && (txn->mt_parent == nullptr) && (is_dirty || is_spilled))
     {
-        unsigned i;
-        unsigned j;
-        pgno_t* mop;
-        MDB_ID2* dl;
-        MDB_ID2 ix;
-        MDB_ID2 iy;
-        rc = mdb_midl_need(&env->me_pghead, ovpages);
-        if (rc != 0)
+        if (const int rc = mdb_midl_need(&env->me_pghead, ovpages); rc != 0)
             return rc;
-        if ((mp->mp_flags & P_DIRTY) == 0)
+
+        if (is_dirty)
         {
-            /* This page is no longer spilled */
-            if (x == sl[0])
+            // Remove from dirty list
+            const auto dl = txn->mt_u.dirty_list;
+            unsigned search_idx = dl[0].mid--;
+            MDB_ID2 current_item = dl[search_idx];
+            while (current_item.mptr != mp)
+            {
+                if (search_idx > 1)
+                {
+                    --search_idx;
+                    const MDB_ID2 next_item = dl[search_idx];
+                    dl[search_idx] = current_item;
+                    current_item = next_item;
+                }
+                else
+                {
+                    mdb_cassert(mc, search_idx > 1);
+                    const unsigned restored_idx = ++(dl[0].mid);
+                    dl[restored_idx] = current_item; // Unsorted. OK when MDB_TXN_ERROR.
+                    txn->mt_flags |= MDB_TXN_ERROR;
+                    return MDB_PROBLEM;
+                }
+            }
+            txn->mt_dirty_room++;
+            if ((env->me_flags & MDB_WRITEMAP) == 0U)
+                mdb_dpage_free(env, mp);
+        }
+        else
+        {
+            // This page is no longer spilled
+            if (spill_idx == sl[0])
                 sl[0]--;
             else
-                sl[x] |= 1;
-            goto release;
+                sl[spill_idx] |= 1;
         }
-        /* Remove from dirty list */
-        dl = txn->mt_u.dirty_list;
-        x = dl[0].mid--;
-        for (ix = dl[x]; ix.mptr != mp; ix = iy)
-        {
-            if (x > 1)
-            {
-                x--;
-                iy = dl[x];
-                dl[x] = ix;
-            }
-            else
-            {
-                mdb_cassert(mc, x > 1);
-                j = ++(dl[0].mid);
-                dl[j] = ix; /* Unsorted. OK when MDB_TXN_ERROR. */
-                txn->mt_flags |= MDB_TXN_ERROR;
-                return MDB_PROBLEM;
-            }
-        }
-        txn->mt_dirty_room++;
-        if ((env->me_flags & MDB_WRITEMAP) == 0U)
-            mdb_dpage_free(env, mp);
-    release:
-        /* Insert in me_pghead */
-        mop = env->me_pghead;
-        j = mop[0] + ovpages;
-        for (i = mop[0]; (i != 0U) && mop[i] < pg; i--)
-            mop[j--] = mop[i];
-        while (j > i)
-            mop[j--] = pg++;
+
+        // Insert in me_pghead
+        const auto mop = env->me_pghead;
+        const unsigned new_count = mop[0] + ovpages;
+        unsigned write_pos = new_count;
+        unsigned read_pos;
+        for (read_pos = mop[0]; (read_pos != 0U) && mop[read_pos] < pg; read_pos--)
+            mop[write_pos--] = mop[read_pos];
+
+        while (write_pos > read_pos)
+            mop[write_pos--] = pg++;
+
         mop[0] += ovpages;
     }
     else
     {
-        rc = mdb_midl_append_range(&txn->mt_free_pgs, pg, ovpages);
-        if (rc != 0)
+        if (const int rc = mdb_midl_append_range(&txn->mt_free_pgs, pg, ovpages); rc != 0)
             return rc;
     }
+    
     mc->mc_db->md_overflow_pages -= ovpages;
     return 0;
 }
