@@ -13,56 +13,71 @@
 // Allocate memory for a page.
 // Re-use old malloc'd pages first for singletons, otherwise just malloc.
 // Set #MDB_TXN_ERROR on failure.
-//
 auto mdb_page_malloc(MDB_txn* txn, unsigned num) -> MDB_page*
 {
-    MDB_env* env = txn->mt_env;
-    MDB_page* ret = env->me_dpages;
-    size_t psize = env->me_psize;
-    size_t sz = psize;
-    size_t off;
-    /* For ! #MDB_NOMEMINIT, psize counts how much to init.
-     * For a single page alloc, we init everything after the page header.
-     * For multi-page, we init the final page; if the caller needed that
-     * many pages they will be filling in at least up to the last page.
-     */
+    auto* env = txn->mt_env;
+
+    // Fast path: For a single page, try to reuse one from the freelist.
     if (num == 1)
     {
-        if (ret != nullptr)
+        if (auto* page_from_freelist = env->me_dpages)
         {
-            VGMEMP_ALLOC(env, ret, sz);
-            VGMEMP_DEFINED(ret, sizeof(ret->mp_next));
-            env->me_dpages = ret->mp_next;
-            return ret;
+            // A page is available. Pop it from the list and return it.
+            env->me_dpages = page_from_freelist->mp_next;
+
+            // These macros are for Valgrind memory tracking; their usage remains.
+            const auto page_size = env->me_psize;
+            VGMEMP_ALLOC(env, page_from_freelist, page_size);
+            VGMEMP_DEFINED(page_from_freelist, sizeof(page_from_freelist->mp_next));
+
+            return page_from_freelist;
         }
-        psize -= off = PAGEHDRSZ;
     }
-    else
+
+    // Slow path: The freelist is empty or multiple pages were requested.
+    // Allocate new memory.
+
+    // Declare variables close to use with const where possible.
+    const auto page_size = env->me_psize;
+    const auto total_alloc_size = page_size * num;
+
+    // Use static_cast for related type conversions instead of C-style casts.
+    auto* new_page = static_cast<MDB_page*>(malloc(total_alloc_size));
+
+    if (new_page)
     {
-        sz *= num;
-        off = sz - psize;
-    }
-    ret = (MDB_page*)malloc(sz);
-    if (ret != nullptr)
-    {
-        VGMEMP_ALLOC(env, ret, sz);
+        VGMEMP_ALLOC(env, new_page, total_alloc_size);
+
+        // If memory initialization is not disabled, clear the relevant part of the memory.
         if ((env->me_flags & MDB_NOMEMINIT) == 0U)
         {
-            memset((char*)ret + off, 0, psize);
-            ret->mp_pad = 0;
+            // The logic for what to initialize is complex. We calculate the offset
+            // and size to initialize without reusing variables.
+            // For a single page, we clear everything after the header.
+            // For multiple pages, we only clear the last page.
+            const auto init_offset = (num == 1) ? PAGEHDRSZ : total_alloc_size - page_size;
+
+            const auto init_size = (num == 1) ? page_size - PAGEHDRSZ : page_size;
+
+            // Use reinterpret_cast for low-level, type-punned pointer manipulation.
+            memset(reinterpret_cast<char*>(new_page) + init_offset, 0, init_size);
+
+            // This field is only set during initialization.
+            new_page->mp_pad = 0;
         }
     }
     else
     {
+        // Allocation failed; mark the transaction with an error.
         txn->mt_flags |= MDB_TXN_ERROR;
     }
-    return ret;
+
+    return new_page;
 }
 
 // Free a single page.
 // Saves single pages to a list, for future reuse.
 // (This is not used for multi-page overflow pages.)
-//
 void mdb_page_free(MDB_env* env, MDB_page* mp)
 {
     mp->mp_next = env->me_dpages;
@@ -94,24 +109,25 @@ void mdb_dpage_free(MDB_env* env, MDB_page* dp)
 //
 // If the page wasn't dirtied in this txn, just add it
 // to this txn's free list.
-//
 auto mdb_page_loose(MDB_cursor* mc, MDB_page* mp) -> int
 {
-    int loose = 0;
-    pgno_t pgno = mp->mp_pgno;
-    MDB_txn* txn = mc->mc_txn;
+    auto* const txn = mc->mc_txn;
+    const auto pgno = mp->mp_pgno;
+
+    bool is_loose_page = false;
 
     if (((mp->mp_flags & P_DIRTY) != 0) && mc->mc_dbi != FREE_DBI)
     {
         if (txn->mt_parent != nullptr)
         {
-            MDB_ID2* dl = txn->mt_u.dirty_list;
+            auto* const dl = txn->mt_u.dirty_list;
             /* If txn has a parent, make sure the page is in our
              * dirty list.
              */
             if (dl[0].mid != 0U)
             {
-                unsigned x = mdb_mid2l_search(dl, pgno);
+                // Rule: Declare 'x' close to first use. Use 'const' and 'auto'.
+                const auto x = mdb_mid2l_search(dl, pgno);
                 if (x <= dl[0].mid && dl[x].mid == pgno)
                 {
                     if (mp != dl[x].mptr)
@@ -121,17 +137,18 @@ auto mdb_page_loose(MDB_cursor* mc, MDB_page* mp) -> int
                         return MDB_PROBLEM;
                     }
                     /* ok, it's ours */
-                    loose = 1;
+                    is_loose_page = true;
                 }
             }
         }
         else
         {
             /* no parent txn, so it's just ours */
-            loose = 1;
+            is_loose_page = true;
         }
     }
-    if (loose != 0)
+
+    if (is_loose_page)
     {
         DPRINTF(("loosen db %d page %" Yu, DDBI(mc), mp->mp_pgno));
         NEXT_LOOSE_PAGE(mp) = txn->mt_loose_pgs;
@@ -141,7 +158,8 @@ auto mdb_page_loose(MDB_cursor* mc, MDB_page* mp) -> int
     }
     else
     {
-        int rc = mdb_midl_append(&txn->mt_free_pgs, pgno);
+        // Rule: Declare 'rc' in the narrowest possible scope. Use 'const' and 'auto'.
+        const auto rc = mdb_midl_append(&txn->mt_free_pgs, pgno);
         if (rc != 0)
             return rc;
     }
@@ -155,112 +173,105 @@ auto mdb_page_loose(MDB_cursor* mc, MDB_page* mp) -> int
 // P_DIRTY to set P_KEEP, P_DIRTY|P_KEEP to clear it.
 // all No shortcuts. Needed except after a full #mdb_page_flush().
 // 0 on success, non-zero on failure.
-//
 auto mdb_pages_xkeep(MDB_cursor* mc, unsigned pflags, int all) -> int
 {
     enum
     {
         Mask = P_SUBP | P_DIRTY | P_LOOSE | P_KEEP
     };
-    MDB_txn* txn = mc->mc_txn;
-    MDB_cursor* m0 = mc;
-    int rc{MDB_SUCCESS};
-    MDB_cursor* m3{nullptr};
-    MDB_xcursor* mx{nullptr};
-    MDB_page* dp{nullptr};
-    MDB_page* mp{nullptr};
-    MDB_node* leaf{nullptr};
-    unsigned i{};
-    unsigned j{};
-    int level{};
+    const auto* const txn = mc->mc_txn;
+    auto* const m0 = mc; // Keep the starting cursor
 
-    /* Mark pages seen by cursors: First m0, then tracked cursors */
-    for (i = txn->mt_numdbs;;)
+    unsigned i = txn->mt_numdbs;
+    while (true)
     {
         if ((mc->mc_flags & C_INITIALIZED) != 0U)
         {
-            for (m3 = mc;; m3 = &mx->mx_cursor)
+            for (auto* m3 = mc; m3 != nullptr;)
             {
-                mp = nullptr;
-                for (j = 0; j < m3->mc_snum; j++)
+                MDB_page* mp{nullptr};
+                unsigned j{0};
+                for (unsigned j{0}; j < m3->mc_snum; j++)
                 {
                     mp = m3->mc_pg[j];
                     if ((mp->mp_flags & Mask) == pflags)
                         mp->mp_flags ^= P_KEEP;
                 }
-                mx = m3->mc_xcursor;
-                /* Proceed to mx if it is at a sub-database */
-                if ((mx == nullptr) || ((mx->mx_cursor.mc_flags & C_INITIALIZED) == 0U))
-                    break;
-                if ((mp == nullptr) || ((mp->mp_flags & P_LEAF) == 0))
-                    break;
-                leaf = NODEPTR(mp, m3->mc_ki[j - 1]);
+
+                // Check if we can and should proceed to a sub-cursor (xcursor).
+                auto* const mx = m3->mc_xcursor;
+                if (mx == nullptr || (mx->mx_cursor.mc_flags & C_INITIALIZED) == 0U)
+                    break; // No valid sub-cursor to follow.
+
+                if (mp == nullptr || (mp->mp_flags & P_LEAF) == 0)
+                    break; // Last page was not a leaf, cannot have a sub-db.
+
+                const auto* leaf = NODEPTR(mp, m3->mc_ki[j - 1]);
                 if ((leaf->mn_flags & F_SUBDATA) == 0)
-                    break;
+                    break; // Last node was not a sub-database entry.
+
+                // Descend to the sub-cursor.
+                m3 = &mx->mx_cursor;
             }
         }
+
         mc = mc->mc_next;
-        for (; (mc == nullptr) || mc == m0; mc = txn->mt_cursors[--i])
+
+        // If we've finished the linked list or looped back to the start,
+        // switch to iterating through the main transaction cursor array.
+        while (mc == nullptr || mc == m0)
+        {
             if (i == 0)
-                goto mark_done;
+                goto all_cursors_processed; // Exit the outer while-loop.
+            mc = txn->mt_cursors[--i];
+        }
     }
 
-mark_done:
+all_cursors_processed:
     if (all != 0)
     {
-        /* Mark dirty root pages */
-        for (i = 0; i < txn->mt_numdbs; i++)
+        // Mark dirty root pages
+        for (unsigned k = 0; k < txn->mt_numdbs; k++)
         {
-            if ((txn->mt_dbflags[i] & DB_DIRTY) != 0)
+            if ((txn->mt_dbflags[k] & DB_DIRTY) != 0)
             {
-                pgno_t pgno = txn->mt_dbs[i].md_root;
+                const auto pgno = txn->mt_dbs[k].md_root;
                 if (pgno == P_INVALID)
                     continue;
-                rc = mdb_page_get(m0, pgno, &dp, &level);
+
+                MDB_page* dp{nullptr};
+                int level{0};
+                int rc = mdb_page_get(m0, pgno, &dp, &level);
                 if (rc != MDB_SUCCESS)
-                    break;
+                    return rc;
+
                 if ((dp->mp_flags & Mask) == pflags && level <= 1)
                     dp->mp_flags ^= P_KEEP;
             }
         }
     }
 
-    return rc;
+    return MDB_SUCCESS;
 }
 
 // Flush (some) dirty pages to the map, after clearing their dirty flag.
 // txn the transaction that's being committed
 // keep number of initial pages in dirty_list to keep dirty.
 // 0 on success, non-zero on failure.
-//
 auto mdb_page_flush(MDB_txn* txn, int keep) -> int
 {
-    MDB_env* env = txn->mt_env;
-    MDB_ID2L dl = txn->mt_u.dirty_list;
-    unsigned psize = env->me_psize;
-    int pagecount = dl[0].mid;
+    auto* const env = txn->mt_env;
+    const auto dl = txn->mt_u.dirty_list;
+    const auto psize = env->me_psize;
+    const int pagecount = dl[0].mid;
     int rc{};
 #ifdef _WIN32
-    OVERLAPPED* ov = env->ov;
-    MDB_page* wdp{nullptr};
-    int async_i{0};
-    HANDLE fd = ((env->me_flags & MDB_NOSYNC) != 0U) ? env->me_fd : env->me_ovfd;
+    auto* ov = env->ov;
+    const HANDLE fd = ((env->me_flags & MDB_NOSYNC) != 0U) ? env->me_fd : env->me_ovfd;
 #else
-    struct iovec iov[MDB_COMMIT_PAGES];
-    HANDLE fd = env->me_fd;
+    const HANDLE fd = env->me_fd;
 #endif
-    ssize_t wsize{0};
-    ssize_t wres{};
-    MDB_OFF_T wpos{0};
-    MDB_OFF_T next_pos{1}; /* impossible pos, so pos != next_pos */
-    int n{0};
-    size_t size{0};
-    MDB_OFF_T pos{0};
-    pgno_t pgno{0};
-    MDB_page* dp{nullptr};
-
     const int initial_keep_count = keep;
-    int writemap_loop_index = initial_keep_count;
     int dirty_list_write_pos = initial_keep_count;
     int page_write_index = initial_keep_count;
 
@@ -273,17 +284,17 @@ auto mdb_page_flush(MDB_txn* txn, int keep) -> int
     )
     {
         /* Clear dirty flags */
-        while (++writemap_loop_index <= pagecount)
+        for (int i = initial_keep_count + 1; i <= pagecount; ++i)
         {
-            auto* dp = (MDB_page*)dl[writemap_loop_index].mptr;
+            auto* const page_to_clear = (MDB_page*)dl[i].mptr;
             /* Don't flush this page yet */
-            if ((dp->mp_flags & (P_LOOSE | P_KEEP)) != 0)
+            if ((page_to_clear->mp_flags & (P_LOOSE | P_KEEP)) != 0)
             {
-                dp->mp_flags &= ~P_KEEP;
-                dl[++dirty_list_write_pos] = dl[writemap_loop_index];
+                page_to_clear->mp_flags &= ~P_KEEP;
+                dl[++dirty_list_write_pos] = dl[i];
                 continue;
             }
-            dp->mp_flags &= ~P_DIRTY;
+            page_to_clear->mp_flags &= ~P_DIRTY;
         }
         goto done;
     }
@@ -292,196 +303,211 @@ auto mdb_page_flush(MDB_txn* txn, int keep) -> int
     if (pagecount - keep >= env->ovs)
     {
         /* ran out of room in ov array, and re-malloc, copy handles and free previous */
-        int ovs = (pagecount - keep) * 1.5; /* provide extra padding to reduce number of re-allocations */
-        int new_size = ovs * sizeof(OVERLAPPED);
-        ov = (OVERLAPPED*)malloc(new_size);
-        if (ov == nullptr)
+        const int new_ovs_count = (pagecount - keep) * 1.5; /* provide extra padding to reduce number of re-allocations */
+        const auto new_size = new_ovs_count * sizeof(OVERLAPPED);
+        auto* const new_ov = (OVERLAPPED*)malloc(new_size);
+        if (new_ov == nullptr)
             return ENOMEM;
-        int previous_size = env->ovs * sizeof(OVERLAPPED);
-        memcpy(ov, env->ov, previous_size); /* Copy previous OVERLAPPED data to retain event handles */
+        const auto previous_size = env->ovs * sizeof(OVERLAPPED);
+        memcpy(new_ov, env->ov, previous_size); /* Copy previous OVERLAPPED data to retain event handles */
         /* And clear rest of memory */
-        memset(&ov[env->ovs], 0, new_size - previous_size);
+        memset(&new_ov[env->ovs], 0, new_size - previous_size);
         if (env->ovs > 0)
         {
             free(env->ov); /* release previous allocation */
         }
 
-        env->ov = ov;
-        env->ovs = ovs;
+        env->ov = new_ov;
+        env->ovs = new_ovs_count;
+        ov = new_ov;
     }
 #endif
 
     /* Write the pages */
-    for (;;)
     {
-        if (++page_write_index <= pagecount)
+#ifdef _WIN32
+        int async_i{0};
+        MDB_page* wdp{nullptr};
+#else
+        struct iovec iov[MDB_COMMIT_PAGES];
+#endif
+        ssize_t wsize{0};
+        MDB_OFF_T wpos{0};
+        MDB_OFF_T next_pos{1}; /* impossible pos, so pos != next_pos */
+        int n{0};
+
+        for (;;)
         {
-            dp = (MDB_page*)dl[page_write_index].mptr;
-            /* Don't flush this page yet */
-            if ((dp->mp_flags & (P_LOOSE | P_KEEP)) != 0)
+            MDB_page* dp{nullptr};
+            pgno_t pgno{0};
+            MDB_OFF_T pos{0};
+            size_t size{0};
+
+            if (++page_write_index <= pagecount)
             {
-                dp->mp_flags &= ~P_KEEP;
-                dl[page_write_index].mid = 0;
-                continue;
+                dp = (MDB_page*)dl[page_write_index].mptr;
+                /* Don't flush this page yet */
+                if ((dp->mp_flags & (P_LOOSE | P_KEEP)) != 0)
+                {
+                    dp->mp_flags &= ~P_KEEP;
+                    dl[page_write_index].mid = 0;
+                    continue;
+                }
+                pgno = dl[page_write_index].mid;
+                /* clear dirty flag */
+                dp->mp_flags &= ~P_DIRTY;
+                pos = pgno * psize;
+                size = psize;
+                if (IS_OVERFLOW(dp))
+                    size *= dp->mp_pages;
             }
-            pgno = dl[page_write_index].mid;
-            /* clear dirty flag */
-            dp->mp_flags &= ~P_DIRTY;
-            pos = pgno * psize;
-            size = psize;
-            if (IS_OVERFLOW(dp))
-                size *= dp->mp_pages;
-        }
-        /* Write up to MDB_COMMIT_PAGES dirty pages at a time. */
-        if (pos != next_pos || n == MDB_COMMIT_PAGES ||
-            wsize + size > MAX_WRITE
+            /* Write up to MDB_COMMIT_PAGES dirty pages at a time. */
+            if (pos != next_pos || n == MDB_COMMIT_PAGES ||
+                wsize + size > MAX_WRITE
 #ifdef _WIN32
-            /* If writemap is enabled, consecutive page positions infer
-             * contiguous (mapped) memory.
-             * Otherwise force write pages one at a time.
-             * Windows actually supports scatter/gather I/O, but only on
-             * unbuffered file handles. Since we're relying on the OS page
-             * cache for all our data, that's self-defeating. So we just
-             * write pages one at a time. We use the ov structure to set
-             * the write offset, to at least save the overhead of a Seek
-             * system call.
-             */
-            || ((env->me_flags & MDB_WRITEMAP) == 0U)
+                /* If writemap is enabled, consecutive page positions infer
+                 * contiguous (mapped) memory.
+                 * Otherwise force write pages one at a time.
+                 * Windows actually supports scatter/gather I/O, but only on
+                 * unbuffered file handles. Since we're relying on the OS page
+                 * cache for all our data, that's self-defeating. So we just
+                 * write pages one at a time. We use the ov structure to set
+                 * the write offset, to at least save the overhead of a Seek
+                 * system call.
+                 */
+                || ((env->me_flags & MDB_WRITEMAP) == 0U)
 #endif
-        )
-        {
-            if (n != 0)
+            )
             {
-            retry_write:
-                /* Write previous page(s) */
-                DPRINTF(("committing page %" Z "u", pgno));
+                if (n != 0)
+                {
+                retry_write:
+                    /* Write previous page(s) */
+                    DPRINTF(("committing page %" Z "u", pgno));
 #ifdef _WIN32
-                OVERLAPPED* this_ov = &ov[async_i];
-                /* Clear status, and keep hEvent, we reuse that */
-                this_ov->Internal = 0;
-                this_ov->Offset = wpos & 0xffffffff;
-                this_ov->OffsetHigh = wpos >> 16 >> 16;
-                if (!F_ISSET(env->me_flags, MDB_NOSYNC) && (this_ov->hEvent == nullptr))
-                {
-                    HANDLE event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-                    if (event == nullptr)
+                    OVERLAPPED* this_ov = &ov[async_i];
+                    /* Clear status, and keep hEvent, we reuse that */
+                    this_ov->Internal = 0;
+                    this_ov->Offset = wpos & 0xffffffff;
+                    this_ov->OffsetHigh = wpos >> 16 >> 16;
+                    if (!F_ISSET(env->me_flags, MDB_NOSYNC) && (this_ov->hEvent == nullptr))
+                    {
+                        const HANDLE event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+                        if (event == nullptr)
+                        {
+                            rc = ErrCode();
+                            DPRINTF(("CreateEvent: %s", strerror(rc)));
+                            return rc;
+                        }
+                        this_ov->hEvent = event;
+                    }
+                    if (WriteFile(fd, wdp, wsize, nullptr, this_ov) == 0)
                     {
                         rc = ErrCode();
-                        DPRINTF(("CreateEvent: %s", strerror(rc)));
-                        return rc;
+                        if (rc != ERROR_IO_PENDING)
+                        {
+                            DPRINTF(("WriteFile: %d", rc));
+                            return rc;
+                        }
                     }
-                    this_ov->hEvent = event;
-                }
-                if (WriteFile(fd, wdp, wsize, nullptr, this_ov) == 0)
-                {
-                    rc = ErrCode();
-                    if (rc != ERROR_IO_PENDING)
-                    {
-                        DPRINTF(("WriteFile: %d", rc));
-                        return rc;
-                    }
-                }
-                async_i++;
+                    async_i++;
 #else
-#ifdef MDB_USE_PWRITEV
-                wres = pwritev(fd, iov, n, wpos);
-#else
-                if (n == 1)
-                {
-                    wres = pwrite(fd, iov[0].iov_base, wsize, wpos);
-                }
-                else
-                {
-                retry_seek:
-                    if (lseek(fd, wpos, SEEK_SET) == -1)
+                    ssize_t wres;
+                    if (n == 1)
                     {
-                        rc = ErrCode();
-                        if (rc == EINTR)
-                            goto retry_seek;
-                        DPRINTF(("lseek: %s", strerror(rc)));
-                        return rc;
-                    }
-                    wres = writev(fd, iov, n);
-                }
-#endif
-                if (wres != wsize)
-                {
-                    if (wres < 0)
-                    {
-                        rc = ErrCode();
-                        if (rc == EINTR)
-                            goto retry_write;
-                        DPRINTF(("Write error: %s", strerror(rc)));
+                        wres = pwrite(fd, iov[0].iov_base, wsize, wpos);
                     }
                     else
                     {
-                        rc = EIO; /* TODO: Use which error code? */
-                        DPUTS("short write, filesystem full?");
+                    retry_seek:
+                        if (lseek(fd, wpos, SEEK_SET) == -1)
+                        {
+                            rc = ErrCode();
+                            if (rc == EINTR)
+                                goto retry_seek;
+                            DPRINTF(("lseek: %s", strerror(rc)));
+                            return rc;
+                        }
+                        wres = writev(fd, iov, n);
                     }
-                    return rc;
+                    if (wres != wsize)
+                    {
+                        if (wres < 0)
+                        {
+                            rc = ErrCode();
+                            if (rc == EINTR)
+                                goto retry_write;
+                            DPRINTF(("Write error: %s", strerror(rc)));
+                        }
+                        else
+                        {
+                            rc = EIO; /* TODO: Use which error code? */
+                            DPUTS("short write, filesystem full?");
+                        }
+                        return rc;
+                    }
+#endif /* _WIN32 */
+                    n = 0;
                 }
-#endif /* _WIN32 */
-                n = 0;
-            }
-            if (page_write_index > pagecount)
-                break;
-            wpos = pos;
-            wsize = 0;
+                if (page_write_index > pagecount)
+                    break;
+                wpos = pos;
+                wsize = 0;
 #ifdef _WIN32
-            wdp = dp;
-        }
+                wdp = dp;
+            }
 #else
-        }
-        iov[n].iov_len = size;
-        iov[n].iov_base = (char*)dp;
+            }
+            iov[n].iov_len = size;
+            iov[n].iov_base = (char*)dp;
 #endif /* _WIN32 */
-        DPRINTF(("committing page %" Yu, pgno));
-        next_pos = pos + size;
-        wsize += size;
-        n++;
-    }
+            DPRINTF(("committing page %" Yu, pgno));
+            next_pos = pos + size;
+            wsize += size;
+            n++;
+        }
 
 #ifdef _WIN32
-    if (!F_ISSET(env->me_flags, MDB_NOSYNC))
-    {
-        /* Now wait for all the asynchronous/overlapped sync/write-through writes to complete.
-         * We start with the last one so that all the others should already be complete and
-         * we reduce thread suspend/resuming (in practice, typically about 99.5% of writes are
-         * done after the last write is done) */
-        rc = 0;
-        while (--async_i >= 0)
+        if (!F_ISSET(env->me_flags, MDB_NOSYNC))
         {
-            if (ov[async_i].hEvent != nullptr)
+            /* Now wait for all the asynchronous/overlapped sync/write-through writes to complete.
+             * We start with the last one so that all the others should already be complete and
+             * we reduce thread suspend/resuming (in practice, typically about 99.5% of writes are
+             * done after the last write is done) */
+            rc = 0;
+            while (--async_i >= 0)
             {
-                DWORD temp_wres;
-                if (GetOverlappedResult(fd, &ov[async_i], &temp_wres, TRUE) == 0)
+                if (ov[async_i].hEvent != nullptr)
                 {
-                    rc = ErrCode(); /* Continue on so that all the event signals are reset */
+                    DWORD bytes_written;
+                    if (GetOverlappedResult(fd, &ov[async_i], &bytes_written, TRUE) == 0)
+                    {
+                        rc = ErrCode(); /* Continue on so that all the event signals are reset */
+                    }
+                    [[maybe_unused]] const ssize_t wres = bytes_written;
                 }
-                wres = temp_wres;
+            }
+            if (rc != 0)
+            { /* any error on GetOverlappedResult, exit now */
+                return rc;
             }
         }
-        if (rc != 0)
-        { /* any error on GetOverlappedResult, exit now */
-            return rc;
-        }
-    }
 #endif /* _WIN32 */
+    }
 
     if ((env->me_flags & MDB_WRITEMAP) == 0U)
     {
-        int cleanup_loop_index = initial_keep_count;
-        for (; ++cleanup_loop_index <= pagecount;)
+        for (int i = initial_keep_count + 1; i <= pagecount; ++i)
         {
-            dp = (MDB_page*)dl[cleanup_loop_index].mptr;
+            auto* const page_to_cleanup = (MDB_page*)dl[i].mptr;
             /* This is a page we skipped above */
-            if (dl[cleanup_loop_index].mid == 0U)
+            if (dl[i].mid == 0U)
             {
-                dl[++dirty_list_write_pos] = dl[cleanup_loop_index];
-                dl[dirty_list_write_pos].mid = dp->mp_pgno;
+                dl[++dirty_list_write_pos] = dl[i];
+                dl[dirty_list_write_pos].mid = page_to_cleanup->mp_pgno;
                 continue;
             }
-            mdb_dpage_free(env, dp);
+            mdb_dpage_free(env, page_to_cleanup);
         }
     }
 
@@ -693,241 +719,272 @@ void mdb_page_dirty(MDB_txn* txn, MDB_page* mp)
 // mp Address of the allocated page(s). Requests for multiple pages
 // will always be satisfied by a single contiguous chunk of memory.
 // 0 on success, non-zero on failure.
-//
 auto mdb_page_alloc(MDB_cursor* mc, int num, MDB_page** mp) -> int
 {
-#ifdef MDB_PARANOID  // Seems like we can ignore this now
-    // Get at most <Max_retries> more freeDB records once me_pghead
-    // has enough pages.  If not enough, use new pages from the map.
-    // If <Paranoid> and mc is updating the freeDB, only get new
-    // records if me_pghead is empty. Then the freelist cannot play
-    // catch-up with itself by growing while trying to save it.
-    enum
-    {
-        Paranoid = 1,
-        Max_retries = 500
-    };
+#ifdef MDB_PARANOID
+    constexpr bool is_paranoid = true;
 #else
-    enum
-    {
-        Paranoid = 0,
-        Max_retries = INT_MAX /*infinite*/
-    };
+    constexpr bool is_paranoid = false;
 #endif
-    int initial_rc{};
-    int retry = num * 60;
-    MDB_txn* txn = mc->mc_txn;
-    MDB_env* env = txn->mt_env;
-    pgno_t* mop = env->me_pghead;
-    unsigned mop_len = (mop != nullptr) ? mop[0] : 0;
-    unsigned n2 = num - 1;
-    pgno_t pgno{};
-    unsigned contiguous_search_index{};
-    unsigned page_move_index{};
-    MDB_page* np{nullptr};
-    txnid_t oldest{0};
-    txnid_t last{};
-    MDB_cursor_op op{};
-    MDB_cursor m2{};
-    int found_old{0};
 
-    /* If there are any loose pages, just use them */
+    const auto txn = mc->mc_txn;
+    const auto env = txn->mt_env;
+
+    // Helper lambda to centralize error handling logic.
+    auto set_error_and_return = [&](int error_code)
+    {
+        txn->mt_flags |= MDB_TXN_ERROR;
+        return error_code;
+    };
+
+    /* If there are any loose pages, just use them (for single-page requests). */
     if (num == 1 && (txn->mt_loose_pgs != nullptr))
     {
-        np = txn->mt_loose_pgs;
-        txn->mt_loose_pgs = NEXT_LOOSE_PAGE(np);
+        MDB_page* loose_page = txn->mt_loose_pgs;
+        txn->mt_loose_pgs = NEXT_LOOSE_PAGE(loose_page);
         txn->mt_loose_count--;
-        DPRINTF(("db %d use loose page %" Yu, DDBI(mc), np->mp_pgno));
-        *mp = np;
+        DPRINTF(("db %d use loose page %" Yu, DDBI(mc), loose_page->mp_pgno));
+        *mp = loose_page;
         return MDB_SUCCESS;
     }
 
     *mp = nullptr;
 
-    /* If our dirty list is already full, we can't do anything */
+    /* If our dirty list is already full, we can't allocate more pages. */
     if (txn->mt_dirty_room == 0)
     {
-        initial_rc = MDB_TXN_FULL;
-        goto fail;
+        return set_error_and_return(MDB_TXN_FULL);
     }
 
-    for (op = MDB_FIRST;; op = MDB_NEXT)
+    pgno_t found_freelist_pgno = 0;
+    unsigned freelist_idx = 0;
+
+    /*
+     * The main allocation logic:
+     * 1. Try to find a contiguous block of pages in the in-memory freelist (me_pghead).
+     * 2. If not found, fetch records from the on-disk freeDB, merge them into the
+     *    in-memory freelist, and retry step 1.
+     * 3. This continues until a block is found, retries are exhausted, or no more
+     *    records can be fetched from the freeDB.
+     * 4. If no suitable block is found in the freelist, allocate new pages from
+     *    the end of the database map.
+     */
     {
-        MDB_val key;
-        MDB_val data;
-        MDB_node* leaf;
-        pgno_t* idl;
+        MDB_cursor m2{};
+        bool free_db_cursor_inited = false;
+        txnid_t last_freed_txn_id = 0;
+        txnid_t oldest_reader_txn_id = 0;
+        bool oldest_reader_found = false;
+        auto next_op = MDB_FIRST;
+        int retry_count = num * 60;
 
-        /* Seek a big enough contiguous page range. Prefer
-         * pages at the tail, just truncating the list.
-         */
-        if (mop_len > n2)
+        while (true)
         {
-            contiguous_search_index = mop_len;
-            do
-            {
-                pgno = mop[contiguous_search_index];
-                if (mop[contiguous_search_index - n2] == pgno + n2)
-                    goto search_done;
-            } while (--contiguous_search_index > n2);
-            if (--retry < 0)
-                break;
-        }
+            pgno_t* current_mop = env->me_pghead;
+            const unsigned current_mop_len = (current_mop != nullptr) ? current_mop[0] : 0;
+            const unsigned contiguous_pages_needed = num - 1;
 
-        if (op == MDB_FIRST)
-        { /* 1st iteration */
-            /* Prepare to fetch more and coalesce */
-            last = env->me_pglast;
-            oldest = env->me_pgoldest;
-            mdb_cursor_init(&m2, txn, FREE_DBI, nullptr);
-            if (last != 0U)
+            if (current_mop_len > contiguous_pages_needed)
             {
-                op = MDB_SET_RANGE;
-                key.mv_data = &last; /* will look up last+1 */
-                key.mv_size = sizeof(last);
+                // Search for a contiguous block, preferring pages at the tail.
+                for (unsigned i = current_mop_len; i > contiguous_pages_needed; --i)
+                {
+                    if (current_mop[i - contiguous_pages_needed] == current_mop[i] + contiguous_pages_needed)
+                    {
+                        found_freelist_pgno = current_mop[i];
+                        freelist_idx = i;
+                        goto search_complete;  // Found a block, exit the loop.
+                    }
+                }
             }
-            if ((Paranoid != 0) && mc->mc_dbi == FREE_DBI)
-                retry = -1;
-        }
-        if ((Paranoid != 0) && retry < 0 && (mop_len != 0U))
-            break;
 
-        last++;
-        /* Do not fetch more if the record will be too recent */
-        if (oldest <= last)
-        {
-            if (found_old == 0)
+            if (--retry_count < 0)
             {
-                oldest = mdb_find_oldest(txn);
-                env->me_pgoldest = oldest;
-                found_old = 1;
+                break;  // Retries exhausted.
             }
-            if (oldest <= last)
-                break;
-        }
-        const int cursor_get_result = mdb_cursor_get(&m2, &key, nullptr, op);
-        if (cursor_get_result != 0)
-        {
-            if (cursor_get_result == MDB_NOTFOUND)
-                break;
-            initial_rc = cursor_get_result;
-            goto fail;
-        }
-        last = *(txnid_t*)key.mv_data;
-        if (oldest <= last)
-        {
-            if (found_old == 0)
-            {
-                oldest = mdb_find_oldest(txn);
-                env->me_pgoldest = oldest;
-                found_old = 1;
-            }
-            if (oldest <= last)
-                break;
-        }
-        np = m2.mc_pg[m2.mc_top];
-        leaf = NODEPTR(np, m2.mc_ki[m2.mc_top]);
-        const int node_read_result = mdb_node_read(&m2, leaf, &data);
-        if (node_read_result != MDB_SUCCESS)
-        {
-            initial_rc = node_read_result;
-            goto fail;
-        }
 
-        idl = (MDB_ID*)data.mv_data;
-        const unsigned idl_count = idl[0];
-        if (mop == nullptr)
-        {
-            mop = mdb_midl_alloc(idl_count);
-            env->me_pghead = mop;
-            if (mop == nullptr)
+            // --- Logic to fetch more pages from the freeDB ---
+            if (!free_db_cursor_inited)
             {
-                initial_rc = ENOMEM;
-                goto fail;
+                last_freed_txn_id = env->me_pglast;
+                oldest_reader_txn_id = env->me_pgoldest;
+                mdb_cursor_init(&m2, txn, FREE_DBI, nullptr);
+                if (last_freed_txn_id != 0U)
+                {
+                    next_op = MDB_SET_RANGE;
+                }
+                if (is_paranoid && mc->mc_dbi == FREE_DBI)
+                {
+                    retry_count = -1;  // Force break on next iteration if list is not empty.
+                }
+                free_db_cursor_inited = true;
             }
+
+            if (is_paranoid && retry_count < 0 && (current_mop_len != 0U))
+            {
+                break;
+            }
+
+            last_freed_txn_id++;
+
+            // Do not fetch more if the record is too recent for this transaction to see.
+            if (oldest_reader_txn_id <= last_freed_txn_id)
+            {
+                if (!oldest_reader_found)
+                {
+                    oldest_reader_txn_id = mdb_find_oldest(txn);
+                    env->me_pgoldest = oldest_reader_txn_id;
+                    oldest_reader_found = true;
+                }
+                if (oldest_reader_txn_id <= last_freed_txn_id)
+                {
+                    break;  // Still too recent, can't fetch more.
+                }
+            }
+
+            MDB_val key{};
+            if (next_op == MDB_SET_RANGE)
+            {
+                key.mv_data = &last_freed_txn_id;
+                key.mv_size = sizeof(last_freed_txn_id);
+            }
+            const int get_rc = mdb_cursor_get(&m2, &key, nullptr, next_op);
+            next_op = MDB_NEXT;  // Subsequent gets will be MDB_NEXT.
+
+            if (get_rc != MDB_SUCCESS)
+            {
+                if (get_rc == MDB_NOTFOUND)
+                    break;  // No more records in freeDB.
+                return set_error_and_return(get_rc);
+            }
+
+            const auto txn_id_from_key = *static_cast<txnid_t*>(key.mv_data);
+            if (oldest_reader_txn_id <= txn_id_from_key)
+            {
+                if (!oldest_reader_found)
+                {
+                    oldest_reader_txn_id = mdb_find_oldest(txn);
+                    env->me_pgoldest = oldest_reader_txn_id;
+                    oldest_reader_found = true;
+                }
+                if (oldest_reader_txn_id <= txn_id_from_key)
+                {
+                    break;
+                }
+            }
+
+            auto* page_in_cursor = m2.mc_pg[m2.mc_top];
+            auto* leaf_node = NODEPTR(page_in_cursor, m2.mc_ki[m2.mc_top]);
+            MDB_val data;
+            const int node_read_rc = mdb_node_read(&m2, leaf_node, &data);
+            if (node_read_rc != MDB_SUCCESS)
+            {
+                return set_error_and_return(node_read_rc);
+            }
+
+            auto* idl = static_cast<MDB_ID*>(data.mv_data);
+            const unsigned idl_count = idl[0];
+
+            // Ensure the in-memory freelist (mop) has enough space.
+            if (env->me_pghead == nullptr)
+            {
+                auto* new_mop = mdb_midl_alloc(idl_count);
+                if (new_mop == nullptr)
+                    return set_error_and_return(ENOMEM);
+                env->me_pghead = new_mop;
+            }
+            else
+            {
+                const int midl_need_rc = mdb_midl_need(&env->me_pghead, idl_count);
+                if (midl_need_rc != 0)
+                    return set_error_and_return(midl_need_rc);
+            }
+
+            env->me_pglast = txn_id_from_key;
+            mdb_midl_xmerge(env->me_pghead, idl);
+        }
+    }
+search_complete:
+
+    pgno_t final_pgno;
+    MDB_page* result_page;
+
+    if (found_freelist_pgno != 0)
+    {
+        // --- A suitable block was found in the freelist ---
+        final_pgno = found_freelist_pgno;
+
+        if ((env->me_flags & MDB_WRITEMAP) != 0U)
+        {
+            result_page = reinterpret_cast<MDB_page*>(static_cast<char*>(env->me_map) + env->me_psize * final_pgno);
         }
         else
         {
-            const int midl_need_result = mdb_midl_need(&env->me_pghead, idl_count);
-            if (midl_need_result != 0)
-            {
-                initial_rc = midl_need_result;
-                goto fail;
-            }
-            mop = env->me_pghead;
+            result_page = mdb_page_malloc(txn, num);
+            if (result_page == nullptr)
+                return set_error_and_return(ENOMEM);
         }
-        env->me_pglast = last;
-#if (MDB_DEBUG) > 1
-        DPRINTF(("IDL read txn %" Yu " root %" Yu " num %u", last, txn->mt_dbs[FREE_DBI].md_root, idl_count));
-        for (unsigned debug_index = idl_count; debug_index; debug_index--)
-            DPRINTF(("IDL %" Yu, idl[debug_index]));
-#endif
-        /* Merge in descending sorted order */
-        mdb_midl_xmerge(mop, idl);
-        mop_len = mop[0];
-    }
 
-    /* Use new pages from the map when nothing suitable in the freeDB */
-    contiguous_search_index = 0;
-    pgno = txn->mt_next_pgno;
-    if (pgno + num >= env->me_maxpg)
-    {
-        DPUTS("DB size maxed out");
-        initial_rc = MDB_MAP_FULL;
-        goto fail;
+        // Remove the allocated pages from the in-memory freelist.
+        pgno_t* mop = env->me_pghead;
+        const unsigned old_mop_len = mop[0];
+        const unsigned new_mop_len = old_mop_len - num;
+
+        pgno_t* dest = &mop[freelist_idx - num + 1];
+        const pgno_t* src = &mop[freelist_idx + 1];
+        const size_t num_to_move = old_mop_len - freelist_idx;
+
+        if (num_to_move > 0)
+        {
+            memmove(dest, src, num_to_move * sizeof(pgno_t));
+        }
+        mop[0] = new_mop_len;
     }
+    else
+    {
+        // --- No block found, allocate new pages from the end of the map ---
+        const pgno_t new_pgno = txn->mt_next_pgno;
+
+        if (new_pgno + num > env->me_maxpg)
+        {
+            DPUTS("DB size maxed out");
+            return set_error_and_return(MDB_MAP_FULL);
+        }
+        final_pgno = new_pgno;
+
 #if defined(_WIN32)
-    if ((env->me_flags & MDB_RDONLY) == 0U)
-    {
-        void* p;
-        p = (MDB_page*)(env->me_map + (env->me_psize * pgno));
-        p = VirtualAlloc(p,
-                         static_cast<SIZE_T>(env->me_psize) * num,
-                         MEM_COMMIT,
-                         ((env->me_flags & MDB_WRITEMAP) != 0U) ? PAGE_READWRITE : PAGE_READONLY);
-        if (p == nullptr)
+        if ((env->me_flags & MDB_RDONLY) == 0U)
         {
-            DPUTS("VirtualAlloc failed");
-            initial_rc = ErrCode();
-            goto fail;
+            void* p = VirtualAlloc(static_cast<char*>(env->me_map) + env->me_psize * new_pgno,
+                                   static_cast<SIZE_T>(env->me_psize) * num,
+                                   MEM_COMMIT,
+                                   ((env->me_flags & MDB_WRITEMAP) != 0U) ? PAGE_READWRITE : PAGE_READONLY);
+            if (p == nullptr)
+            {
+                DPUTS("VirtualAlloc failed");
+                return set_error_and_return(ErrCode());
+            }
         }
-    }
 #endif
-
-search_done:
-    if ((env->me_flags & MDB_WRITEMAP) != 0U)
-    {
-        np = (MDB_page*)(env->me_map + (env->me_psize * pgno));
-    }
-    else
-    {
-        np = mdb_page_malloc(txn, num);
-        if (np == nullptr)
+        if ((env->me_flags & MDB_WRITEMAP) != 0U)
         {
-            initial_rc = ENOMEM;
-            goto fail;
+            result_page = reinterpret_cast<MDB_page*>(static_cast<char*>(env->me_map) + env->me_psize * final_pgno);
         }
+        else
+        {
+            result_page = mdb_page_malloc(txn, num);
+            if (result_page == nullptr)
+                return set_error_and_return(ENOMEM);
+        }
+
+        txn->mt_next_pgno = new_pgno + num;
     }
-    if (contiguous_search_index != 0U)
-    {
-        mop[0] = mop_len -= num;
-        /* Move any stragglers down */
-        for (page_move_index = contiguous_search_index - num; page_move_index < mop_len;)
-            mop[++page_move_index] = mop[++contiguous_search_index];
-    }
-    else
-    {
-        txn->mt_next_pgno = pgno + num;
-    }
-    np->mp_pgno = pgno;
-    mdb_page_dirty(txn, np);
-    *mp = np;
+
+    result_page->mp_pgno = final_pgno;
+    mdb_page_dirty(txn, result_page);
+    *mp = result_page;
 
     return MDB_SUCCESS;
-
-fail:
-    txn->mt_flags |= MDB_TXN_ERROR;
-    return initial_rc;
 }
 
 // Copy the used portions of a non-overflow page.
