@@ -3,10 +3,10 @@
 #ifndef MDB_BTREE_H
 #define MDB_BTREE_H
 
-#include "mdb_internal.h"
-#include "mdb_page_io.h"
 #include "mdb_cursor.h"
+#include "mdb_internal.h"
 #include "mdb_page.h"
+#include "mdb_page_io.h"
 
 // Page search flags
 enum
@@ -163,5 +163,4 @@ auto mdb_branch_size(MDB_env* env, MDB_val* key) -> size_t;
 //
 void mdb_page_copy(MDB_page* dst, MDB_page* src, unsigned int psize);
 
-
-#endif // MDB_BTREE_H
+#endif  // MDB_BTREE_H

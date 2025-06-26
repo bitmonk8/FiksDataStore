@@ -66,8 +66,8 @@ struct MDB_page2
 #define P_META 0x08      // meta page
 #define P_DIRTY 0x10     // dirty page
 #define P_SUBP 0x02
-#define P_LOOSE 0x4000   // page was dirtied then freed, can be reused
-#define P_KEEP 0x8000    // leave this page alone during spill
+#define P_LOOSE 0x4000  // page was dirtied then freed, can be reused
+#define P_KEEP 0x8000   // leave this page alone during spill
 
 enum
 {

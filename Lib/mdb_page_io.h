@@ -1,9 +1,9 @@
 #pragma once
 
 #include "mdb_internal.h"
+#include "mdb_page.h"
 #include "mdb_util.h"
 #include "midl.h"
-#include "mdb_page.h"
 
 // Forward declarations to avoid circular dependencies.
 struct MDB_cursor;

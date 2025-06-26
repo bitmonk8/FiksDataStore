@@ -41,7 +41,7 @@ struct MDB_cursor
 // Read-only cursor into the txn's original snapshot in the map.
 // Set for read-only txns. Only implements code which is necessary for this.
 #define C_ORIG_RDONLY MDB_TXN_RDONLY
-    unsigned int mc_flags;          // mdb_cursor
+    unsigned int mc_flags;                      // mdb_cursor
     std::array<MDB_page*, CURSOR_STACK> mc_pg;  // stack of pushed pages
     std::array<indx_t, CURSOR_STACK> mc_ki;     // stack of page indices
     // Extended cursor for duplicate data (removed but kept for compatibility)
