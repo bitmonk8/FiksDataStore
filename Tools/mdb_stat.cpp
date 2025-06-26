@@ -202,11 +202,11 @@ auto main(int argc, char* argv[]) -> int
 
     if (freinfo != 0)
     {
-        MDB_cursor* cursor;
-        MDB_val key;
-        MDB_val data;
+        MDB_cursor* cursor = nullptr;
+        MDB_val key{};
+        MDB_val data{};
         mdb_size_t pages = 0;
-        mdb_size_t* iptr;
+        mdb_size_t* iptr = nullptr;
 
         printf("Freelist Status\n");
         dbi = 0;
@@ -223,7 +223,7 @@ auto main(int argc, char* argv[]) -> int
             goto txn_abort;
         }
         prstat(&mst);
-        while ((rc = mdb_cursor_get(cursor, &key, &data, MDB_NEXT)) == 0)
+        while (mdb_cursor_get(cursor, &key, &data, MDB_NEXT) == 0)
         {
             iptr = (mdb_size_t*)data.mv_data;
             const mdb_size_t entry_page_count = *iptr;
@@ -233,7 +233,7 @@ auto main(int argc, char* argv[]) -> int
             {
                 const char* sequence_status = "";
                 const mdb_size_t* const page_list = iptr + 1;
-                const ssize_t total_pages = entry_page_count;
+                const ssize_t total_pages = static_cast<ssize_t>(entry_page_count);
                 ssize_t max_span = 0;
 
                 // Check sequence validity and find max span
@@ -310,8 +310,8 @@ auto main(int argc, char* argv[]) -> int
 
     if (alldbs != 0)
     {
-        MDB_cursor* cursor;
-        MDB_val key;
+        MDB_cursor* cursor = nullptr;
+        MDB_val key{};
 
         rc = mdb_cursor_open(txn, dbi, &cursor);
         if (rc != 0)
@@ -321,8 +321,8 @@ auto main(int argc, char* argv[]) -> int
         }
         while ((rc = mdb_cursor_get(cursor, &key, nullptr, MDB_NEXT)) == 0)
         {
-            char* str;
-            MDB_dbi db2;
+            char* str = nullptr;
+            MDB_dbi db2 = 0;
             if (memchr(key.mv_data, '\0', key.mv_size) != nullptr)
                 continue;
             str = (char*)malloc(key.mv_size + 1);
