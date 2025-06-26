@@ -4,10 +4,11 @@
 #include "mdb_db.h"
 #include "mdb_debug.h"
 #include "mdb_env.h"
-#include "mdb_txn.h"
 #include "mdb_page_io.h"
+#include "mdb_txn.h"
 
 #include <string.h>
+
 #include <utility>
 
 static auto mdb_page_loose(MDB_cursor* mc, MDB_page* mp) -> int
@@ -31,7 +32,7 @@ static auto mdb_page_loose(MDB_cursor* mc, MDB_page* mp) -> int
                 if (x <= dl[0].mid && dl[x].mid == pgno)
                 {
                     if (mp != dl[x].mptr)
-                    { // bad cursor?
+                    {  // bad cursor?
                         mc->mc_flags &= ~(C_INITIALIZED | C_EOF);
                         txn->mt_flags |= MDB_TXN_ERROR;
                         return MDB_PROBLEM;
@@ -158,7 +159,7 @@ auto mdb_page_touch(MDB_cursor* mc) -> int
             if (x <= dl[0].mid && dl[x].mid == current_pgno)
             {
                 if (mp != dl[x].mptr)
-                { // bad cursor?
+                {  // bad cursor?
                     mc->mc_flags &= ~(C_INITIALIZED | C_EOF);
                     txn->mt_flags |= MDB_TXN_ERROR;
                     return MDB_PROBLEM;
@@ -476,7 +477,7 @@ auto mdb_node_add(MDB_cursor* mc, indx_t indx, MDB_val* key, MDB_val* data, pgno
     indx_t ofs;
     MDB_node* node;
     MDB_page* mp = mc->mc_pg[mc->mc_top];
-    MDB_page* ofp = nullptr; // overflow page
+    MDB_page* ofp = nullptr;  // overflow page
     void* ndata;
     DKBUF;
 
@@ -512,12 +513,12 @@ auto mdb_node_add(MDB_cursor* mc, indx_t indx, MDB_val* key, MDB_val* data, pgno
             DPRINTF(("data size is %" Z "u, node would be %" Z "u, put data on overflow page",
                      data->mv_size,
                      node_size + data->mv_size));
-           node_size = EVEN(node_size + sizeof(pgno_t));
-           if (node_size > room)
-               goto full;
-           rc = mdb_page_new(mc, P_OVERFLOW, ovpages, &ofp);
-           if (rc != 0)
-               return rc;
+            node_size = EVEN(node_size + sizeof(pgno_t));
+            if (node_size > room)
+                goto full;
+            rc = mdb_page_new(mc, P_OVERFLOW, ovpages, &ofp);
+            if (rc != 0)
+                return rc;
             DPRINTF(("allocated overflow page %" Yu, ofp->mp_pgno));
             flags |= F_BIGDATA;
             goto update;
@@ -920,7 +921,7 @@ auto mdb_page_merge(MDB_cursor* csrc, MDB_cursor* cdst) -> int
 
     DPRINTF(("merging page %" Yu " into %" Yu, psrc->mp_pgno, pdst->mp_pgno));
 
-    mdb_cassert(csrc, csrc->mc_snum > 1); // can't merge root page
+    mdb_cassert(csrc, csrc->mc_snum > 1);  // can't merge root page
     mdb_cassert(csrc, cdst->mc_snum > 1);
 
     // Mark dst as dirty.
@@ -1072,9 +1073,9 @@ auto mdb_rebalance(MDB_cursor* mc) -> int
 
     if (PAGEFILL(mc->mc_txn->mt_env, mc->mc_pg[mc->mc_top]) >= thresh && NUMKEYS(mc->mc_pg[mc->mc_top]) >= minkeys)
     {
-    #if MDB_DEBUG
+#if MDB_DEBUG
         DPRINTF(("no need to rebalance page %" Yu ", above fill threshold", mdb_dbg_pgno(mc->mc_pg[mc->mc_top])));
-    #endif
+#endif
         return MDB_SUCCESS;
     }
 

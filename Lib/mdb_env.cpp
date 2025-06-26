@@ -1,12 +1,12 @@
 #include "mdb_env.h"
 
+#include "mdb_btree.h"
 #include "mdb_compare.h"
 #include "mdb_cursor.h"
 #include "mdb_db.h"
 #include "mdb_debug.h"
 #include "mdb_hash.h"
 #include "mdb_lock.h"
-#include "mdb_btree.h" // Includes mdb_page_io.h, which includes mdb_page.h
 #include "mdb_txn.h"
 
 // The maximum size of a database page.
@@ -131,25 +131,25 @@ void NTAPI mdb_tls_callback(PVOID module, DWORD reason, PVOID ptr)
 // NTDLL.DLL at runtime, to avoid buildtime dependencies on any
 // NTDLL import libraries.
 using NtCreateSectionFunc = NTSTATUS(WINAPI*)(OUT PHANDLE sh,
-                                             IN ACCESS_MASK acc,
-                                             IN void* oa OPTIONAL,
-                                             IN PLARGE_INTEGER ms OPTIONAL,
-                                             IN ULONG pp,
-                                             IN ULONG aa,
-                                             IN HANDLE fh OPTIONAL);
+                                              IN ACCESS_MASK acc,
+                                              IN void* oa OPTIONAL,
+                                              IN PLARGE_INTEGER ms OPTIONAL,
+                                              IN ULONG pp,
+                                              IN ULONG aa,
+                                              IN HANDLE fh OPTIONAL);
 
 using SECTION_INHERIT = enum SECTION_INHERIT_ENUM { ViewShare = 1, ViewUnmap = 2 };
 
 using NtMapViewOfSectionFunc = NTSTATUS(WINAPI*)(IN HANDLE sh,
-                                                IN HANDLE ph,
-                                                IN OUT PVOID* addr,
-                                                IN ULONG_PTR zbits,
-                                                IN SIZE_T cs,
-                                                IN OUT PLARGE_INTEGER off OPTIONAL,
-                                                IN OUT PSIZE_T vs,
-                                                IN SECTION_INHERIT ih,
-                                                IN ULONG at,
-                                                IN ULONG pp);
+                                                 IN HANDLE ph,
+                                                 IN OUT PVOID* addr,
+                                                 IN ULONG_PTR zbits,
+                                                 IN SIZE_T cs,
+                                                 IN OUT PLARGE_INTEGER off OPTIONAL,
+                                                 IN OUT PSIZE_T vs,
+                                                 IN SECTION_INHERIT ih,
+                                                 IN ULONG at,
+                                                 IN ULONG pp);
 
 using NtCloseFunc = NTSTATUS(WINAPI*)(HANDLE h);
 

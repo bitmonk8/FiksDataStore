@@ -60,7 +60,7 @@ auto main(int argc, char* argv[]) -> int
     int* values;
     char sval[32] = "";
     struct stat st;
-st.st_dev = 0;
+    st.st_dev = 0;
     if (stat("./testdb2", &st) == -1)
         mkdir("./testdb2", 0700);
 

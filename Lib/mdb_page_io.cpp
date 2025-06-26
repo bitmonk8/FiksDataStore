@@ -1,15 +1,15 @@
 #include "mdb_page_io.h"
 
+#include "mdb_btree.h"
 #include "mdb_cursor.h"
 #include "mdb_db.h"
 #include "mdb_debug.h"
 #include "mdb_env.h"
 #include "mdb_txn.h"
-#include "mdb_btree.h"
 
-#include <utility>
-#include <cstring>
 #include <cstdlib>
+#include <cstring>
+#include <utility>
 
 // Page Management Operations
 
@@ -152,19 +152,18 @@ auto mdb_page_flush(MDB_txn* txn, int keep) -> int
     if (pagecount - keep >= env->ovs)
     {
         // ran out of room in ov array, and re-malloc, copy handles and free previous
-        const int new_ovs_count =
-            (pagecount - keep) * 1.5; // provide extra padding to reduce number of re-allocations
+        const int new_ovs_count = (pagecount - keep) * 1.5;  // provide extra padding to reduce number of re-allocations
         const auto new_size = new_ovs_count * sizeof(OVERLAPPED);
         auto* const new_ov = (OVERLAPPED*)malloc(new_size);
         if (new_ov == nullptr)
             return ENOMEM;
         const auto previous_size = env->ovs * sizeof(OVERLAPPED);
-        memcpy(new_ov, env->ov, previous_size); // Copy previous OVERLAPPED data to retain event handles
+        memcpy(new_ov, env->ov, previous_size);  // Copy previous OVERLAPPED data to retain event handles
         // And clear rest of memory
         memset(&new_ov[env->ovs], 0, new_size - previous_size);
         if (env->ovs > 0)
         {
-            free(env->ov); // release previous allocation
+            free(env->ov);  // release previous allocation
         }
 
         env->ov = new_ov;
@@ -290,7 +289,7 @@ auto mdb_page_flush(MDB_txn* txn, int keep) -> int
                         }
                         else
                         {
-                            rc = EIO; // TODO: Use which error code?
+                            rc = EIO;  // TODO: Use which error code?
                             DPUTS("short write, filesystem full?");
                         }
                         return rc;
@@ -331,17 +330,17 @@ auto mdb_page_flush(MDB_txn* txn, int keep) -> int
                     DWORD bytes_written;
                     if (GetOverlappedResult(fd, &ov[async_i], &bytes_written, TRUE) == 0)
                     {
-                        rc = ErrCode(); // Continue on so that all the event signals are reset
+                        rc = ErrCode();  // Continue on so that all the event signals are reset
                     }
                     [[maybe_unused]] const ssize_t wres = bytes_written;
                 }
             }
             if (rc != 0)
-            { // any error on GetOverlappedResult, exit now
+            {  // any error on GetOverlappedResult, exit now
                 return rc;
             }
         }
-#endif // _WIN32
+#endif  // _WIN32
     }
 
     if ((env->me_flags & MDB_WRITEMAP) == 0U)
@@ -796,7 +795,7 @@ auto mdb_page_alloc(MDB_cursor* mc, int num, MDB_page** mp) -> int
             auto* page_in_cursor = m2.mc_pg[m2.mc_top];
             auto* leaf_node = NODEPTR(page_in_cursor, m2.mc_ki[m2.mc_top]);
             MDB_val data;
-            extern auto mdb_node_read(MDB_cursor* mc, MDB_node* leaf, MDB_val* data) -> int;
+            extern auto mdb_node_read(MDB_cursor * mc, MDB_node * leaf, MDB_val * data)->int;
             const int node_read_rc = mdb_node_read(&m2, leaf_node, &data);
             if (node_read_rc != MDB_SUCCESS)
             {
@@ -959,7 +958,7 @@ auto mdb_page_unspill(MDB_txn* txn, MDB_page* mp, MDB_page** ret) -> int
                     txn->mt_spill_pgs[0]--;
                 else
                     txn->mt_spill_pgs[x] |= 1;
-            } // otherwise, if belonging to a parent txn, the
+            }  // otherwise, if belonging to a parent txn, the
                // page remains spilled until child commits
                //
 

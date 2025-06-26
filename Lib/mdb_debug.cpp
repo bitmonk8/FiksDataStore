@@ -1,8 +1,8 @@
 #include "mdb_debug.h"
 
+#include "mdb_btree.h"
 #include "mdb_env.h"
 #include "mdb_page.h"
-#include "mdb_btree.h"
 
 #if MDB_DEBUG
 int mdb_debug;

@@ -1,11 +1,11 @@
 #include "mdb_txn.h"
 
+#include "mdb_btree.h"
 #include "mdb_cursor.h"
 #include "mdb_db.h"
 #include "mdb_debug.h"
 #include "mdb_env.h"
 #include "mdb_lock.h"
-#include "mdb_btree.h" // Includes mdb_page_io.h, which includes mdb_page.h
 
 #include <utility>
 
