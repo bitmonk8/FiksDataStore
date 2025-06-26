@@ -262,7 +262,10 @@ target("lint")
         end
 
         -- Run clang-tidy and capture the result
-        local success = os.runv("clang-tidy", command_args)
+        local output, success = os.iorunv("clang-tidy", command_args)
+        if output and #output > 0 then
+            print(output)
+        end
 
         -- Restore the original compilation database in the build directory
         os.run("xmake project -k compile_commands build")
