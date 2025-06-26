@@ -224,6 +224,9 @@ target("lint")
         -- the compile_commands.json from the current directory. clang-tidy will
         -- lint all files found in the compilation database.
         local command_args = {"-p", ".", "--fix"}
+        for _, file in ipairs(files) do
+            table.insert(command_args, file)
+        end
         local output, errors = os.iorunv("clang-tidy", command_args)
 
         local output_file = path.join(build_dir, "clang-tidy-output.txt")
