@@ -193,11 +193,10 @@ target("format")
 target("lint")
     set_kind("phony")
     on_run(function (target)
-        -- Find all .cpp files in the specified directories (focus on source files first)
+        -- Find all .cpp files in the specified directories
         local source_dirs = {"Lib", "Tests", "Tools"}
         local file_patterns = {"*.cpp"}
         local files = {}
-        
         for _, dir in ipairs(source_dirs) do
             if os.isdir(dir) then
                 for _, pattern in ipairs(file_patterns) do
@@ -208,38 +207,46 @@ target("lint")
                 end
             end
         end
-        
+
         if #files == 0 then
             print("No source files found to lint")
             return
         end
-        
-        print("Running clang-tidy with --fix on " .. #files .. " source files...")
-        print("Applying readability-isolate-declaration fixes and other configured checks...")
-        
-        local processed_count = 0
-        local error_count = 0
-        
-        -- Run clang-tidy with --fix and --fix-errors on all found files
-        for _, file in ipairs(files) do
-            print("Processing: " .. file)
-            local ok, errors = os.iorunv("clang-tidy", {"--fix", "--fix-errors", file})
-            if ok then
-                processed_count = processed_count + 1
-                print("  ✓ Successfully processed " .. file)
-            else
-                error_count = error_count + 1
-                print("  ✗ Error processing " .. file .. ": " .. (errors or "unknown error"))
-                -- Continue processing other files instead of exiting
+
+        print("Running clang-tidy with --fix on project files...")
+
+        local build_dir = "build"
+        if not os.isdir(build_dir) then
+            os.mkdir(build_dir)
+        end
+
+        -- Run clang-tidy with --fix. The -p . argument tells clang-tidy to use
+        -- the compile_commands.json from the current directory. clang-tidy will
+        -- lint all files found in the compilation database.
+        local command_args = {"-p", ".", "--fix"}
+        local output, errors = os.iorunv("clang-tidy", command_args)
+
+        local output_file = path.join(build_dir, "clang-tidy-output.txt")
+        io.writefile(output_file, output or "")
+        if errors then
+            -- Append errors to the same file
+            local f = io.open(output_file, "a")
+            if f then
+                f:write("\n--- ERRORS ---\n")
+                f:write(errors)
+                f:close()
             end
         end
-        
-        print("\nCode linting completed!")
-        print("Successfully processed: " .. processed_count .. " files")
-        if error_count > 0 then
-            print("Files with errors: " .. error_count)
+
+        -- os.iorunv returns the output as the first value. If there was an error,
+        -- the second return value is a string describing the error.
+        -- We check for the presence of the error string to determine success.
+        if not errors then
+            print("\nCode linting completed successfully!")
+            print("Applied automatic fixes where possible.")
+            print("Output and diagnostics written to " .. output_file)
+        else
+            print("\nCode linting completed with errors.")
+            print("Please check the output file for details: " .. output_file)
         end
-        print("Processed files in directories: " .. table.concat(source_dirs, ", "))
-        print("Applied automatic fixes where possible using project's .clang-tidy configuration")
-        print("Focus: readability-isolate-declaration and other configured checks")
     end)
