@@ -333,7 +333,10 @@ mdb_fopen(const MDB_env* env, MDB_name* fname, enum mdb_fopen_type which, mdb_mo
     int rc = MDB_SUCCESS;
     HANDLE fd;
 #ifdef _WIN32
-    DWORD acc, share, disp, attrs;
+    DWORD acc;
+    DWORD share;
+    DWORD disp;
+    DWORD attrs;
 #else
     int flags;
 #endif
@@ -1299,7 +1302,8 @@ auto ESECT mdb_env_setup_locks(MDB_env* env, MDB_name* fname, int mode, int* exc
     union semun semu{};
 #endif
     int rc{};
-    MDB_OFF_T size{}, rsize{};
+    MDB_OFF_T size{};
+    MDB_OFF_T rsize{};
 
     rc = mdb_fopen(env, fname, MDB_O_LOCKS, mode, &env->me_lfd);
     if (rc != 0)
@@ -1865,11 +1869,13 @@ struct mdb_copy
 };
 
 // Dedicated writer thread for compacting copy.
-THREAD_RET ESECT CALL_CONV mdb_env_copythr(void* arg)
+auto ESECT CALL_CONV mdb_env_copythr(void* arg) -> THREAD_RET
 {
     auto* my = (mdb_copy*)arg;
     char* ptr;
-    int toggle = 0, wsize, rc;
+    int toggle = 0;
+    int wsize;
+    int rc;
 #ifdef _WIN32
     DWORD len;
 #define DO_WRITE(rc, fd, ptr, w2, len) (rc) = WriteFile((fd), (ptr), (w2), &(len), NULL)
@@ -1973,7 +1979,8 @@ auto ESECT mdb_env_cthr_toggle(mdb_copy* my, int adjust) -> int
 // pg database root.
 auto ESECT mdb_env_cwalk(mdb_copy* my, pgno_t* pg) -> int
 {
-    MDB_cursor mc = {.mc_next = nullptr};
+    MDB_cursor mc;
+    mc.mc_next = nullptr;
     MDB_node* ni;
     MDB_page* mo;
     MDB_page* mp;
@@ -2155,7 +2162,8 @@ auto ESECT mdb_env_copyfd1(MDB_env* env, HANDLE fd) -> int
 {
     MDB_meta* mm;
     MDB_page* mp;
-    mdb_copy my = {.mc_env = nullptr};
+    mdb_copy my;
+    my.mc_env = nullptr;
     MDB_txn* txn = nullptr;
     pthread_t thr;
     pgno_t root;
@@ -2320,7 +2328,8 @@ auto ESECT mdb_env_copyfd0(MDB_env* env, HANDLE fd) -> int
     mdb_size_t w3;
     char* ptr;
 #ifdef _WIN32
-    DWORD len, w2;
+    DWORD len;
+    DWORD w2;
 #define DO_WRITE(rc, fd, ptr, w2, len) (rc) = WriteFile((fd), (ptr), (w2), &(len), NULL)
 #else
     ssize_t len;
@@ -2542,7 +2551,7 @@ static auto ESECT mdb_stat0(MDB_env* env, MDB_db* db, MDB_stat* arg) -> int
 
 auto ESECT mdb_stat(MDB_txn* txn, MDB_dbi dbi, MDB_stat* stat) -> int
 {
-    if ((stat == nullptr) || !TXN_DBI_EXIST(txn, dbi, DB_VALID))
+    if (stat == nullptr || (TXN_DBI_EXIST(txn, dbi, DB_VALID) == 0))
         return EINVAL;
 
     if ((txn->mt_flags & MDB_TXN_BLOCKED) != 0U)

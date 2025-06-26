@@ -31,7 +31,7 @@ void ESECT mdb_assert_fail(MDB_env* env, const char* expr_txt, const char* func,
 
 #if MDB_DEBUG
 // Return the page number of mp which may be sub-page, for debug output
-pgno_t mdb_dbg_pgno(MDB_page* mp)
+auto mdb_dbg_pgno(MDB_page* mp) -> pgno_t
 {
     pgno_t ret{};
     COPY_PGNO(ret, MP_PGNO(mp));
@@ -42,13 +42,13 @@ pgno_t mdb_dbg_pgno(MDB_page* mp)
 // key the key to display
 // buf the buffer to write into. Should always be DKBUF.
 // The key in hexadecimal form.
-char* mdb_dkey(MDB_val* key, char* buf)
+auto mdb_dkey(MDB_val* key, char* buf) -> char*
 {
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
-    if (!key)
+    if (key == nullptr)
         return (char*)"";
 
     if (key->mv_size > DKBUF_MAXKEYSIZE)
@@ -68,13 +68,13 @@ char* mdb_dkey(MDB_val* key, char* buf)
 #endif
 }
 
-char* mdb_dval(MDB_txn* txn, MDB_dbi dbi, MDB_val* data, char* buf)
+auto mdb_dval(MDB_txn* txn, MDB_dbi dbi, MDB_val* data, char* buf) -> char*
 {
     *buf = '\0';
     return buf;
 }
 
-const char* mdb_leafnode_type(MDB_node* n)
+auto mdb_leafnode_type(MDB_node* n) -> const char*
 {
     static const char* const tp[2][2] = {
         {          "",     ": DB"},
@@ -88,7 +88,7 @@ const char* mdb_leafnode_type(MDB_node* n)
 void mdb_page_list(MDB_page* mp)
 {
     pgno_t pgno{mdb_dbg_pgno(mp)};
-    const char* state{(MP_FLAGS(mp) & P_DIRTY) ? ", dirty" : ""};
+    const char* state{((MP_FLAGS(mp) & P_DIRTY) != 0) ? ", dirty" : ""};
     const char* type{nullptr};
     DKBUF;
 

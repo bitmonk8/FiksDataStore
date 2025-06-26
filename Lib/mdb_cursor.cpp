@@ -16,7 +16,7 @@ void mdb_cursor_chk(MDB_cursor* mc)
     MDB_node* node;
     MDB_page* mp;
 
-    if (!mc->mc_snum || !(mc->mc_flags & C_INITIALIZED))
+    if (mc->mc_snum == 0 || (mc->mc_flags & C_INITIALIZED) == 0)
         return;
     for (i = 0; i < mc->mc_top; i++)
     {
@@ -617,42 +617,42 @@ auto mdb_cursor_last(MDB_cursor* mc, MDB_val* key, MDB_val* data) -> int
     return MDB_SUCCESS;
 }
 
-auto mdb_cursor_get(MDB_cursor* mc, MDB_val* key, MDB_val* data, MDB_cursor_op op) -> int
+auto mdb_cursor_get(MDB_cursor* cursor, MDB_val* key, MDB_val* data, MDB_cursor_op op) -> int
 {
     int rc;
     int exact = 0;
 
-    if (mc == nullptr)
+    if (cursor == nullptr)
         return EINVAL;
 
-    if ((mc->mc_txn->mt_flags & MDB_TXN_BLOCKED) != 0U)
+    if ((cursor->mc_txn->mt_flags & MDB_TXN_BLOCKED) != 0U)
         return MDB_BAD_TXN;
 
     switch (op)
     {
     case MDB_GET_CURRENT:
-        if ((mc->mc_flags & C_INITIALIZED) == 0U)
+        if ((cursor->mc_flags & C_INITIALIZED) == 0U)
         {
             rc = EINVAL;
         }
         else
         {
-            MDB_page* mp = mc->mc_pg[mc->mc_top];
+            MDB_page* mp = cursor->mc_pg[cursor->mc_top];
             int nkeys = NUMKEYS(mp);
-            if ((nkeys == 0) || (mc->mc_ki[mc->mc_top] >= nkeys))
+            if ((nkeys == 0) || (cursor->mc_ki[cursor->mc_top] >= nkeys))
             {
-                mc->mc_ki[mc->mc_top] = nkeys;
+                cursor->mc_ki[cursor->mc_top] = nkeys;
                 rc = MDB_NOTFOUND;
                 break;
             }
             rc = MDB_SUCCESS;
             // No LEAF2 support - use standard nodes
-            MDB_node* leaf = NODEPTR(mp, mc->mc_ki[mc->mc_top]);
+            MDB_node* leaf = NODEPTR(mp, cursor->mc_ki[cursor->mc_top]);
             MDB_GET_KEY(leaf, key);
             if (data != nullptr)
             {
                 // No duplicate support - read data directly
-                rc = mdb_node_read(mc, leaf, data);
+                rc = mdb_node_read(cursor, leaf, data);
             }
         }
         break;
@@ -665,20 +665,20 @@ auto mdb_cursor_get(MDB_cursor* mc, MDB_val* key, MDB_val* data, MDB_cursor_op o
         }
         else
         {
-            rc = mdb_cursor_set(mc, key, data, op, op == MDB_SET_RANGE ? nullptr : &exact);
+            rc = mdb_cursor_set(cursor, key, data, op, op == MDB_SET_RANGE ? nullptr : &exact);
         }
         break;
     case MDB_NEXT:
-        rc = mdb_cursor_next(mc, key, data, op);
+        rc = mdb_cursor_next(cursor, key, data, op);
         break;
     case MDB_PREV:
-        rc = mdb_cursor_prev(mc, key, data, op);
+        rc = mdb_cursor_prev(cursor, key, data, op);
         break;
     case MDB_FIRST:
-        rc = mdb_cursor_first(mc, key, data);
+        rc = mdb_cursor_first(cursor, key, data);
         break;
     case MDB_LAST:
-        rc = mdb_cursor_last(mc, key, data);
+        rc = mdb_cursor_last(cursor, key, data);
         break;
     default:
         // All duplicate operations are not supported
@@ -687,8 +687,8 @@ auto mdb_cursor_get(MDB_cursor* mc, MDB_val* key, MDB_val* data, MDB_cursor_op o
         break;
     }
 
-    if ((mc->mc_flags & C_DEL) != 0U)
-        mc->mc_flags ^= C_DEL;
+    if ((cursor->mc_flags & C_DEL) != 0U)
+        cursor->mc_flags ^= C_DEL;
 
     return rc;
 }
@@ -1178,12 +1178,12 @@ void mdb_cursor_init(MDB_cursor* mc, MDB_txn* txn, MDB_dbi dbi, MDB_xcursor* mx)
     }
 }
 
-auto mdb_cursor_open(MDB_txn* txn, MDB_dbi dbi, MDB_cursor** ret) -> int
+auto mdb_cursor_open(MDB_txn* txn, MDB_dbi dbi, MDB_cursor** cursor) -> int
 {
     MDB_cursor* mc;
     size_t size = sizeof(MDB_cursor);
 
-    if ((ret == nullptr) || !TXN_DBI_EXIST(txn, dbi, DB_VALID))
+    if (cursor == nullptr || (TXN_DBI_EXIST(txn, dbi, DB_VALID) == 0))
         return EINVAL;
 
     if ((txn->mt_flags & MDB_TXN_BLOCKED) != 0U)
@@ -1209,23 +1209,23 @@ auto mdb_cursor_open(MDB_txn* txn, MDB_dbi dbi, MDB_cursor** ret) -> int
     }
 
     MDB_TRACE(("%p, %u = %p", txn, dbi, mc));
-    *ret = mc;
+    *cursor = mc;
 
     return MDB_SUCCESS;
 }
 
-auto mdb_cursor_renew(MDB_txn* txn, MDB_cursor* mc) -> int
+auto mdb_cursor_renew(MDB_txn* txn, MDB_cursor* cursor) -> int
 {
-    if ((mc == nullptr) || !TXN_DBI_EXIST(txn, mc->mc_dbi, DB_VALID))
+    if (cursor == nullptr || (TXN_DBI_EXIST(txn, cursor->mc_dbi, DB_VALID) == 0))
         return EINVAL;
 
-    if (((mc->mc_flags & C_UNTRACK) != 0U) || (txn->mt_cursors != nullptr))
+    if (((cursor->mc_flags & C_UNTRACK) != 0U) || (txn->mt_cursors != nullptr))
         return EINVAL;
 
     if ((txn->mt_flags & MDB_TXN_BLOCKED) != 0U)
         return MDB_BAD_TXN;
 
-    mdb_cursor_init(mc, txn, mc->mc_dbi, nullptr);
+    mdb_cursor_init(cursor, txn, cursor->mc_dbi, nullptr);
     return MDB_SUCCESS;
 }
 
@@ -1256,37 +1256,37 @@ auto mdb_cursor_count(MDB_cursor* mc, mdb_size_t* countp) -> int
     return MDB_SUCCESS;
 }
 
-void mdb_cursor_close(MDB_cursor* mc)
+void mdb_cursor_close(MDB_cursor* cursor)
 {
-    MDB_TRACE(("%p", mc));
-    if ((mc != nullptr) && (mc->mc_backup == nullptr))
+    MDB_TRACE(("%p", cursor));
+    if ((cursor != nullptr) && (cursor->mc_backup == nullptr))
     {
         /* Remove from txn, if tracked.
          * A read-only txn (!C_UNTRACK) may have been freed already,
          * so do not peek inside it.  Only write txns track cursors.
          */
-        if (((mc->mc_flags & C_UNTRACK) != 0U) && (mc->mc_txn->mt_cursors != nullptr))
+        if (((cursor->mc_flags & C_UNTRACK) != 0U) && (cursor->mc_txn->mt_cursors != nullptr))
         {
-            MDB_cursor** prev = &mc->mc_txn->mt_cursors[mc->mc_dbi];
-            while ((*prev != nullptr) && *prev != mc)
+            MDB_cursor** prev = &cursor->mc_txn->mt_cursors[cursor->mc_dbi];
+            while ((*prev != nullptr) && *prev != cursor)
                 prev = &(*prev)->mc_next;
-            if (*prev == mc)
-                *prev = mc->mc_next;
+            if (*prev == cursor)
+                *prev = cursor->mc_next;
         }
-        free(mc);
+        free(cursor);
     }
 }
 
-auto mdb_cursor_txn(MDB_cursor* mc) -> MDB_txn*
+auto mdb_cursor_txn(MDB_cursor* cursor) -> MDB_txn*
 {
-    if (mc == nullptr)
+    if (cursor == nullptr)
         return nullptr;
-    return mc->mc_txn;
+    return cursor->mc_txn;
 }
 
-auto mdb_cursor_dbi(MDB_cursor* mc) -> MDB_dbi
+auto mdb_cursor_dbi(MDB_cursor* cursor) -> MDB_dbi
 {
-    return mc->mc_dbi;
+    return cursor->mc_dbi;
 }
 
 // Copy the contents of a cursor.
@@ -1432,7 +1432,7 @@ auto mdb_update_key(MDB_cursor* mc, MDB_val* key) -> int
 #if MDB_DEBUG
     {
         MDB_val k2;
-        char kbuf2[DKBUF_MAXKEYSIZE * 2 + 1];
+        char kbuf2[(DKBUF_MAXKEYSIZE * 2) + 1];
         k2.mv_data = NODEKEY(node);
         k2.mv_size = node->mn_ksize;
         DPRINTF(("update key %u (ofs %u) [%s] to [%s] on page %" Yu,

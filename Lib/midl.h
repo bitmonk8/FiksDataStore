@@ -91,7 +91,8 @@ using MDB_IDL = MDB_ID*;
 #define mdb_midl_xappend(idl, id)                                                                                      \
     do                                                                                                                 \
     {                                                                                                                  \
-        MDB_ID *xidl = (idl), xlen = ++(xidl[0]);                                                                      \
+        MDB_ID* xidl = (idl);                                                                                          \
+        MDB_ID xlen = ++(xidl[0]);                                                                                     \
         xidl[xlen] = (id);                                                                                             \
     } while (0)
 

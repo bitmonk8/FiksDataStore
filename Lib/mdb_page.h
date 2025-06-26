@@ -80,7 +80,7 @@ enum
 #define SIZELEFT(p) (indx_t)(MP_UPPER(p) - MP_LOWER(p))
 
 // The percentage of space used in the page, in tenths of a percent.
-#define PAGEFILL(env, p) (1000L * ((env)->me_psize - PAGEHDRSZ - SIZELEFT(p)) / ((env)->me_psize - PAGEHDRSZ))
+#define PAGEFILL(env, p) (1000.0L * ((env)->me_psize - PAGEHDRSZ - SIZELEFT(p)) / ((env)->me_psize - PAGEHDRSZ))
 // The minimum page fill factor, in tenths of a percent.
 // Pages emptier than this are candidates for merging.
 enum
@@ -96,7 +96,7 @@ enum
 #define IS_OVERFLOW(p) F_ISSET(MP_FLAGS(p), P_OVERFLOW)
 
 // The number of overflow pages needed to store the given size.
-#define OVPAGES(size, psize) ((PAGEHDRSZ - 1 + (size)) / (psize) + 1)
+#define OVPAGES(size, psize) (((PAGEHDRSZ - 1 + (size)) / (psize)) + 1)
 
 // Link in MDB_txn.mt_loose_pgs list.
 // Kept outside the page header, which is needed when reusing the page.
@@ -185,7 +185,8 @@ struct MDB_node
 #define COPY_PGNO(dst, src)                                                                                            \
     do                                                                                                                 \
     {                                                                                                                  \
-        unsigned short *s, *d;                                                                                         \
+        unsigned short *s;                                                                                             \
+        unsigned short *d;                                                                                             \
         s = (unsigned short*)&(src);                                                                                   \
         d = (unsigned short*)&(dst);                                                                                   \
         *d++ = *s++;                                                                                                   \
@@ -197,7 +198,8 @@ struct MDB_node
 #define COPY_PGNO(dst, src)                                                                                            \
     do                                                                                                                 \
     {                                                                                                                  \
-        unsigned short *s, *d;                                                                                         \
+        unsigned short *s;                                                                                             \
+        unsigned short *d;                                                                                             \
         s = (unsigned short*)&(src);                                                                                   \
         d = (unsigned short*)&(dst);                                                                                   \
         *d++ = *s++;                                                                                                   \

@@ -66,7 +66,7 @@ struct flagbit
 #define S(s) s, STRLENOF(s)
 
 flagbit dbflags[] = {
-    {MDB_REVERSEKEY, S("reversekey")},
+    {.bit = MDB_REVERSEKEY, .name = "reversekey", .len = 10},
     {.bit = 0, .name = nullptr, .len = 0}
 };
 

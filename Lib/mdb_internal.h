@@ -493,7 +493,7 @@ enum
 
 // Lockfile format signature: version, features and field layout
 #define MDB_LOCK_FORMAT                                                                                                \
-    ((uint32_t)(((MDB_LOCK_VERSION) % (1U << MDB_LOCK_VERSION_BITS)) + MDB_lock_desc * (1U << MDB_LOCK_VERSION_BITS)))
+    ((uint32_t)(((MDB_LOCK_VERSION) % (1U << MDB_LOCK_VERSION_BITS)) + (MDB_lock_desc * (1U << MDB_LOCK_VERSION_BITS))))
 
 // Lock type and layout. Values 0-119. _WIN32 implies MDB_PIDLOCK.
 // Some low values are reserved for future tweaks.
@@ -527,11 +527,13 @@ enum
 #define VALID_FLAGS (MDB_REVERSEKEY | MDB_CREATE)
 
 /* for MDB_cursor */
-#define C_INITIALIZED 0x01           // cursor has been initialized and is valid
-#define C_EOF 0x02                   // No more data
-#define C_SUB 0x04                   // Cursor is a sub-cursor
-#define C_DEL 0x08                   // last op was a cursor_del
-#define C_UNTRACK 0x40               // Un-track cursor when closing
+enum MCursorFlags : unsigned int {
+    C_INITIALIZED = 0x01, // cursor has been initialized and is valid
+    C_EOF = 0x02,         // No more data
+    C_SUB = 0x04,         // Cursor is a sub-cursor
+    C_DEL = 0x08,         // last op was a cursor_del
+    C_UNTRACK = 0x40      // Un-track cursor when closing
+};
 #define C_WRITEMAP MDB_TXN_WRITEMAP  // Copy of txn flag
 #define C_ORIG_RDONLY MDB_TXN_RDONLY
 

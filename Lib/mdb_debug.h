@@ -39,7 +39,7 @@ extern txnid_t mdb_debug_start;
 #define DPRINTF0(fmt, ...) fprintf(stderr, "%s:%d " fmt "\n", __func__, __LINE__, __VA_ARGS__)
 // Trace info for replaying
 #define MDB_TRACE(args) ((void)((mdb_debug & MDB_DBG_TRACE) && DPRINTF1 args))
-#define DPRINTF1(fmt, ...) fprintf(stderr, ">%d:%s: " fmt "\n", getpid(), __func__, __VA_ARGS__)
+#define DPRINTF1(fmt, ...) fprintf(stderr, ">%lu:%s: " fmt "\n", getpid(), __func__, __VA_ARGS__)
 #else
 #define DPRINTF(args) ((void)0)
 #define MDB_TRACE(args) ((void)0)
@@ -56,15 +56,15 @@ extern txnid_t mdb_debug_start;
 #define DKBUF_MAXKEYSIZE ((MDB_MAXKEYSIZE) > 0 ? (MDB_MAXKEYSIZE) : 511)
 //	A key buffer.
 //	This is used for printing a hex dump of a key's contents.
-#define DKBUF char kbuf[DKBUF_MAXKEYSIZE * 2 + 1]
+#define DKBUF char kbuf[(DKBUF_MAXKEYSIZE * 2) + 1]
 //	A data value buffer.
 //	This is used for printing a hex dump of a data value's contents.
-#define DDBUF char dbuf[DKBUF_MAXKEYSIZE * 2 + 1 + 2]
+#define DDBUF char dbuf[(DKBUF_MAXKEYSIZE * 2) + 1 + 2]
 //	Display a key in hex.
 //	Invoke a function to display a key in hex.
 #define DKEY(x) mdb_dkey(x, kbuf)
-pgno_t mdb_dbg_pgno(MDB_page* mp);
-char* mdb_dval(MDB_txn* txn, MDB_dbi dbi, MDB_val* data, char* buf);
+auto mdb_dbg_pgno(MDB_page* mp) -> pgno_t;
+auto mdb_dval(MDB_txn* txn, MDB_dbi dbi, MDB_val* data, char* buf) -> char*;
 #else
 #define DKBUF
 #define DDBUF

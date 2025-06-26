@@ -168,7 +168,7 @@ void mdb_dbi_close(MDB_env* env, MDB_dbi dbi)
 auto mdb_dbi_flags(MDB_txn* txn, MDB_dbi dbi, unsigned int* flags) -> int
 {
     // We could return the flags for the FREE_DBI too but what's the point?
-    if (!TXN_DBI_EXIST(txn, dbi, DB_USRVALID))
+    if (TXN_DBI_EXIST(txn, dbi, DB_USRVALID) == 0)
         return EINVAL;
     *flags = txn->mt_dbs[dbi].md_flags & PERSISTENT_FLAGS;
     return MDB_SUCCESS;
@@ -321,7 +321,7 @@ auto mdb_del(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data) -> int
 {
     DKBUF;
     DDBUF;
-    if ((key == nullptr) || !TXN_DBI_EXIST(txn, dbi, DB_USRVALID))
+    if (key == nullptr || (TXN_DBI_EXIST(txn, dbi, DB_USRVALID) == 0))
         return EINVAL;
 
     if ((txn->mt_flags & (MDB_TXN_RDONLY | MDB_TXN_BLOCKED)) != 0U)
@@ -344,7 +344,7 @@ auto mdb_del(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data) -> int
 
 auto mdb_drop(MDB_txn* txn, MDB_dbi dbi, int del) -> int
 {
-    if ((unsigned)del > 1 || !TXN_DBI_EXIST(txn, dbi, DB_USRVALID))
+    if ((unsigned)del > 1 || (TXN_DBI_EXIST(txn, dbi, DB_USRVALID) == 0))
         return EINVAL;
 
     if (F_ISSET(txn->mt_flags, MDB_TXN_RDONLY))
@@ -403,7 +403,7 @@ auto mdb_put(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data, unsigned in
     DKBUF;
     DDBUF;
 
-    if ((key == nullptr) || (data == nullptr) || !TXN_DBI_EXIST(txn, dbi, DB_USRVALID))
+    if (key == nullptr || data == nullptr || (TXN_DBI_EXIST(txn, dbi, DB_USRVALID) == 0))
         return EINVAL;
 
     if ((flags & ~(MDB_NOOVERWRITE | MDB_RESERVE | MDB_APPEND)) != 0U)
@@ -433,7 +433,7 @@ auto mdb_put(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data, unsigned in
 
 auto mdb_set_compare(MDB_txn* txn, MDB_dbi dbi, MDB_cmp_func cmp) -> int
 {
-    if (!TXN_DBI_EXIST(txn, dbi, DB_USRVALID))
+    if (TXN_DBI_EXIST(txn, dbi, DB_USRVALID) == 0)
         return EINVAL;
 
     txn->mt_dbxs[dbi].md_cmp = cmp;
@@ -446,7 +446,7 @@ auto mdb_get(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data) -> int
 
     DPRINTF(("===> get db %u key [%s]", dbi, DKEY(key)));
 
-    if ((key == nullptr) || (data == nullptr) || !TXN_DBI_EXIST(txn, dbi, DB_USRVALID))
+    if (key == nullptr || data == nullptr || (TXN_DBI_EXIST(txn, dbi, DB_USRVALID) == 0))
         return EINVAL;
 
     if ((txn->mt_flags & MDB_TXN_BLOCKED) != 0U)

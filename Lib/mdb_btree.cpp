@@ -172,7 +172,7 @@ auto mdb_page_touch(MDB_cursor* mc) -> int
         new_page = mdb_page_malloc(txn, 1);
         if (new_page == nullptr)
             return ENOMEM;
-        MDB_ID2 mid = {current_pgno, new_page};
+        MDB_ID2 mid = {.mid = current_pgno, .mptr = new_page};
         const auto rc = mdb_mid2l_insert(dl, &mid);
         mdb_cassert(mc, rc == 0);
         mdb_page_copy(new_page, mp, txn->mt_env->me_psize);
@@ -217,7 +217,7 @@ done:
     return 0;
 }
 
-auto mdb_page_search_root(MDB_cursor* mc, MDB_val* key, int flags) -> int
+auto mdb_page_search_root(MDB_cursor* mc, MDB_val* key, int modify) -> int
 {
     MDB_page* mp = mc->mc_pg[mc->mc_top];
     DKBUF;
@@ -234,10 +234,10 @@ auto mdb_page_search_root(MDB_cursor* mc, MDB_val* key, int flags) -> int
         indx_t i;
         bool descend = true;
 
-        if ((flags & (MDB_PS_FIRST | MDB_PS_LAST)) != 0)
+        if ((modify & (MDB_PS_FIRST | MDB_PS_LAST)) != 0)
         {
             i = 0;
-            if ((flags & MDB_PS_LAST) != 0)
+            if ((modify & MDB_PS_LAST) != 0)
             {
                 i = NUMKEYS(mp) - 1;
                 // if already init'd, see if we're already in right place
@@ -288,7 +288,7 @@ auto mdb_page_search_root(MDB_cursor* mc, MDB_val* key, int flags) -> int
             }
         }
 
-        if ((flags & MDB_PS_MODIFY) != 0)
+        if ((modify & MDB_PS_MODIFY) != 0)
         {
             if (const auto rc = mdb_page_touch(mc); rc != 0)
             {

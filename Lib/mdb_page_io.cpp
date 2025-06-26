@@ -978,7 +978,7 @@ auto mdb_page_unspill(MDB_txn* txn, MDB_page* mp, MDB_page** ret) -> int
 // ret address of a pointer where the page's address will be stored.
 // lvl dirty_list inheritance level of found page. 1=current txn, 0=mapped page.
 // 0 on success, non-zero on failure.
-auto mdb_page_get(MDB_cursor* mc, pgno_t pgno, MDB_page** ret, int* lvl) -> int
+auto mdb_page_get(MDB_cursor* mc, pgno_t pgno, MDB_page** mp, int* lvl) -> int
 {
     auto* const txn = mc->mc_txn;
 
@@ -1006,7 +1006,7 @@ auto mdb_page_get(MDB_cursor* mc, pgno_t pgno, MDB_page** ret, int* lvl) -> int
                 const auto dirty_idx = mdb_mid2l_search(dl, pgno);
                 if (dirty_idx <= dl[0].mid && dl[dirty_idx].mid == pgno)
                 {
-                    *ret = (MDB_page*)dl[dirty_idx].mptr;
+                    *mp = (MDB_page*)dl[dirty_idx].mptr;
                     if (lvl != nullptr)
                         *lvl = search_level;
                     return MDB_SUCCESS;
@@ -1024,7 +1024,7 @@ auto mdb_page_get(MDB_cursor* mc, pgno_t pgno, MDB_page** ret, int* lvl) -> int
     }
 
     const auto* env = txn->mt_env;
-    *ret = (MDB_page*)(env->me_map + (env->me_psize * pgno));
+    *mp = (MDB_page*)(env->me_map + (env->me_psize * pgno));
 
     if (lvl != nullptr)
         *lvl = 0;

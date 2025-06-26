@@ -249,9 +249,9 @@ static auto mdb_cursor_shadow(MDB_txn* src, MDB_txn* dst) -> int
     return MDB_SUCCESS;
 }
 
-auto mdb_txn_begin(MDB_env* env, MDB_txn* parent, unsigned int flags, MDB_txn** ret) -> int
+auto mdb_txn_begin(MDB_env* env, MDB_txn* parent, unsigned int flags, MDB_txn** txn) -> int
 {
-    MDB_txn* txn{nullptr};
+    MDB_txn* new_txn{nullptr};
     MDB_ntxn* ntxn{nullptr};
     int rc{};
     int size{};
@@ -284,49 +284,49 @@ auto mdb_txn_begin(MDB_env* env, MDB_txn* parent, unsigned int flags, MDB_txn** 
     {
         // Reuse preallocated write txn. However, do not touch it until
         // mdb_txn_renew0() succeeds, since it currently may be active.
-        txn = env->me_txn0;
+        new_txn = env->me_txn0;
         goto renew;
     }
-    txn = (MDB_txn*)calloc(1, size);
-    if (txn == nullptr)
+    new_txn = (MDB_txn*)calloc(1, size);
+    if (new_txn == nullptr)
     {
         DPRINTF(("calloc: %s", strerror(errno)));
         return ENOMEM;
     }
-    txn->mt_dbxs = env->me_dbxs;  // static
-    txn->mt_dbs = (MDB_db*)((char*)txn + tsize);
-    txn->mt_dbflags = (unsigned char*)txn + size - env->me_maxdbs;
-    txn->mt_flags = flags;
-    txn->mt_env = env;
+    new_txn->mt_dbxs = env->me_dbxs;  // static
+    new_txn->mt_dbs = (MDB_db*)((char*)new_txn + tsize);
+    new_txn->mt_dbflags = (unsigned char*)new_txn + size - env->me_maxdbs;
+    new_txn->mt_flags = flags;
+    new_txn->mt_env = env;
 
     if (parent != nullptr)
     {
         unsigned int i;
-        txn->mt_cursors = (MDB_cursor**)(txn->mt_dbs + env->me_maxdbs);
-        txn->mt_dbiseqs = parent->mt_dbiseqs;
-        txn->mt_u.dirty_list = (MDB_ID2L)malloc(sizeof(MDB_ID2) * MDB_IDL_UM_SIZE);
-        txn->mt_free_pgs = mdb_midl_alloc(MDB_IDL_UM_MAX);
-        if ((txn->mt_u.dirty_list == nullptr) || (txn->mt_free_pgs == nullptr))
+        new_txn->mt_cursors = (MDB_cursor**)(new_txn->mt_dbs + env->me_maxdbs);
+        new_txn->mt_dbiseqs = parent->mt_dbiseqs;
+        new_txn->mt_u.dirty_list = (MDB_ID2L)malloc(sizeof(MDB_ID2) * MDB_IDL_UM_SIZE);
+        new_txn->mt_free_pgs = mdb_midl_alloc(MDB_IDL_UM_MAX);
+        if ((new_txn->mt_u.dirty_list == nullptr) || (new_txn->mt_free_pgs == nullptr))
         {
-            free(txn->mt_u.dirty_list);
-            free(txn);
+            free(new_txn->mt_u.dirty_list);
+            free(new_txn);
             return ENOMEM;
         }
-        txn->mt_txnid = parent->mt_txnid;
-        txn->mt_dirty_room = parent->mt_dirty_room;
-        txn->mt_u.dirty_list[0].mid = 0;
-        txn->mt_spill_pgs = nullptr;
-        txn->mt_next_pgno = parent->mt_next_pgno;
+        new_txn->mt_txnid = parent->mt_txnid;
+        new_txn->mt_dirty_room = parent->mt_dirty_room;
+        new_txn->mt_u.dirty_list[0].mid = 0;
+        new_txn->mt_spill_pgs = nullptr;
+        new_txn->mt_next_pgno = parent->mt_next_pgno;
         parent->mt_flags |= MDB_TXN_HAS_CHILD;
-        parent->mt_child = txn;
-        txn->mt_parent = parent;
-        txn->mt_numdbs = parent->mt_numdbs;
-        memcpy(txn->mt_dbs, parent->mt_dbs, txn->mt_numdbs * sizeof(MDB_db));
+        parent->mt_child = new_txn;
+        new_txn->mt_parent = parent;
+        new_txn->mt_numdbs = parent->mt_numdbs;
+        memcpy(new_txn->mt_dbs, parent->mt_dbs, new_txn->mt_numdbs * sizeof(MDB_db));
         // Copy parent's mt_dbflags, but clear DB_NEW
-        for (i = 0; i < txn->mt_numdbs; i++)
-            txn->mt_dbflags[i] = parent->mt_dbflags[i] & ~DB_NEW;
+        for (i = 0; i < new_txn->mt_numdbs; i++)
+            new_txn->mt_dbflags[i] = parent->mt_dbflags[i] & ~DB_NEW;
         rc = 0;
-        ntxn = (MDB_ntxn*)txn;
+        ntxn = (MDB_ntxn*)new_txn;
         ntxn->mnt_pgstate = env->me_pgstate;  // save parent me_pghead & co
         if (env->me_pghead != nullptr)
         {
@@ -338,33 +338,33 @@ auto mdb_txn_begin(MDB_env* env, MDB_txn* parent, unsigned int flags, MDB_txn** 
                 rc = ENOMEM;
         }
         if (rc == 0)
-            rc = mdb_cursor_shadow(parent, txn);
+            rc = mdb_cursor_shadow(parent, new_txn);
         if (rc != 0)
-            mdb_txn_end(txn, MDB_END_FAIL_BEGINCHILD);
+            mdb_txn_end(new_txn, MDB_END_FAIL_BEGINCHILD);
     }
     else
     { /* MDB_RDONLY */
-        txn->mt_dbiseqs = env->me_dbiseqs;
+        new_txn->mt_dbiseqs = env->me_dbiseqs;
     renew:
-        rc = mdb_txn_renew0(txn);
+        rc = mdb_txn_renew0(new_txn);
     }
     if (rc != 0)
     {
-        if (txn != env->me_txn0)
+        if (new_txn != env->me_txn0)
         {
-            free(txn);
+            free(new_txn);
         }
     }
     else
     {
-        txn->mt_flags |= flags; /* could not change txn=me_txn0 earlier */
-        *ret = txn;
+        new_txn->mt_flags |= flags; /* could not change new_txn=me_txn0 earlier */
+        *txn = new_txn;
         DPRINTF(("begin txn %" Yu "%c %p on mdbenv %p, root page %" Yu,
-                 txn->mt_txnid,
+                 new_txn->mt_txnid,
                  (flags & MDB_RDONLY) ? 'r' : 'w',
-                 (void*)txn,
+                 (void*)new_txn,
                  (void*)env,
-                 txn->mt_dbs[MAIN_DBI].md_root));
+                 new_txn->mt_dbs[MAIN_DBI].md_root));
     }
     MDB_TRACE(("%p, %p, %u = %p", env, parent, flags, txn));
 

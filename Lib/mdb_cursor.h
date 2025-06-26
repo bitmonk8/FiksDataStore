@@ -64,7 +64,8 @@ struct MDB_xcursor
 #define WITH_CURSOR_TRACKING(mn, act)                                                                                  \
     do                                                                                                                 \
     {                                                                                                                  \
-        MDB_cursor *tracked, **tp = &(mn).mc_txn->mt_cursors[(mn).mc_dbi];                                             \
+        MDB_cursor* tracked;                                                                                           \
+        MDB_cursor** tp = &(mn).mc_txn->mt_cursors[(mn).mc_dbi];                                                        \
         tracked = &(mn);                                                                                               \
         tracked->mc_next = *tp;                                                                                        \
         *tp = tracked;                                                                                                 \

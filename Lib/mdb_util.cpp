@@ -54,7 +54,8 @@ auto mdb_strerror(int err) -> const char*
     // and the actual use of the message uses more than 4K of stack.
 #define MSGSIZE 1024
 #define PADSIZE 4096
-    static char buf[MSGSIZE + PADSIZE], *ptr = buf;
+    static char buf[MSGSIZE + PADSIZE];
+    static char* ptr = buf;
 #endif
     if (err == 0)
         return ("Successful return: 0");

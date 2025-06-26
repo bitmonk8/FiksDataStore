@@ -1287,7 +1287,7 @@ auto mdb_reader_check(MDB_env* env, int* dead) -> int;
 // @param[in] key the key to display
 // @param[in] buf the buffer to write into. Should always be #DKBUF.
 // @return The key in hexadecimal form.
-char* mdb_dkey(MDB_val* key, char* buf);
+auto mdb_dkey(MDB_val* key, char* buf) -> char*;
 #endif
 
 // @}
