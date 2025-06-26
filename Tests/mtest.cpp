@@ -56,9 +56,9 @@ auto main(int argc, char* argv[]) -> int
     int* values;
     char sval[32] = "";
 
-    struct stat st = {.st_dev = 0};
-    if (stat("./testdb", &st) == -1)
-        mkdir("./testdb", 0700);
+    struct stat st = {0};
+    if (stat("./testdb1", &st) == -1)
+        mkdir("./testdb1", 0700);
 
     srand(static_cast<unsigned int>(time(nullptr)));
 
@@ -73,7 +73,7 @@ auto main(int argc, char* argv[]) -> int
     E(mdb_env_create(&env));
     E(mdb_env_set_maxreaders(env, 1));
     E(mdb_env_set_mapsize(env, 10485760));
-    E(mdb_env_open(env, "./testdb", 0 /*|MDB_NOSYNC*/, 0664));
+    E(mdb_env_open(env, "./testdb1", 0 /*|MDB_NOSYNC*/, 0664));
 
     E(mdb_txn_begin(env, nullptr, 0, &txn));
     E(mdb_dbi_open(txn, nullptr, 0, &dbi));

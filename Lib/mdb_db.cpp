@@ -4,7 +4,7 @@
 #include "mdb_cursor.h"
 #include "mdb_debug.h"
 #include "mdb_env.h"
-#include "mdb_page.h"
+#include "mdb_btree.h" // Includes mdb_page_io.h, which includes mdb_page.h
 #include "mdb_txn.h"
 
 // Set the default comparison functions for a database.
@@ -330,6 +330,7 @@ auto mdb_del(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data) -> int
     // Without duplicate support, always ignore data parameter
     data = nullptr;
 
+#if MDB_DEBUG
     MDB_TRACE(("%p, %u, %" Z "u[%s], %" Z "u%s",
                txn,
                dbi,
@@ -337,6 +338,7 @@ auto mdb_del(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data) -> int
                DKEY(key),
                data ? data->mv_size : 0,
                data ? mdb_dval(txn, dbi, data, dbuf) : ""));
+#endif
     return mdb_del0(txn, dbi, key, data, 0);
 }
 
@@ -410,6 +412,7 @@ auto mdb_put(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data, unsigned in
     if ((txn->mt_flags & (MDB_TXN_RDONLY | MDB_TXN_BLOCKED)) != 0U)
         return ((txn->mt_flags & MDB_TXN_RDONLY) != 0U) ? EACCES : MDB_BAD_TXN;
 
+#if MDB_DEBUG
     MDB_TRACE(("%p, %u, %" Z "u[%s], %" Z "u%s, %u",
                txn,
                dbi,
@@ -418,6 +421,7 @@ auto mdb_put(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data, unsigned in
                data->mv_size,
                mdb_dval(txn, dbi, data, dbuf),
                flags));
+#endif
     MDB_cursor mc{};
     mdb_cursor_init(&mc, txn, dbi, nullptr);
     mc.mc_next = txn->mt_cursors[dbi];

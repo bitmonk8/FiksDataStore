@@ -30,7 +30,7 @@ enum
 };
 
 #if MDB_DEBUG
-extern int mdb_debug = MDB_DBG_TRACE;
+extern int mdb_debug;
 extern txnid_t mdb_debug_start;
 
 //	Print a debug message with printf formatting.
@@ -63,6 +63,8 @@ extern txnid_t mdb_debug_start;
 //	Display a key in hex.
 //	Invoke a function to display a key in hex.
 #define DKEY(x) mdb_dkey(x, kbuf)
+pgno_t mdb_dbg_pgno(MDB_page* mp);
+char* mdb_dval(MDB_txn* txn, MDB_dbi dbi, MDB_val* data, char* buf);
 #else
 #define DKBUF
 #define DDBUF

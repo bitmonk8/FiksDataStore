@@ -1,9 +1,11 @@
 #include "mdb_debug.h"
 
 #include "mdb_env.h"
+#include "mdb_page.h"
+#include "mdb_btree.h"
 
 #if MDB_DEBUG
-int mdb_debug = MDB_DBG_TRACE;
+int mdb_debug;
 txnid_t mdb_debug_start;
 #endif
 
@@ -47,10 +49,10 @@ char* mdb_dkey(MDB_val* key, char* buf)
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
     if (!key)
-        return "";
+        return (char*)"";
 
     if (key->mv_size > DKBUF_MAXKEYSIZE)
-        return "MDB_MAXKEYSIZE";
+        return (char*)"MDB_MAXKEYSIZE";
 
     // may want to make this a dynamic check: if the key is mostly
     // printable characters, print it as-is instead of converting to hex.
@@ -74,7 +76,7 @@ char* mdb_dval(MDB_txn* txn, MDB_dbi dbi, MDB_val* data, char* buf)
 
 const char* mdb_leafnode_type(MDB_node* n)
 {
-    static char* const tp[2][2] = {
+    static const char* const tp[2][2] = {
         {          "",     ": DB"},
         {": sub-page", ": sub-DB"}
     };
@@ -98,9 +100,6 @@ void mdb_page_list(MDB_page* mp)
     case P_LEAF:
         type = "Leaf page";
         break;
-    case P_LEAF | P_SUBP:
-        type = "Sub-page";
-        break;
     case P_OVERFLOW:
         fprintf(stderr, "Overflow page %" Yu " pages %u%s\n", pgno, mp->mp_pages, state);
         return;
@@ -122,7 +121,7 @@ void mdb_page_list(MDB_page* mp)
         MDB_val key{};
         key.mv_size = node->mn_ksize;
         key.mv_data = node->mn_data;
-        unsigned int nsize{NODESIZE + key.mv_size};
+        unsigned int nsize{unsigned(NODESIZE + key.mv_size)};
         if (IS_BRANCH(mp))
         {
             fprintf(stderr, "key %d: page %" Yu ", %s\n", i, NODEPGNO(node), DKEY(&key));

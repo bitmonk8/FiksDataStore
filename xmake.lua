@@ -14,7 +14,7 @@ end
 
 set_languages("cxx20")
 set_warnings("error")
-add_defines("MDB_DEBUG=0")
+add_defines("MDB_DEBUG=1")
 if is_plat("windows") then
     add_cxflags("/wd4146")
 end
@@ -23,7 +23,8 @@ target("fiksstore")
     set_kind("static")
     add_files("Lib/midl.cpp",
               "Lib/mdb_hash.cpp",
-              "Lib/mdb_page.cpp",
+              "Lib/mdb_page_io.cpp",
+              "Lib/mdb_btree.cpp",
               "Lib/mdb_util.cpp",
               "Lib/mdb_compare.cpp",
               "Lib/mdb_env.cpp",
@@ -52,7 +53,7 @@ target("mtest")
     end)
     after_test(function (target)
         if os.isdir(testdir1) then
-            os.rmdir(testdir1)
+            os.rm(testdir1)
         end
     end)
 
@@ -74,9 +75,9 @@ target("mtest2")
     end)
     after_test(function (target)
         if os.isdir(testdir2) then
-            os.rmdir(testdir2)
+            os.rm(testdir2)
         end
-    end)    
+    end)
 
 
 local testdir3 = path.join(os.tmpdir(), "test3")

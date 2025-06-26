@@ -4,7 +4,7 @@
 #include "mdb_db.h"
 #include "mdb_debug.h"
 #include "mdb_env.h"
-#include "mdb_page.h"
+#include "mdb_btree.h" // Includes mdb_page_io.h, which includes mdb_page.h
 #include "mdb_txn.h"
 
 #include <utility>
@@ -1078,7 +1078,7 @@ auto mdb_cursor_put(MDB_cursor* cursor, MDB_val* key, MDB_val* data, unsigned in
                key ? key->mv_size : 0,
                DKEY(key),
                data ? data->mv_size : 0,
-               data ? mdb_dval(mc->mc_txn, mc->mc_dbi, data, dbuf) : "",
+               data ? mdb_dval(cursor->mc_txn, cursor->mc_dbi, data, dbuf) : "",
                flags));
     return rc;
 }

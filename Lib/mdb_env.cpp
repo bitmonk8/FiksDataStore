@@ -6,7 +6,7 @@
 #include "mdb_debug.h"
 #include "mdb_hash.h"
 #include "mdb_lock.h"
-#include "mdb_page.h"
+#include "mdb_btree.h" // Includes mdb_page_io.h, which includes mdb_page.h
 #include "mdb_txn.h"
 
 // The maximum size of a database page.

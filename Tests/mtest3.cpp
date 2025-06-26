@@ -57,7 +57,7 @@ auto main(int argc, char* argv[]) -> int
     MDB_cursor* cursor;
     char kbuf[16];
     char* sval;
-    struct stat st = {.st_dev = 0};
+    struct stat st;
     if (stat("testdb", &st) == -1)
         mkdir("testdb", 0700);
 

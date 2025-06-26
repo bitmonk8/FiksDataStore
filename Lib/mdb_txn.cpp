@@ -5,7 +5,7 @@
 #include "mdb_debug.h"
 #include "mdb_env.h"
 #include "mdb_lock.h"
-#include "mdb_page.h"
+#include "mdb_btree.h" // Includes mdb_page_io.h, which includes mdb_page.h
 
 #include <utility>
 

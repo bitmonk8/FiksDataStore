@@ -33,7 +33,7 @@ using mdb_hash_t = unsigned long long;
 #ifdef _WIN32
 
 #include <malloc.h>
-#include <wchar.h>  // get wcscpy()
+#include <wchar.h>
 #include <windows.h>
 
 // getpid() returns int; MinGW defines pid_t but MinGW64 typedefs it
@@ -525,6 +525,15 @@ enum
 #define PERSISTENT_FLAGS (0xffff & ~(MDB_VALID))
 // mdb_dbi_open() flags
 #define VALID_FLAGS (MDB_REVERSEKEY | MDB_CREATE)
+
+/* for MDB_cursor */
+#define C_INITIALIZED 0x01           // cursor has been initialized and is valid
+#define C_EOF 0x02                   // No more data
+#define C_SUB 0x04                   // Cursor is a sub-cursor
+#define C_DEL 0x08                   // last op was a cursor_del
+#define C_UNTRACK 0x40               // Un-track cursor when closing
+#define C_WRITEMAP MDB_TXN_WRITEMAP  // Copy of txn flag
+#define C_ORIG_RDONLY MDB_TXN_RDONLY
 
 // Handle for the DB used to track free pages.
 enum

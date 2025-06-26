@@ -55,7 +55,6 @@ struct MDB_page2
 // Address of first usable data byte in a page, after the header
 #define METADATA(p) (reinterpret_cast<void*>(reinterpret_cast<char*>(p) + PAGEHDRSZ))
 
-// ITS#7713, change PAGEBASE to handle 65536 byte pages
 #define PAGEBASE 0
 
 // Number of nodes on a page
@@ -66,42 +65,15 @@ struct MDB_page2
 #define P_OVERFLOW 0x04  // overflow page
 #define P_META 0x08      // meta page
 #define P_DIRTY 0x10     // dirty page
-#define P_SUBP 0x02      // for sub-page (removed but kept for compatibility)
+#define P_SUBP 0x02
 #define P_LOOSE 0x4000   // page was dirtied then freed, can be reused
 #define P_KEEP 0x8000    // leave this page alone during spill
 
-// Page search flags
-enum
-{
-    MDB_PS_MODIFY = 1,
-    MDB_PS_ROOTONLY = 2,
-    MDB_PS_FIRST = 4,
-    MDB_PS_LAST = 8
-};
-
-/* from mdb.c, for MDB_cursor */
-#define C_INITIALIZED 0x01           // cursor has been initialized and is valid
-#define C_EOF 0x02                   // No more data
-#define C_SUB 0x04                   // Cursor is a sub-cursor
-#define C_DEL 0x08                   // last op was a cursor_del
-#define C_UNTRACK 0x40               // Un-track cursor when closing
-#define C_WRITEMAP MDB_TXN_WRITEMAP  // Copy of txn flag
-#define C_ORIG_RDONLY MDB_TXN_RDONLY
-
-/* from mdb.c, for MDB_node */
 enum
 {
     F_BIGDATA = 0x01,  // data put on overflow page
     F_SUBDATA = 0x02,  // data is a sub-database
-    F_DUPDATA = 0x04   // data has duplicates (removed but kept for compatibility)
-};
-#define NODE_ADD_FLAGS                                                                                                 \
-    (static_cast<unsigned>(F_SUBDATA) | static_cast<unsigned>(MDB_RESERVE) | static_cast<unsigned>(MDB_APPEND))
-
-// Split flags
-enum
-{
-    MDB_SPLIT_REPLACE = 0x01  // replace existing item (removed but kept for compatibility)
+    F_DUPDATA = 0x04
 };
 
 // The amount of space remaining in the page
@@ -250,30 +222,3 @@ struct MDB_node
         (key).mv_size = NODEKSZ(node);                                                                                 \
         (key).mv_data = NODEKEY(node);                                                                                 \
     }
-
-// Page Management Functions
-auto mdb_page_alloc(MDB_cursor* mc, int num, MDB_page** mp) -> int;
-auto mdb_page_new(MDB_cursor* mc, uint32_t flags, int num, MDB_page** mp) -> int;
-auto mdb_page_touch(MDB_cursor* mc) -> int;
-auto mdb_page_unspill(MDB_txn* txn, MDB_page* mp, MDB_page** ret) -> int;
-auto mdb_page_get(MDB_cursor* mc, pgno_t pgno, MDB_page** mp, int* lvl) -> int;
-auto mdb_page_search_root(MDB_cursor* mc, MDB_val* key, int modify) -> int;
-auto mdb_page_search(MDB_cursor* mc, MDB_val* key, int flags) -> int;
-auto mdb_page_merge(MDB_cursor* csrc, MDB_cursor* cdst) -> int;
-auto mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t newpgno, unsigned int nflags) -> int;
-void mdb_page_copy(MDB_page* dst, MDB_page* src, unsigned int psize);
-auto mdb_page_flush(MDB_txn* txn, int keep) -> int;
-// Node operation functions
-auto mdb_node_search(MDB_cursor* mc, MDB_val* key, int* exactp) -> MDB_node*;
-auto mdb_node_add(MDB_cursor* mc, indx_t indx, MDB_val* key, MDB_val* data, pgno_t pgno, unsigned int flags) -> int;
-void mdb_node_del(MDB_cursor* mc, int ksize);
-void mdb_node_shrink(MDB_page* mp, indx_t indx);
-auto mdb_node_move(MDB_cursor* csrc, MDB_cursor* cdst, int fromleft) -> int;
-auto mdb_node_read(MDB_cursor* mc, MDB_node* leaf, MDB_val* data) -> int;
-auto mdb_leaf_size(MDB_env* env, MDB_val* key, MDB_val* data) -> size_t;
-auto mdb_branch_size(MDB_env* env, MDB_val* key) -> size_t;
-auto mdb_ovpage_free(MDB_cursor* mc, MDB_page* mp) -> int;
-auto mdb_page_spill(MDB_cursor* m0, MDB_val* key, MDB_val* data) -> int;
-void mdb_page_dirty(MDB_txn* txn, MDB_page* mp);
-auto mdb_page_malloc(MDB_txn* txn, unsigned num) -> MDB_page*;
-void mdb_dpage_free(MDB_env* env, MDB_page* dp);
