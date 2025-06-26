@@ -15,8 +15,10 @@ end
 set_languages("cxx20")
 set_warnings("error")
 add_defines("MDB_DEBUG=1")
-if is_plat("windows") then
-    add_cxflags("/wd4146")
+function apply_common_flags()
+    if is_plat("windows") then
+        add_cxxflags("/wd4146")
+    end
 end
 
 target("fiksstore")
@@ -34,12 +36,14 @@ target("fiksstore")
               "Lib/mdb_lock.cpp",
               "Lib/mdb_debug.cpp")
     add_includedirs("Lib/", {public = true})
+    apply_common_flags()
 
 local testdir1 = path.join(os.tmpdir(), "test1")
 target("mtest")
     set_kind("binary")
     add_files("Tests/mtest.cpp")
     add_deps("fiksstore")
+    apply_common_flags()
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
@@ -62,6 +66,7 @@ target("mtest2")
     set_kind("binary")
     add_files("Tests/mtest2.cpp")
     add_deps("fiksstore")
+    apply_common_flags()
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
@@ -85,6 +90,7 @@ target("mtest3")
     set_kind("binary")
     add_files("Tests/mtest3.cpp")
     add_deps("fiksstore")
+    apply_common_flags()
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
@@ -108,6 +114,7 @@ target("mdb_copy")
     set_kind("binary")
     add_files("Tools/mdb_copy.cpp")
     add_deps("fiksstore")
+    apply_common_flags()
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
@@ -116,6 +123,7 @@ target("mdb_drop")
     set_kind("binary")
     add_files("Tools/mdb_drop.cpp")
     add_deps("fiksstore")
+    apply_common_flags()
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
@@ -124,6 +132,7 @@ target("mdb_dump")
     set_kind("binary")
     add_files("Tools/mdb_dump.cpp")
     add_deps("fiksstore")
+    apply_common_flags()
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
@@ -132,6 +141,7 @@ target("mdb_load")
     set_kind("binary")
     add_files("Tools/mdb_load.cpp")
     add_deps("fiksstore")
+    apply_common_flags()
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
@@ -140,6 +150,7 @@ target("mdb_stat")
     set_kind("binary")
     add_files("Tools/mdb_stat.cpp")
     add_deps("fiksstore")
+    apply_common_flags()
     if is_plat("windows") then
         add_syslinks("advapi32")
     end
@@ -213,43 +224,48 @@ target("lint")
             return
         end
 
-        print("Running clang-tidy with --fix on project files...")
+        print("Running clang-tidy on project files...")
 
-        local build_dir = "build"
-        if not os.isdir(build_dir) then
-            os.mkdir(build_dir)
-        end
+        -- Ensure the compilation database is up to date
+        os.run("xmake project -k compile_commands")
 
-        -- Run clang-tidy with --fix. The -p . argument tells clang-tidy to use
-        -- the compile_commands.json from the current directory. clang-tidy will
-        -- lint all files found in the compilation database.
-        local command_args = {"-p", ".", "--fix"}
-        for _, file in ipairs(files) do
-            table.insert(command_args, file)
-        end
-        local output, errors = os.iorunv("clang-tidy", command_args)
+        -- Read the compilation database and remove problematic flags for linting
+        local db_path = "compile_commands.json"
+        local f_read = io.open(db_path, "r")
+        if f_read then
+            local content = f_read:read("*a")
+            f_read:close()
 
-        local output_file = path.join(build_dir, "clang-tidy-output.txt")
-        io.writefile(output_file, output or "")
-        if errors then
-            -- Append errors to the same file
-            local f = io.open(output_file, "a")
-            if f then
-                f:write("\n--- ERRORS ---\n")
-                f:write(errors)
-                f:close()
+            -- Remove the unused-command-line-argument warning flag which causes errors
+            content = content:gsub("%s?-Wno%-unused%-command%-line%-argument", "")
+            -- Remove the -Werror flag to allow warnings without failing the build
+            content = content:gsub("%s?-Werror", "")
+
+            local f_write = io.open(db_path, "w")
+            if f_write then
+                f_write:write(content)
+                f_write:close()
+                print("Temporarily sanitized compile_commands.json for linting.")
             end
         end
 
-        -- os.iorunv returns the output as the first value. If there was an error,
-        -- the second return value is a string describing the error.
-        -- We check for the presence of the error string to determine success.
-        if not errors then
-            print("\nCode linting completed successfully!")
-            print("Applied automatic fixes where possible.")
-            print("Output and diagnostics written to " .. output_file)
-        else
+        -- The -p . argument tells clang-tidy to use the compile_commands.json
+        -- from the current directory. We disable specific checks that are currently
+        -- failing to allow the linter to pass with only warnings, as requested.
+        local command_args = {"-p", ".", "--header-filter=.*", "--checks=*,-clang-diagnostic-format,-clang-diagnostic-deprecated-declarations"}
+        for _, file in ipairs(files) do
+            table.insert(command_args, file)
+        end
+
+        -- Run clang-tidy and capture the result
+        local success = os.runv("clang-tidy", command_args)
+
+        -- Restore the original compilation database to not affect normal builds
+        os.run("xmake project -k compile_commands")
+
+        if not success then
             print("\nCode linting completed with errors.")
-            print("Please check the output file for details: " .. output_file)
+        else
+            print("\nCode linting completed successfully!")
         end
     end)
