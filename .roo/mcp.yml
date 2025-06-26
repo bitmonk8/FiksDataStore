@@ -1,0 +1,7 @@
+mcpServers:
+  roo-activity-logger:
+    command: npx
+    args: ["-y", "github:annenpolka/roo-logger"]
+    env: {}
+    disabled: false
+    defaultLogsDir: "${workspaceFolder}/RooLogs"

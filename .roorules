@@ -1,0 +1,17 @@
+## Important
+
+Always log activities using roo-activity-logger according to the logging rules.
+
+## Preparation
+
+Check the current context with `git status`.
+
+Then, use roo-activity-logger's `search_logs` to review existing logs and identify current tasks.
+
+Be sure to perform the logging steps.
+
+## Logging
+
+- Always use roo-activity-logger for all logs
+- Include stack traces and execution context
+- Record intention and context
