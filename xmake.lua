@@ -204,16 +204,31 @@ target("format")
 target("lint")
     set_kind("phony")
     on_run(function (target)
-        -- Find all .cpp files in the specified directories
-        local source_dirs = {"Lib", "Tests", "Tools"}
-        local file_patterns = {"*.cpp"}
+        import("core.base.option")
+        local args = option.get("arguments")
+        local file_to_lint = args and args[1]
+
         local files = {}
-        for _, dir in ipairs(source_dirs) do
-            if os.isdir(dir) then
-                for _, pattern in ipairs(file_patterns) do
-                    local found_files = os.files(path.join(dir, pattern))
-                    for _, file in ipairs(found_files) do
-                        table.insert(files, file)
+        if file_to_lint and file_to_lint ~= "" then
+            if os.isfile(file_to_lint) then
+                table.insert(files, file_to_lint)
+                print("Running clang-tidy on " .. file_to_lint .. "...")
+            else
+                print("Error: File not found at: " .. file_to_lint)
+                os.exit(1)
+            end
+        else
+            -- Find all .cpp files in the specified directories
+            print("Running clang-tidy on all project files...")
+            local source_dirs = {"Lib", "Tests", "Tools"}
+            local file_patterns = {"*.cpp"}
+            for _, dir in ipairs(source_dirs) do
+                if os.isdir(dir) then
+                    for _, pattern in ipairs(file_patterns) do
+                        local found_files = os.files(path.join(dir, pattern))
+                        for _, file in ipairs(found_files) do
+                            table.insert(files, file)
+                        end
                     end
                 end
             end
@@ -223,8 +238,6 @@ target("lint")
             print("No source files found to lint")
             return
         end
-
-        print("Running clang-tidy on project files...")
 
         -- Ensure the build directory exists
         if not os.isdir("build") then
@@ -242,9 +255,10 @@ target("lint")
             f_read:close()
 
             -- Remove the unused-command-line-argument warning flag which causes errors
-            content = content:gsub("%s?-Wno%-unused%-command%-line%-argument", "")
+            -- Note: '%' is a special character in Lua patterns and must be escaped with '%%'.
+            content = content:gsub("%%s?-Wno%%-unused%%-command%%-line%%-argument", "")
             -- Remove the -Werror flag to allow warnings without failing the build
-            content = content:gsub("%s?-Werror", "")
+            content = content:gsub("%%s?-Werror", "")
 
             local f_write = io.open(db_path, "w")
             if f_write then
