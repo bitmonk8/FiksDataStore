@@ -226,11 +226,16 @@ target("lint")
 
         print("Running clang-tidy on project files...")
 
-        -- Ensure the compilation database is up to date
-        os.run("xmake project -k compile_commands")
+        -- Ensure the build directory exists
+        if not os.isdir("build") then
+            os.mkdir("build")
+        end
 
-        -- Read the compilation database and remove problematic flags for linting
-        local db_path = "compile_commands.json"
+        -- Ensure the compilation database is up to date in the build directory
+        os.run("xmake project -k compile_commands build")
+
+        -- Read the compilation database from the build directory
+        local db_path = "build/compile_commands.json"
         local f_read = io.open(db_path, "r")
         if f_read then
             local content = f_read:read("*a")
@@ -249,10 +254,9 @@ target("lint")
             end
         end
 
-        -- The -p . argument tells clang-tidy to use the compile_commands.json
-        -- from the current directory. We disable specific checks that are currently
-        -- failing to allow the linter to pass with only warnings, as requested.
-        local command_args = {"-p", ".", "--header-filter=.*", "--checks=*,-clang-diagnostic-format,-clang-diagnostic-deprecated-declarations"}
+        -- The -p build argument tells clang-tidy to use the compile_commands.json
+        -- from the build/ directory.
+        local command_args = {"-p", "build", "--header-filter=.*", "--checks=*,-clang-diagnostic-format,-clang-diagnostic-deprecated-declarations"}
         for _, file in ipairs(files) do
             table.insert(command_args, file)
         end
@@ -260,8 +264,8 @@ target("lint")
         -- Run clang-tidy and capture the result
         local success = os.runv("clang-tidy", command_args)
 
-        -- Restore the original compilation database to not affect normal builds
-        os.run("xmake project -k compile_commands")
+        -- Restore the original compilation database in the build directory
+        os.run("xmake project -k compile_commands build")
 
         if not success then
             print("\nCode linting completed with errors.")
