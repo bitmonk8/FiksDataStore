@@ -270,7 +270,7 @@ target("lint")
 
         -- The -p build argument tells clang-tidy to use the compile_commands.json
         -- from the build/ directory.
-        local command_args = {"-p", "build", "--header-filter=.*", "--checks=*,-clang-diagnostic-format,-clang-diagnostic-deprecated-declarations"}
+        local command_args = {"-p", "build", "--header-filter=.*"}
         for _, file in ipairs(files) do
             table.insert(command_args, file)
         end
