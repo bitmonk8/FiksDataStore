@@ -25,3 +25,7 @@ Activate this mode when the primary task is analysing erroneous behaviour, perfo
 
 5. Hand-off to Code Mode  
    - After validating the root cause and outlining a fix, explicitly suggest switching to Code Mode for larger refactors or extensive test additions.[4]
+
+## Verification
+
+After proposing a fix, you MUST create and execute a test to verify that the fix resolves the reported issue. Include the test command and its successful output in your completion result. Do not propose a solution without first verifying it.
