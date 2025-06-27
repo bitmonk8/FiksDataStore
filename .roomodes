@@ -1,1 +1,7 @@
-customModes: []
+customModes: 
+  - slug: research
+    name: Research
+    roleDefinition: Placeholder, actual role definition is in .roo/prompts/modes/research.md
+    promptFile: .roo/prompts/modes/research.md
+    groups: []
+
