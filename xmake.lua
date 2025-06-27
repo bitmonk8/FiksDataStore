@@ -275,18 +275,23 @@ target("lint")
             table.insert(command_args, file)
         end
 
-        -- Run clang-tidy and capture the result
-        local output, success = os.iorunv("clang-tidy", command_args)
-        if output and #output > 0 then
-            print(output)
-        end
+        local args_string = os.args(command_args)
+        local cmdline = "clang-tidy " .. args_string
+        print(cmdline)
 
+        local out_file    = path.join("build", "lint_output.txt")
+        local ok = os.execv("clang-tidy", command_args, { stdout = out_file, stderr = out_file })
+
+        local lint_output = io.readfile(out_file)
+        if lint_output and #lint_output > 0 then
+            print(lint_output)
+        end
         -- Restore the original compilation database in the build directory
         os.run("xmake project -k compile_commands build")
 
-        if not success then
-            print("\nCode linting completed with errors.")
-        else
+        if ok == 0 then
             print("\nCode linting completed successfully!")
+        else
+            print("\nCode linting completed with errors.")
         end
     end)
