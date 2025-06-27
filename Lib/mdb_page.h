@@ -185,8 +185,8 @@ struct MDB_node
 #define COPY_PGNO(dst, src)                                                                                            \
     do                                                                                                                 \
     {                                                                                                                  \
-        unsigned short *s;                                                                                             \
-        unsigned short *d;                                                                                             \
+        unsigned short* s;                                                                                             \
+        unsigned short* d;                                                                                             \
         s = (unsigned short*)&(src);                                                                                   \
         d = (unsigned short*)&(dst);                                                                                   \
         *d++ = *s++;                                                                                                   \
@@ -198,8 +198,8 @@ struct MDB_node
 #define COPY_PGNO(dst, src)                                                                                            \
     do                                                                                                                 \
     {                                                                                                                  \
-        unsigned short *s;                                                                                             \
-        unsigned short *d;                                                                                             \
+        unsigned short* s;                                                                                             \
+        unsigned short* d;                                                                                             \
         s = (unsigned short*)&(src);                                                                                   \
         d = (unsigned short*)&(dst);                                                                                   \
         *d++ = *s++;                                                                                                   \
