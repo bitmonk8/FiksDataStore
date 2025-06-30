@@ -797,7 +797,7 @@ auto mdb_page_alloc(MDB_cursor* mc, int num, MDB_page** mp) -> int
             auto* page_in_cursor = m2.mc_pg[m2.mc_top];
             auto* leaf_node = NODEPTR(page_in_cursor, m2.mc_ki[m2.mc_top]);
             MDB_val data;
-            
+
             const int node_read_rc = mdb_node_read(&m2, leaf_node, &data);
             if (node_read_rc != MDB_SUCCESS)
             {

@@ -70,7 +70,6 @@ auto mdb_midl_search(const MDB_IDL ids, MDB_ID id) -> unsigned
     return cursor;
 }
 
-
 auto mdb_midl_alloc(int num) -> MDB_IDL
 {
     auto ids = (MDB_IDL)malloc((num + 2) * sizeof(MDB_ID));

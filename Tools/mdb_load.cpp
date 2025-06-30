@@ -67,7 +67,7 @@ struct flagbit
 
 flagbit dbflags[] = {
     {.bit = MDB_REVERSEKEY, .name = "reversekey", .len = 10},
-    {.bit = 0, .name = nullptr, .len = 0}
+    {             .bit = 0,      .name = nullptr,  .len = 0}
 };
 
 static void readhdr()
