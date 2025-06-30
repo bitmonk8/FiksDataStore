@@ -29,9 +29,6 @@ using ssize_t = SSIZE_T;
 
 static void prstat(MDB_stat* ms)
 {
-#if 0
-//	printf("  Page size: %u\n", ms->ms_psize);
-#endif
     printf("  Tree depth: %u\n", ms->ms_depth);
     printf("  Branch pages: %" Yu "\n", ms->ms_branch_pages);
     printf("  Leaf pages: %" Yu "\n", ms->ms_leaf_pages);

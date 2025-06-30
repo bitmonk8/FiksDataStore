@@ -288,16 +288,8 @@ static auto mdb_del0(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data, uns
 
     MDB_cursor_op op{};
     MDB_val* xdata{nullptr};
-    if (data != nullptr)
-    {
-        op = MDB_SET;     // Simplified without MDB_GET_BOTH
-        xdata = nullptr;  // Ignore data parameter since no duplicates
-    }
-    else
-    {
-        op = MDB_SET;
-        xdata = nullptr;
-    }
+    op = MDB_SET;
+    xdata = nullptr;
     int exact{};
     int rc{mdb_cursor_set(&mc, key, xdata, op, &exact)};
     if (rc == 0)

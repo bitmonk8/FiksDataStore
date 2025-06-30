@@ -104,7 +104,7 @@ void mdb_page_list(MDB_page* mp)
         fprintf(stderr, "Overflow page %" Yu " pages %u%s\n", pgno, mp->mp_pages, state);
         return;
     case P_META:
-        fprintf(stderr, "Meta-page %" Yu " txnid %" Yu "\n", pgno, ((MDB_meta*)METADATA(mp))->mm_txnid);
+        fprintf(stderr, "Meta-page %" Yu " txnid %" Yu "\n", pgno, reinterpret_cast<MDB_meta*>(reinterpret_cast<char*>(mp) + PAGEHDRSZ)->mm_txnid);
         return;
     default:
         fprintf(stderr, "Bad page %" Yu " flags 0x%X\n", pgno, MP_FLAGS(mp));

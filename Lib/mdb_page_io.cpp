@@ -244,7 +244,9 @@ auto mdb_page_flush(MDB_txn* txn, int keep) -> int
                         if (event == nullptr)
                         {
                             rc = ErrCode();
-                            DPRINTF(("CreateEvent: %s", strerror(rc)));
+                            char errbuf[128];
+                            strerror_s(errbuf, sizeof(errbuf), rc);
+                            DPRINTF(("CreateEvent: %s", errbuf));
                             return rc;
                         }
                         this_ov->hEvent = event;

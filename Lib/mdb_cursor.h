@@ -92,6 +92,4 @@ auto mdb_cursor_prev(MDB_cursor* mc, MDB_val* key, MDB_val* data, MDB_cursor_op 
 auto mdb_cursor_set(MDB_cursor* mc, MDB_val* key, MDB_val* data, MDB_cursor_op op, int* exactp) -> int;
 auto mdb_cursor_first(MDB_cursor* mc, MDB_val* key, MDB_val* data) -> int;
 auto mdb_cursor_last(MDB_cursor* mc, MDB_val* key, MDB_val* data) -> int;
-
-auto mdb_rebalance(MDB_cursor* mc) -> int;
 auto mdb_update_key(MDB_cursor* mc, MDB_val* key) -> int;

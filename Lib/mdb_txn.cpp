@@ -290,7 +290,9 @@ auto mdb_txn_begin(MDB_env* env, MDB_txn* parent, unsigned int flags, MDB_txn** 
     new_txn = (MDB_txn*)calloc(1, size);
     if (new_txn == nullptr)
     {
-        DPRINTF(("calloc: %s", strerror(errno)));
+        char errbuf[128];
+        strerror_s(errbuf, sizeof(errbuf), errno);
+        DPRINTF(("calloc: %s", errbuf));
         return ENOMEM;
     }
     new_txn->mt_dbxs = env->me_dbxs;  // static

@@ -105,7 +105,6 @@ enum
 #define MDB_END_SLOT MDB_NOTLS  // release any reader slot if MDB_NOTLS
 void mdb_txn_end(MDB_txn* txn, unsigned mode);
 
-void mdb_txn_abort(MDB_txn* txn);
 auto mdb_txn_renew0(MDB_txn* txn) -> int;
 
 // Internal implementation function

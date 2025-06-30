@@ -70,40 +70,6 @@ auto mdb_midl_search(const MDB_IDL ids, MDB_ID id) -> unsigned
     return cursor;
 }
 
-#if 0  // superseded by append/sort
-//int mdb_midl_insert( MDB_IDL ids, MDB_ID id )
-//{
-//	unsigned x, i;
-//
-//	x = mdb_midl_search( ids, id );
-//	assert( x > 0 );
-//
-//	if( x < 1 ) {
-//		// internal error
-//		return -2;
-//	}
-//
-//	if ( x <= ids[0] && ids[x] == id ) {
-//		// duplicate
-//		assert(0);
-//		return -1;
-//	}
-//
-//	if ( ++ids[0] >= MDB_IDL_DB_MAX ) {
-//		// no room
-//		--ids[0];
-//		return -2;
-//
-//	} else {
-//		// insert id
-//		for (i=ids[0]; i>x; i--)
-//			ids[i] = ids[i-1];
-//		ids[x] = id;
-//	}
-//
-//	return 0;
-//}
-#endif
 
 auto mdb_midl_alloc(int num) -> MDB_IDL
 {
