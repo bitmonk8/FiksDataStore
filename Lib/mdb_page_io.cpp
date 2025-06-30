@@ -242,13 +242,8 @@ auto mdb_page_flush(MDB_txn* txn, int keep) -> int
                     {
                         const HANDLE event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
                         if (event == nullptr)
-                        {
-                            rc = ErrCode();
-                            char errbuf[128];
-                            strerror_s(errbuf, sizeof(errbuf), rc);
-                            DPRINTF(("CreateEvent: %s", errbuf));
-                            return rc;
-                        }
+                            return ErrCode();
+                            
                         this_ov->hEvent = event;
                     }
                     if (WriteFile(fd, wdp, wsize, nullptr, this_ov) == 0)
