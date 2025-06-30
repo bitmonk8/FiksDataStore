@@ -233,7 +233,7 @@ auto main(int argc, char* argv[]) -> int
             {
                 const char* sequence_status = "";
                 const mdb_size_t* const page_list = iptr + 1;
-                const ssize_t total_pages = static_cast<ssize_t>(entry_page_count);
+                const auto total_pages = static_cast<ssize_t>(entry_page_count);
                 ssize_t max_span = 0;
 
                 // Check sequence validity and find max span

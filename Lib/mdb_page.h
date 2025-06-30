@@ -131,7 +131,7 @@ struct MDB_node
 #define NODESIZE offsetof(MDB_node, mn_data)
 
 // Bit position of top word in page number, for shifting mn_flags
-#define PGNO_TOPWORD ((pgno_t) - 1 > 0xffffffffu ? 32 : 0)
+#define PGNO_TOPWORD ((pgno_t) - 1 > 0xffffffffU ? 32 : 0)
 
 // Size of a node in a branch page with a given key.
 // This is just the node header plus the key, there is no data.
