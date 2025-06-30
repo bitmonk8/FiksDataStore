@@ -74,7 +74,7 @@ auto mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* d
     if ((unused == 0U) && txn->mt_numdbs >= txn->mt_env->me_maxdbs)
         return MDB_DBS_FULL;
 
-    // Cannot mix named databases with some mainDB flags - removed MDB_INTEGERKEY check
+    // Cannot mix named databases with some mainDB flags
 
     // Find the DB info
     int dbflag{DB_NEW | DB_VALID | DB_USRVALID};

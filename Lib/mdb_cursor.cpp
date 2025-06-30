@@ -40,17 +40,11 @@ void mdb_cursor_chk(MDB_cursor* mc)
 auto mdb_node_search(MDB_cursor* mc, MDB_val* key, int* exactp) -> MDB_node*
 {
     unsigned int i = 0;
-    unsigned int nkeys;
-    int low;
-    int high;
-    int rc = 0;
     MDB_page* mp = mc->mc_pg[mc->mc_top];
     MDB_node* node = nullptr;
-    MDB_val nodekey;
-    MDB_cmp_func cmp;
     DKBUF;
 
-    nkeys = NUMKEYS(mp);
+    const unsigned int nkeys = NUMKEYS(mp);
 
     DPRINTF(("searching %u keys in %s %spage %" Yu,
              nkeys,
@@ -58,56 +52,53 @@ auto mdb_node_search(MDB_cursor* mc, MDB_val* key, int* exactp) -> MDB_node*
              IS_SUBP(mp) ? "sub-" : "",
              mdb_dbg_pgno(mp)));
 
-    low = IS_LEAF(mp) ? 0 : 1;
-    high = nkeys - 1;
-    cmp = mc->mc_dbx->md_cmp;
+    int low = IS_LEAF(mp) ? 0 : 1;
+    int high = nkeys - 1;
 
-    // Branch pages have no data, so if using integer keys,
-    // alignment is guaranteed. Use faster mdb_cmp_int.
-    if (cmp == mdb_cmp_cint && IS_BRANCH(mp))
-    {
-        if (NODEPTR(mp, 1)->mn_ksize == sizeof(mdb_size_t))
-            cmp = mdb_cmp_long;
-        else
-            cmp = mdb_cmp_int;
-    }
+    const auto cmp = mc->mc_dbx->md_cmp;
 
+    int compareResult = 0;
     // No LEAF2 support - use standard node search
     while (low <= high)
     {
         i = (low + high) >> 1;
 
         node = NODEPTR(mp, i);
+
+        MDB_val nodekey;
         nodekey.mv_size = NODEKSZ(node);
         nodekey.mv_data = NODEKEY(node);
 
-        rc = cmp(key, &nodekey);
+        compareResult = cmp(key, &nodekey);
 #if MDB_DEBUG
         if (IS_LEAF(mp))
-            DPRINTF(("found leaf index %u [%s], rc = %i", i, DKEY(&nodekey), rc));
+            DPRINTF(("found leaf index %u [%s], rc = %i", i, DKEY(&nodekey), compareResult));
         else
-            DPRINTF(("found branch index %u [%s -> %" Yu "], rc = %i", i, DKEY(&nodekey), NODEPGNO(node), rc));
+            DPRINTF(("found branch index %u [%s -> %" Yu "], rc = %i", i, DKEY(&nodekey), NODEPGNO(node), compareResult));
 #endif
-        if (rc == 0)
+        if (compareResult == 0)
             break;
-        if (rc > 0)
+        if (compareResult > 0)
             low = i + 1;
         else
             high = i - 1;
     }
 
-    if (rc > 0)
-    {         // Found entry is less than the key.
-        i++;  // Skip to get the smallest entry larger than key.
+    if (compareResult > 0)
+    {
+        // Found entry is less than the key.
+        // Skip to get the smallest entry larger than key.
+        i++;
         node = NODEPTR(mp, i);
     }
+
     if (exactp != nullptr)
-        *exactp = static_cast<int>(rc == 0 && nkeys > 0);
+        *exactp = static_cast<int>(compareResult == 0 && nkeys > 0);
+
     // store the key index
     mc->mc_ki[mc->mc_top] = i;
     if (i >= nkeys)
-        // There is no entry larger or equal to the key.
-        return nullptr;
+        return nullptr; // There is no entry larger or equal to the key.
 
     return node;
 }

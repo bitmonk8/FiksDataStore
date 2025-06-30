@@ -11,42 +11,6 @@ auto mdb_cmp_long(const MDB_val* a, const MDB_val* b) -> int
                : static_cast<int>(*(mdb_size_t*)a->mv_data > *(mdb_size_t*)b->mv_data);
 }
 
-// Compare two items pointing at aligned unsigned int's.
-auto mdb_cmp_int(const MDB_val* a, const MDB_val* b) -> int
-{
-    return (*(unsigned int*)a->mv_data < *(unsigned int*)b->mv_data)
-               ? -1
-               : static_cast<int>(*(unsigned int*)a->mv_data > *(unsigned int*)b->mv_data);
-}
-
-// Compare two items pointing at unsigned ints of unknown alignment.
-// Nodes and keys are guaranteed to be 2-byte aligned.
-auto mdb_cmp_cint(const MDB_val* a, const MDB_val* b) -> int
-{
-#if BYTE_ORDER == LITTLE_ENDIAN
-    auto* u = (unsigned short*)((char*)a->mv_data + a->mv_size);
-    auto* c = (unsigned short*)((char*)b->mv_data + a->mv_size);
-    do
-    {
-        int x{*--u - *--c};
-        if (x != 0)
-            return x;
-    } while (u > (unsigned short*)a->mv_data);
-    return 0;
-#else
-    unsigned short* end = (unsigned short*)((char*)a->mv_data + a->mv_size);
-    unsigned short* u = (unsigned short*)a->mv_data;
-    unsigned short* c = (unsigned short*)b->mv_data;
-    do
-    {
-        int x{*u++ - *c++};
-        if (x)
-            return x;
-    } while (u < end);
-    return 0;
-#endif
-}
-
 // Compare two items lexically
 auto mdb_cmp_memn(const MDB_val* a, const MDB_val* b) -> int
 {
@@ -88,12 +52,4 @@ auto mdb_cmp_memnr(const MDB_val* a, const MDB_val* b) -> int
 auto mdb_cmp(MDB_txn* txn, MDB_dbi dbi, const MDB_val* a, const MDB_val* b) -> int
 {
     return txn->mt_dbxs[dbi].md_cmp(a, b);
-}
-
-auto mdb_dcmp(MDB_txn* txn, MDB_dbi dbi, const MDB_val* a, const MDB_val* b) -> int
-{
-    MDB_cmp_func dcmp = txn->mt_dbxs[dbi].md_dcmp;
-    if (NEED_CMP_CLONG(dcmp, a->mv_size))
-        dcmp = mdb_cmp_clong;
-    return dcmp(a, b);
 }

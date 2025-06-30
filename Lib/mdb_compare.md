@@ -47,28 +47,14 @@ These functions perform byte-wise comparison of data.
 
 These functions are optimized for comparing keys that are integer types. They are generally faster than lexicographical comparison for numeric data because they avoid byte-by-byte loops.
 
-*   **`mdb_cmp_int(const MDB_val* a, const MDB_val* b)`**: Compares keys that are `unsigned int`. It assumes the `mv_data` pointers are correctly aligned to an `unsigned int` boundary.
-
 *   **`mdb_cmp_long(const MDB_val* a, const MDB_val* b)`**: Compares keys that are `mdb_size_t`. It assumes the `mv_data` pointers are correctly aligned.
-
-*   **`mdb_cmp_cint(const MDB_val* a, const MDB_val* b)`**: A "careful" integer comparison for `unsigned int` keys that may not be aligned.
-    *   **Algorithm**: To avoid potential hardware faults from unaligned memory access, this function reads the data in smaller, guaranteed-to-be-aligned chunks (`unsigned short`).
-    *   **Endianness**: The implementation is endian-aware. On little-endian systems, it compares from the most significant bytes to the least significant (i.e., from the end of the byte array backwards). On big-endian systems, it compares from the start forwards. This ensures the numerical value is correctly compared regardless of the host byte order.
 
 ### Dispatch and Helper Macros
 
 *   **`mdb_cmp(MDB_txn* txn, MDB_dbi dbi, const MDB_val* a, const MDB_val* b)`**: This is a dispatch function. It looks up the correct key comparison function associated with the given database handle (`dbi`) within a transaction and calls it. The comparator is stored in `txn->mt_dbxs[dbi].md_cmp`.
 
-*   **`mdb_dcmp(MDB_txn* txn, MDB_dbi dbi, const MDB_val* a, const MDB_val* b)`**: This is the dispatch function for data comparison, used in `MDB_DUPSORT` databases where keys can have multiple, sorted data items. It calls the comparator stored in `txn->mt_dbxs[dbi].md_dcmp`.
-
-*   **`mdb_cmp_clong`**: This macro is a portability wrapper. It resolves to the fast `mdb_cmp_long` on architectures that permit misaligned access (`MISALIGNED_OK`) and to the safer (but slower) `mdb_cmp_cint` on architectures that do not.
-
-*   **`NEED_CMP_CLONG(cmp, ksize)`**: This macro checks if a situation requires the special `mdb_cmp_clong` comparator. This is true when the default integer comparator is used for keys of size `mdb_size_t` on 64-bit systems where `sizeof(mdb_size_t)` might be 8, but the default integer comparison is for 4-byte integers.
-
 ## 4. Usage and Developer Guidance
 
-*   **Choosing a Comparator**: When creating a database, a developer can use `mdb_db_open` and specify flags like `MDB_INTEGERKEY` or `MDB_REVERSEDUP` to select these built-in comparators. For custom sorting logic, a developer can provide their own function pointer using `mdb_set_compare`.
+*   **Choosing a Comparator**: For custom sorting logic, a developer can provide their own function pointer using `mdb_set_compare`.
 
-*   **Performance and Alignment**: For integer keys, ensuring they are stored with natural alignment allows the use of the faster `mdb_cmp_int` or `mdb_cmp_long`. If alignment cannot be guaranteed, MDB's internal logic will fall back to safer methods, but with a potential performance cost.
-
-*   **Portability**: The code in `mdb_compare.cpp`, especially `mdb_cmp_cint`, demonstrates best practices for writing portable database code by being mindful of data alignment and system endianness. Any custom comparators that deal with multi-byte numeric types should take similar precautions if portability is a concern.
+*   **Portability**: The code in `mdb_compare.cpp`, demonstrates best practices for writing portable database code by being mindful of data alignment and system endianness. Any custom comparators that deal with multi-byte numeric types should take similar precautions if portability is a concern.

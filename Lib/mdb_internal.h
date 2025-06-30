@@ -20,14 +20,6 @@ struct MDB_txn;
 struct MDB_txninfo;
 enum Pidlock_op : int;
 
-#ifndef _GNU_SOURCE
-#define GNU_SOURCE 1
-#endif
-
-#if defined(__WIN64__)
-#define _FILE_OFFSET_BITS 64
-#endif
-
 using mdb_hash_t = unsigned long long;
 
 #ifdef _WIN32
