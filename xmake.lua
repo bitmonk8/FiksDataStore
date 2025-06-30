@@ -1,3 +1,5 @@
+add_moduledirs("xmake_modules")
+
 add_rules("mode.debug")
 set_defaultmode("debug")
 
@@ -205,6 +207,7 @@ target("lint")
     set_kind("phony")
     on_run(function (target)
         import("core.base.option")
+        import("execv")
         local args = option.get("arguments")
         local file_to_lint = args and args[1]
 
@@ -218,7 +221,6 @@ target("lint")
                 os.exit(1)
             end
         else
-            -- Find all .cpp files in the specified directories
             print("Running clang-tidy on all project files...")
             local source_dirs = {"Lib", "Tests", "Tools"}
             local file_patterns = {"*.cpp"}
@@ -239,25 +241,19 @@ target("lint")
             return
         end
 
-        -- Ensure the build directory exists
         if not os.isdir("build") then
             os.mkdir("build")
         end
 
-        -- Ensure the compilation database is up to date in the build directory
         os.run("xmake project -k compile_commands build")
 
-        -- Read the compilation database from the build directory
         local db_path = "build/compile_commands.json"
         local f_read = io.open(db_path, "r")
         if f_read then
             local content = f_read:read("*a")
             f_read:close()
 
-            -- Remove the unused-command-line-argument warning flag which causes errors
-            -- Note: '%' is a special character in Lua patterns and must be escaped with '%%'.
             content = content:gsub("%%s?-Wno%%-unused%%-command%%-line%%-argument", "")
-            -- Remove the -Werror flag to allow warnings without failing the build
             content = content:gsub("%%s?-Werror", "")
 
             local f_write = io.open(db_path, "w")
@@ -268,8 +264,15 @@ target("lint")
             end
         end
 
-        -- The -p build argument tells clang-tidy to use the compile_commands.json
-        -- from the build/ directory.
+        local fix_command_args = {"-p", "build", "--header-filter=.*", "--fix", "--fix-errors", "--quiet"}
+        for _, file in ipairs(files) do
+            table.insert(fix_command_args, file)
+        end
+
+        local nullLogFile = os.tmpfile()
+        execv.MyExecV("clang-tidy", fix_command_args, {stdout = nullLogFile, stderr = nullLogFile})
+        os.rm(nullLogFile)
+
         local command_args = {"-p", "build", "--header-filter=.*"}
         for _, file in ipairs(files) do
             table.insert(command_args, file)
@@ -280,13 +283,13 @@ target("lint")
         print(cmdline)
 
         local out_file    = path.join("build", "lint_output.txt")
-        local ok = os.execv("clang-tidy", command_args, { stdout = out_file, stderr = out_file })
+        local ok, errors = execv.MyExecV("clang-tidy", command_args, {stdout = out_file, stderr = out_file})
 
         local lint_output = io.readfile(out_file)
         if lint_output and #lint_output > 0 then
             print(lint_output)
         end
-        -- Restore the original compilation database in the build directory
+
         os.run("xmake project -k compile_commands build")
 
         if ok == 0 then
