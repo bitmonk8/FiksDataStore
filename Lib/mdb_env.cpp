@@ -840,7 +840,7 @@ auto ESECT mdb_env_create(MDB_env** env) -> int
     GET_PAGESIZE(e->me_os_psize);
     VGMEMP_CREATE(e, 0, 0);
     *env = e;
-    MDB_TRACE(("%p", e));
+    DPRINTF(("%p", e));
     return MDB_SUCCESS;
 }
 
@@ -987,7 +987,7 @@ auto ESECT mdb_env_set_mapsize(MDB_env* env, mdb_size_t size) -> int
     env->me_mapsize = size;
     if (env->me_psize != 0U)
         env->me_maxpg = env->me_mapsize / env->me_psize;
-    MDB_TRACE(("%p, %" Yu "", env, size));
+    DPRINTF(("%p, %" Yu "", env, size));
     return MDB_SUCCESS;
 }
 
@@ -996,7 +996,7 @@ auto ESECT mdb_env_set_maxdbs(MDB_env* env, MDB_dbi dbs) -> int
     if (env->me_map != nullptr)
         return EINVAL;
     env->me_maxdbs = dbs + CORE_DBS;
-    MDB_TRACE(("%p, %u", env, dbs));
+    DPRINTF(("%p, %u", env, dbs));
     return MDB_SUCCESS;
 }
 
@@ -1005,7 +1005,7 @@ auto ESECT mdb_env_set_maxreaders(MDB_env* env, unsigned int readers) -> int
     if ((env->me_map != nullptr) || readers < 1)
         return EINVAL;
     env->me_maxreaders = readers;
-    MDB_TRACE(("%p, %u", env, readers));
+    DPRINTF(("%p, %u", env, readers));
     return MDB_SUCCESS;
 }
 
@@ -1686,7 +1686,7 @@ auto ESECT mdb_env_open(MDB_env* env, const char* path, unsigned int flags, mdb_
     }
 
 leave:
-    MDB_TRACE(("%p, %s, %u, %04o", env, path, flags & (CHANGEABLE | CHANGELESS), mode));
+    DPRINTF(("%p, %s, %u, %04o", env, path, flags & (CHANGEABLE | CHANGELESS), mode));
     if (rc != 0)
     {
         mdb_env_close0(env, excl);
@@ -1827,7 +1827,7 @@ void ESECT mdb_env_close(MDB_env* env)
     if (env == nullptr)
         return;
 
-    MDB_TRACE(("%p", env));
+    DPRINTF(("%p", env));
     VGMEMP_DESTROY(env);
     while ((dp = env->me_dpages) != nullptr)
     {

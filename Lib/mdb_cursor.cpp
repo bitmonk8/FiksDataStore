@@ -1064,7 +1064,7 @@ auto mdb_cursor_put(MDB_cursor* cursor, MDB_val* key, MDB_val* data, unsigned in
     DKBUF;
     DDBUF;
     int rc = mdb_cursor_put_impl(cursor, key, data, flags);
-    MDB_TRACE(("%p, %" Z "u[%s], %" Z "u%s, %u",
+    DPRINTF(("%p, %" Z "u[%s], %" Z "u%s, %u",
                cursor,
                key ? key->mv_size : 0,
                DKEY(key),
@@ -1142,7 +1142,7 @@ fail:
 
 auto mdb_cursor_del(MDB_cursor* cursor, unsigned int flags) -> int
 {
-    MDB_TRACE(("%p, %u", cursor, flags));
+    DPRINTF(("%p, %u", cursor, flags));
     return mdb_cursor_del_impl(cursor, flags);
 }
 
@@ -1199,7 +1199,7 @@ auto mdb_cursor_open(MDB_txn* txn, MDB_dbi dbi, MDB_cursor** cursor) -> int
         return ENOMEM;
     }
 
-    MDB_TRACE(("%p, %u = %p", txn, dbi, mc));
+    DPRINTF(("%p, %u = %p", txn, dbi, mc));
     *cursor = mc;
 
     return MDB_SUCCESS;
@@ -1249,7 +1249,7 @@ auto mdb_cursor_count(MDB_cursor* mc, mdb_size_t* countp) -> int
 
 void mdb_cursor_close(MDB_cursor* cursor)
 {
-    MDB_TRACE(("%p", cursor));
+    DPRINTF(("%p", cursor));
     if ((cursor != nullptr) && (cursor->mc_backup == nullptr))
     {
         /* Remove from txn, if tracked.

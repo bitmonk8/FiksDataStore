@@ -37,12 +37,8 @@ extern txnid_t mdb_debug_start;
 //	Requires double parenthesis around 2 or more args.
 #define DPRINTF(args) ((void)((mdb_debug & MDB_DBG_INFO) && DPRINTF0 args))
 #define DPRINTF0(fmt, ...) fprintf(stderr, "%s:%d " fmt "\n", __func__, __LINE__, __VA_ARGS__)
-// Trace info for replaying
-#define MDB_TRACE(args) ((void)((mdb_debug & MDB_DBG_TRACE) && DPRINTF1 args))
-#define DPRINTF1(fmt, ...) fprintf(stderr, ">%lu:%s: " fmt "\n", getpid(), __func__, __VA_ARGS__)
 #else
 #define DPRINTF(args) ((void)0)
-#define MDB_TRACE(args) ((void)0)
 #endif
 //	Print a debug string.
 //	The string is printed literally, with no format processing.

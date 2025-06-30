@@ -368,7 +368,7 @@ auto mdb_txn_begin(MDB_env* env, MDB_txn* parent, unsigned int flags, MDB_txn** 
                  (void*)env,
                  new_txn->mt_dbs[MAIN_DBI].md_root));
     }
-    MDB_TRACE(("%p, %p, %u = %p", env, parent, flags, txn));
+    DPRINTF(("%p, %p, %u = %p", env, parent, flags, txn));
 
     return rc;
 }
@@ -595,7 +595,7 @@ void mdb_txn_abort_impl(MDB_txn* txn)
 
 void mdb_txn_abort(MDB_txn* txn)
 {
-    MDB_TRACE(("%p", txn));
+    DPRINTF(("%p", txn));
     mdb_txn_abort_impl(txn);
 }
 
@@ -1146,6 +1146,6 @@ fail:
 
 auto mdb_txn_commit(MDB_txn* txn) -> int
 {
-    MDB_TRACE(("%p", txn));
+    DPRINTF(("%p", txn));
     return mdb_txn_commit_impl(txn);
 }

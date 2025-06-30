@@ -29,10 +29,10 @@ A multi-level trace logging system allows for detailed observation of the librar
 *   **Control Macro:** `MDB_DEBUG`
     *   `MDB_DEBUG 0` (Default): All logging is compiled out.
     *   `MDB_DEBUG 1`: Enables informational logging via the `DPRINTF` macro.
-    *   `MDB_DEBUG 2`: Enables more verbose tracing via the `MDB_TRACE` macro, which is useful for replaying execution flows.
+    *   `MDB_DEBUG 2`: Enables more verbose tracing via the `DPRINTF` macro, which is useful for replaying execution flows.
 *   **Logging Macros:**
     *   `DPRINTF((format, ...))`: Prints a standard formatted debug message, prefixed with the function name and line number. Note the double parentheses required for multiple arguments.
-    *   `MDB_TRACE((format, ...))`: Prints a more detailed trace message, prefixed with the process ID and function name.
+    *   `DPRINTF((format, ...))`: Prints a more detailed trace message, prefixed with the process ID and function name.
     *   `DPUTS(string)`: A convenience macro to print a literal string.
 
 ### 2.3. Data Inspection
@@ -77,7 +77,7 @@ To leverage these debugging tools, a developer would typically perform the follo
 2.  **Disable NDEBUG:** Ensure that the `NDEBUG` macro is not defined to enable assertions.
 3.  **Recompile:** Rebuild the MDB library and/or the application using it.
 4.  **Instrument Code:**
-    *   Insert `DPRINTF` or `MDB_TRACE` calls at critical points in the code to observe variable states or execution paths.
+    *   Insert `DPRINTF` or `DPRINTF` calls at critical points in the code to observe variable states or execution paths.
     *   When holding a pointer to a page (`MDB_page *`), call `mdb_page_list()` to dump its contents to `stderr`.
     *   To run the integrity check, call `mdb_audit()` on an open transaction.
 5.  **Run and Observe:** Execute the program and monitor `stderr` for the debug output.

@@ -41,7 +41,7 @@ auto mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* d
             }
         }
         mdb_default_cmp(txn, MAIN_DBI);
-        MDB_TRACE(("%p, (null), %u = %u", txn, flags, MAIN_DBI));
+        DPRINTF(("%p, (null), %u = %u", txn, flags, MAIN_DBI));
         return MDB_SUCCESS;
     }
 
@@ -142,7 +142,7 @@ auto mdb_dbi_open(MDB_txn* txn, const char* name, unsigned int flags, MDB_dbi* d
         {
             txn->mt_numdbs++;
         }
-        MDB_TRACE(("%p, %s, %u = %u", txn, name, flags, slot));
+        DPRINTF(("%p, %s, %u = %u", txn, name, flags, slot));
     }
 
     return rc;
@@ -156,7 +156,7 @@ void mdb_dbi_close(MDB_env* env, MDB_dbi dbi)
     // If there was no name, this was already closed
     if (ptr != nullptr)
     {
-        MDB_TRACE(("%p, %u", env, dbi));
+        DPRINTF(("%p, %u", env, dbi));
         env->me_dbxs[dbi].md_name.mv_data = nullptr;
         env->me_dbxs[dbi].md_name.mv_size = 0;
         env->me_dbflags[dbi] = 0;
@@ -323,7 +323,7 @@ auto mdb_del(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data) -> int
     data = nullptr;
 
 #if MDB_DEBUG
-    MDB_TRACE(("%p, %u, %" Z "u[%s], %" Z "u%s",
+    DPRINTF(("%p, %u, %" Z "u[%s], %" Z "u%s",
                txn,
                dbi,
                key ? key->mv_size : 0,
@@ -350,7 +350,7 @@ auto mdb_drop(MDB_txn* txn, MDB_dbi dbi, int del) -> int
     if (rc != 0)
         return rc;
 
-    MDB_TRACE(("%u, %d", dbi, del));
+    DPRINTF(("%u, %d", dbi, del));
     rc = mdb_drop0(mc, 0);  // No duplicate support, so subs = 0
     // Invalidate the dropped DB's cursors
     for (MDB_cursor* m2{txn->mt_cursors[dbi]}; m2 != nullptr; m2 = m2->mc_next)
@@ -405,7 +405,7 @@ auto mdb_put(MDB_txn* txn, MDB_dbi dbi, MDB_val* key, MDB_val* data, unsigned in
         return ((txn->mt_flags & MDB_TXN_RDONLY) != 0U) ? EACCES : MDB_BAD_TXN;
 
 #if MDB_DEBUG
-    MDB_TRACE(("%p, %u, %" Z "u[%s], %" Z "u%s, %u",
+    DPRINTF(("%p, %u, %" Z "u[%s], %" Z "u%s, %u",
                txn,
                dbi,
                key ? key->mv_size : 0,
