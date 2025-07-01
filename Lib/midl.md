@@ -18,7 +18,7 @@ An `MDB_IDL` is a sorted array of `MDB_ID`s (which is an alias for `mdb_size_t`)
 
 The memory layout of an `MDB_IDL` is a key aspect of its design, enabling efficient dynamic resizing and access. The pointer to an `MDB_IDL` actually points to the first element of the ID array, but metadata is stored at negative and zero indices relative to this pointer.
 
--   `ids[-1]`: Stores the total allocated capacity of the array (i.e., the maximum number of IDs it can hold). This is used by functions like [`mdb_midl_need()`](Lib/midl.cpp:154) to determine if resizing is necessary.
+-   `ids[-1]`: Stores the total allocated capacity of the array (i.e., the maximum number of IDs it can hold). This is used by functions like [`midl_need()`](Lib/midl.cpp:154) to determine if resizing is necessary.
 -   `ids[0]`: Stores the current number of IDs in the list.
 -   `ids[1]` to `ids[ids[0]]`: Contains the actual IDs. For `libmdb`, these are sorted in **descending order**.
 
@@ -42,29 +42,29 @@ The `midl.cpp` file implements several important algorithms for managing these I
 
 ### 3.1. Search
 
--   **`mdb_midl_search(ids, id)`**: Performs a binary search on an `MDB_IDL` to find a specific `id`. It returns the index of the ID if found. If not found, it returns the index where the ID should be inserted to maintain the sort order. The complexity is O(log n).
--   **`mdb_mid2l_search(ids, id)`**: Performs a binary search on an `MDB_ID2L` based on the `mid` field of the `MDB_ID2` structs. It has the same characteristics as `mdb_midl_search`.
+-   **`midl_search(ids, id)`**: Performs a binary search on an `MDB_IDL` to find a specific `id`. It returns the index of the ID if found. If not found, it returns the index where the ID should be inserted to maintain the sort order. The complexity is O(log n).
+-   **`mid2l_search(ids, id)`**: Performs a binary search on an `MDB_ID2L` based on the `mid` field of the `MDB_ID2` structs. It has the same characteristics as `midl_search`.
 
 ### 3.2. Sorting
 
--   **`mdb_midl_sort(ids)`**: Sorts an `MDB_IDL` in descending order. The implementation is a hybrid of Quicksort and Insertion Sort.
+-   **`midl_sort(ids)`**: Sorts an `MDB_IDL` in descending order. The implementation is a hybrid of Quicksort and Insertion Sort.
     -   **Quicksort**: Used for larger portions of the array. It employs a median-of-three pivot selection strategy (`ids[l]`, `ids[k]`, `ids[ir]`) to improve performance and avoid worst-case O(n²) behavior on already sorted or reverse-sorted data.
     -   **Insertion Sort**: When a partition in the Quicksort algorithm becomes smaller than a defined threshold (`SMALL = 8`), the algorithm switches to Insertion Sort, which is more efficient for small arrays.
 
 ### 3.3. Memory Management and List Manipulation
 
 -   **Allocation and Deallocation**:
-    -   [`mdb_midl_alloc(num)`](Lib/midl.cpp:108): Allocates memory for an `MDB_IDL` that can hold `num` IDs. It allocates `num + 2` elements to accommodate the capacity at `ids[-1]` and the count at `ids[0]`.
-    -   [`mdb_midl_free(ids)`](Lib/midl.cpp:119): Frees the memory associated with an `MDB_IDL`.
+    -   [`midl_alloc(num)`](Lib/midl.cpp:108): Allocates memory for an `MDB_IDL` that can hold `num` IDs. It allocates `num + 2` elements to accommodate the capacity at `ids[-1]` and the count at `ids[0]`.
+    -   [`midl_free(ids)`](Lib/midl.cpp:119): Frees the memory associated with an `MDB_IDL`.
 -   **Dynamic Resizing**:
-    -   [`mdb_midl_need(idp, num)`](Lib/midl.cpp:154): Checks if an `MDB_IDL` has enough space for `num` additional elements. If not, it reallocates the list, increasing its size with a 25% overhead and aligning the new size to a 256-element boundary for efficiency.
-    -   [`mdb_midl_shrink(idp)`](Lib/midl.cpp:125): If an IDL has grown beyond a certain threshold (`MDB_IDL_UM_MAX`), this function shrinks it back to a default maximum size.
+    -   [`midl_need(idp, num)`](Lib/midl.cpp:154): Checks if an `MDB_IDL` has enough space for `num` additional elements. If not, it reallocates the list, increasing its size with a 25% overhead and aligning the new size to a 256-element boundary for efficiency.
+    -   [`midl_shrink(idp)`](Lib/midl.cpp:125): If an IDL has grown beyond a certain threshold (`MDB_IDL_UM_MAX`), this function shrinks it back to a default maximum size.
 -   **Append Operations**:
-    -   [`mdb_midl_append(idp, id)`](Lib/midl.cpp:170): Appends a single ID to an `MDB_IDL`, growing the list if necessary.
-    -   [`mdb_midl_append_list(idp, app)`](Lib/midl.cpp:185): Appends all IDs from one `MDB_IDL` to another.
-    -   [`mdb_midl_append_range(idp, id, n)`](Lib/midl.cpp:200): Appends a contiguous range of `n` IDs starting from `id`.
+    -   [`midl_append(idp, id)`](Lib/midl.cpp:170): Appends a single ID to an `MDB_IDL`, growing the list if necessary.
+    -   [`midl_append_list(idp, app)`](Lib/midl.cpp:185): Appends all IDs from one `MDB_IDL` to another.
+    -   [`midl_append_range(idp, id, n)`](Lib/midl.cpp:200): Appends a contiguous range of `n` IDs starting from `id`.
 -   **Merging**:
-    -   [`mdb_midl_xmerge(idl, merge)`](Lib/midl.cpp:218): Merges two sorted `MDB_IDL`s into the destination list (`idl`). The destination list must have enough pre-allocated capacity to hold the combined result. The merge is performed in-place from the end of the arrays backwards.
+    -   [`midl_xmerge(idl, merge)`](Lib/midl.cpp:218): Merges two sorted `MDB_IDL`s into the destination list (`idl`). The destination list must have enough pre-allocated capacity to hold the combined result. The merge is performed in-place from the end of the arrays backwards.
 
 ## 4. Usage in LMDB Context
 

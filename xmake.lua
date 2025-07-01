@@ -26,17 +26,17 @@ end
 target("fiksstore")
     set_kind("static")
     add_files("Lib/midl.cpp",
-              "Lib/mdb_hash.cpp",
-              "Lib/mdb_page_io.cpp",
-              "Lib/mdb_btree.cpp",
-              "Lib/mdb_util.cpp",
-              "Lib/mdb_compare.cpp",
-              "Lib/mdb_env.cpp",
-              "Lib/mdb_txn.cpp",
-              "Lib/mdb_cursor.cpp",
-              "Lib/mdb_db.cpp",
-              "Lib/mdb_lock.cpp",
-              "Lib/mdb_debug.cpp")
+              "Lib/hash.cpp",
+              "Lib/page_io.cpp",
+              "Lib/btree.cpp",
+              "Lib/util.cpp",
+              "Lib/compare.cpp",
+              "Lib/env.cpp",
+              "Lib/txn.cpp",
+              "Lib/cursor.cpp",
+              "Lib/db.cpp",
+              "Lib/lock.cpp",
+              "Lib/debug.cpp")
     add_includedirs("Lib/", {public = true})
     apply_common_flags()
 
