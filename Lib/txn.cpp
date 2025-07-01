@@ -67,7 +67,7 @@ auto fds_txn_renew0(FDS_txn* txn) -> int
                 LOCK_MUTEX(rc, env, rmutex);
                 if (rc != 0)
                     return rc;
-                nr = ti->mti_numreaders;
+                nr = ti->mt1.mtb.mtb_numreaders;
                 for (i = 0; i < nr; i++)
                     if (ti->mti_readers[i].mr_pid == 0)
                         break;
@@ -79,14 +79,14 @@ auto fds_txn_renew0(FDS_txn* txn) -> int
                 r = &ti->mti_readers[i];
                 // Claim the reader slot, carefully since other code
                 // uses the reader table un-mutexed: First reset the
-                // slot, next publish it in mti_numreaders.  After
+                // slot, next publish it in mt1.mtb.mtb_numreaders.  After
                 // that, it is safe for fds_env_close() to touch it.
                 // When it will be closed, we can finally claim it.
                 r->mr_pid = 0;
                 r->mr_txnid = (txnid_t)-1;
                 r->mr_tid = tid;
                 if (i == nr)
-                    ti->mti_numreaders = ++nr;
+                    ti->mt1.mtb.mtb_numreaders = ++nr;
                 env->me_close_readers = nr;
                 r->mr_pid = pid;
                 UNLOCK_MUTEX(rmutex);
@@ -103,8 +103,8 @@ auto fds_txn_renew0(FDS_txn* txn) -> int
                 }
             }
             do /* LY: Retry on a race, ITS#7970. */
-                r->mr_txnid = ti->mti_txnid;
-            while (r->mr_txnid != ti->mti_txnid);
+                r->mr_txnid = ti->mt1.mtb.mtb_txnid;
+            while (r->mr_txnid != ti->mt1.mtb.mtb_txnid);
             if ((r->mr_txnid == 0U) && ((env->me_flags & FDS_RDONLY) != 0U))
             {
                 meta = fds_env_pick_meta(env);
@@ -126,7 +126,7 @@ auto fds_txn_renew0(FDS_txn* txn) -> int
             LOCK_MUTEX(rc, env, env->me_wmutex);
             if (rc != 0)
                 return rc;
-            txn->mt_txnid = ti->mti_txnid;
+            txn->mt_txnid = ti->mt1.mtb.mtb_txnid;
             meta = env->me_metas[txn->mt_txnid & 1];
         }
         else

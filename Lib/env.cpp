@@ -695,7 +695,7 @@ auto fds_env_write_meta(FDS_txn* txn) -> int
     // readers will get consistent data regardless of how fresh or
     // how stale their view of these values is.
     if (env->me_txns != nullptr)
-        env->me_txns->mti_txnid = txn->mt_txnid;
+        env->me_txns->mt1.mtb.mtb_txnid = txn->mt_txnid;
 
     return FDS_SUCCESS;
 }
@@ -748,7 +748,7 @@ int fds_env_write_meta(FDS_txn* txn)
         // readers will get consistent data regardless of how fresh or
         // how stale their view of these values is.
         if (env->me_txns)
-            env->me_txns->mti_txnid = txn->mt_txnid;
+            env->me_txns->mt1.mtb.mtb_txnid = txn->mt_txnid;
 
         return FDS_SUCCESS;
     }
@@ -801,7 +801,7 @@ int fds_env_write_meta(FDS_txn* txn)
     // readers will get consistent data regardless of how fresh or
     // how stale their view of these values is.
     if (env->me_txns)
-        env->me_txns->mti_txnid = txn->mt_txnid;
+        env->me_txns->mt1.mtb.mtb_txnid = txn->mt_txnid;
 
     return FDS_SUCCESS;
 }
@@ -832,9 +832,6 @@ auto ESECT fds_env_create(FDS_env** env) -> int
 #ifdef FDS_USE_POSIX_SEM
     e->me_rmutex = SEM_FAILED;
     e->me_wmutex = SEM_FAILED;
-#elif defined FDS_USE_SYSV_SEM
-    e->me_rmutex->semid = -1;
-    e->me_wmutex->semid = -1;
 #endif
     e->me_pid = getpid();
     GET_PAGESIZE(e->me_os_psize);
@@ -1137,7 +1134,7 @@ auto ESECT fds_env_open2(FDS_env* env, int prev) -> int
     env->me_maxpg = env->me_mapsize / env->me_psize;
 
     if ((prev != 0) && (env->me_txns != nullptr))
-        env->me_txns->mti_txnid = meta.mm_txnid;
+        env->me_txns->mt1.mtb.mtb_txnid = meta.mm_txnid;
 
 #if FDS_DEBUG
     {
@@ -1178,7 +1175,7 @@ auto ESECT fds_env_share_locks(FDS_env* env, int* excl) -> int
     int rc = 0;
     FDS_meta* meta = fds_env_pick_meta(env);
 
-    env->me_txns->mti_txnid = meta->mm_txnid;
+    env->me_txns->mt1.mtb.mtb_txnid = meta->mm_txnid;
 
 #ifdef _WIN32
     {
@@ -1276,7 +1273,7 @@ void ESECT fds_env_mname_init(FDS_env* env)
 #pragma warning(disable : 4996)  // Suppress deprecation warning for strcpy
     strcpy(nm, MUTEXNAME_PREFIX);
 #pragma warning(pop)
-    fds_pack85(env->me_txns->mti_mutexid, nm + sizeof(MUTEXNAME_PREFIX));
+    fds_pack85(env->me_txns->mt1.mtb.mtb_mutexid, nm + sizeof(MUTEXNAME_PREFIX));
 }
 
 // Return env->me_mutexname after filling in ch ('r'/'w') for convenience
@@ -1296,10 +1293,6 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
 #define FDS_ERRCODE_ROFS ERROR_WRITE_PROTECT
 #else
 #define FDS_ERRCODE_ROFS EROFS
-#endif
-#ifdef FDS_USE_SYSV_SEM
-    int semid{};
-    union semun semu{};
 #endif
     int rc{};
     FDS_OFF_T size{};
@@ -1405,7 +1398,7 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
         idbuf.volume = stbuf.dwVolumeSerialNumber;
         idbuf.nhigh = stbuf.nFileIndexHigh;
         idbuf.nlow = stbuf.nFileIndexLow;
-        env->me_txns->mti_mutexid = fds_hash(&idbuf, sizeof(idbuf));
+        env->me_txns->mt1.mtb.mtb_mutexid = fds_hash(&idbuf, sizeof(idbuf));
         fds_env_mname_init(env);
         env->me_rmutex = CreateMutexA(&fds_all_sa, FALSE, MUTEXNAME(env, 'r'));
         if (env->me_rmutex == nullptr)
@@ -1421,21 +1414,12 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
             ino_t ino;
         } idbuf;
 
-#if defined(__NetBSD__)
-#define FDS_SHORT_SEMNAMES 1  // limited to 14 chars
-#endif
         if (fstat(env->me_lfd, &stbuf))
             goto fail_errno;
         memset(&idbuf, 0, sizeof(idbuf));
         idbuf.dev = stbuf.st_dev;
         idbuf.ino = stbuf.st_ino;
-        env->me_txns->mti_mutexid = fds_hash(&idbuf, sizeof(idbuf))
-#ifdef FDS_SHORT_SEMNAMES
-                                    /* Max 9 base85-digits.  We truncate here instead of in
-                                     * fds_env_mname_init() to keep the latter portable.
-                                     */
-                                    % ((fds_hash_t)85 * 85 * 85 * 85 * 85 * 85 * 85 * 85 * 85)
-#endif
+        env->me_txns->mt1.mtb.mtb_mutexid = fds_hash(&idbuf, sizeof(idbuf))
             ;
         fds_env_mname_init(env);
         // Clean up after a previous run, if needed:  Try to
@@ -1448,27 +1432,13 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
         env->me_wmutex = sem_open(MUTEXNAME(env, 'w'), O_CREAT | O_EXCL, mode, 1);
         if (env->me_wmutex == SEM_FAILED)
             goto fail_errno;
-#elif defined(FDS_USE_SYSV_SEM)
-        unsigned short vals[2] = {1, 1};
-        key_t key = ftok(fname->mn_val, 'M');  // fname is lockfile path now
-        if (key == -1)
-            goto fail_errno;
-        semid = semget(key, 2, (mode & 0777) | IPC_CREAT);
-        if (semid < 0)
-            goto fail_errno;
-        semu.array = vals;
-        if (semctl(semid, 0, SETALL, semu) < 0)
-            goto fail_errno;
-        env->me_txns->mti_semid = semid;
-        env->me_txns->mti_rlocked = 0;
-        env->me_txns->mti_wlocked = 0;
 #else   // FDS_USE_POSIX_MUTEX:
         pthread_mutexattr_t mattr;
 
         // Solaris needs this before initing a robust mutex.  Otherwise
         // it may skip the init and return EBUSY "seems someone already
         // inited" or EINVAL "it was inited differently".
-        memset(env->me_txns->mti_rmutex, 0, sizeof(*env->me_txns->mti_rmutex));
+        memset(env->me_txns->mt1.mtb.mtb_rmutex, 0, sizeof(*env->me_txns->mt1.mtb.mtb_rmutex));
         memset(env->me_txns->mti_wmutex, 0, sizeof(*env->me_txns->mti_wmutex));
 
         if ((rc = pthread_mutexattr_init(&mattr)) != 0)
@@ -1477,7 +1447,7 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
         if (!rc)
             rc = pthread_mutexattr_setrobust(&mattr, PTHREAD_MUTEX_ROBUST);
         if (!rc)
-            rc = pthread_mutex_init(env->me_txns->mti_rmutex, &mattr);
+            rc = pthread_mutex_init(env->me_txns->mt1.mtb.mtb_rmutex, &mattr);
         if (!rc)
             rc = pthread_mutex_init(env->me_txns->mti_wmutex, &mattr);
         pthread_mutexattr_destroy(&mattr);
@@ -1485,25 +1455,22 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
             goto fail;
 #endif  // _WIN32 || ...
 
-        env->me_txns->mti_magic = FDS_MAGIC;
-        env->me_txns->mti_format = FDS_LOCK_FORMAT;
-        env->me_txns->mti_txnid = 0;
-        env->me_txns->mti_numreaders = 0;
+        env->me_txns->mt1.mtb.mtb_magic = FDS_MAGIC;
+        env->me_txns->mt1.mtb.mtb_format = FDS_LOCK_FORMAT;
+        env->me_txns->mt1.mtb.mtb_txnid = 0;
+        env->me_txns->mt1.mtb.mtb_numreaders = 0;
     }
     else
     {
-#ifdef FDS_USE_SYSV_SEM
-        struct semid_ds buf;
-#endif
-        if (env->me_txns->mti_magic != FDS_MAGIC)
+        if (env->me_txns->mt1.mtb.mtb_magic != FDS_MAGIC)
         {
             DPUTS("lock region has invalid magic");
             rc = FDS_INVALID;
             goto fail;
         }
-        if (env->me_txns->mti_format != FDS_LOCK_FORMAT)
+        if (env->me_txns->mt1.mtb.mtb_format != FDS_LOCK_FORMAT)
         {
-            DPRINTF(("lock region has format+version 0x%x, expected 0x%x", env->me_txns->mti_format, FDS_LOCK_FORMAT));
+            DPRINTF(("lock region has format+version 0x%x, expected 0x%x", env->me_txns->mt1.mtb.mtb_format, FDS_LOCK_FORMAT));
             rc = FDS_VERSION_MISMATCH;
             goto fail;
         }
@@ -1528,25 +1495,8 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
         env->me_wmutex = sem_open(MUTEXNAME(env, 'w'), 0);
         if (env->me_wmutex == SEM_FAILED)
             goto fail_errno;
-#elif defined(FDS_USE_SYSV_SEM)
-        semid = env->me_txns->mti_semid;
-        semu.buf = &buf;
-        // check for read access
-        if (semctl(semid, 0, IPC_STAT, semu) < 0)
-            goto fail_errno;
-        // check for write access
-        if (semctl(semid, 0, IPC_SET, semu) < 0)
-            goto fail_errno;
 #endif
     }
-#ifdef FDS_USE_SYSV_SEM
-    env->me_rmutex->semid = semid;
-    env->me_wmutex->semid = semid;
-    env->me_rmutex->semnum = 0;
-    env->me_wmutex->semnum = 1;
-    env->me_rmutex->locked = &env->me_txns->mti_rlocked;
-    env->me_wmutex->locked = &env->me_txns->mti_wlocked;
-#endif
 
     return FDS_SUCCESS;
 
@@ -1790,16 +1740,6 @@ void ESECT fds_env_close0(FDS_env* env, int excl)
                 sem_unlink(MUTEXNAME(env, 'r'));
                 sem_unlink(MUTEXNAME(env, 'w'));
             }
-        }
-#elif defined(FDS_USE_SYSV_SEM)
-        if (env->me_rmutex->semid != -1)
-        {
-            // If we have the filelock:  If we are the
-            // only remaining user, clean up semaphores.
-            if (excl == 0)
-                fds_env_excl_lock(env, &excl);
-            if (excl > 0)
-                semctl(env->me_rmutex->semid, 0, IPC_RMID);
         }
 #endif
         munmap((void*)env->me_txns, (env->me_maxreaders - 1) * sizeof(FDS_reader) + sizeof(FDS_txninfo));
@@ -2591,7 +2531,7 @@ auto ESECT fds_env_info(FDS_env* env, FDS_envinfo* stat) -> int
 
     stat->me_mapsize = env->me_mapsize;
     stat->me_maxreaders = env->me_maxreaders;
-    stat->me_numreaders = (env->me_txns != nullptr) ? env->me_txns->mti_numreaders : 0;
+    stat->me_numreaders = (env->me_txns != nullptr) ? env->me_txns->mt1.mtb.mtb_numreaders : 0;
     return FDS_SUCCESS;
 }
 

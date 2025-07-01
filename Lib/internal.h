@@ -90,10 +90,6 @@ using ssize_t = SSIZE_T;
 
 #if defined(__FreeBSD__) && defined(__FreeBSD_version) && __FreeBSD_version >= 1100110
 #define FDS_USE_POSIX_MUTEX 1
-#elif defined(__APPLE__) || defined(BSD) || defined(__FreeBSD_kernel__)
-#if !(defined(FDS_USE_POSIX_MUTEX) || defined(FDS_USE_POSIX_SEM))
-#define FDS_USE_SYSV_SEM 1
-#endif
 #endif
 
 #ifndef _WIN32
@@ -101,23 +97,12 @@ using ssize_t = SSIZE_T;
 #include <signal.h>
 #ifdef FDS_USE_POSIX_SEM
 #include <semaphore.h>
-#elif defined(FDS_USE_SYSV_SEM)
-#include <sys/ipc.h>
-#include <sys/sem.h>
-#ifdef _SEM_SEMUN_UNDEFINED
-union semun
-{
-    int val;
-    struct semid_ds* buf;
-    unsigned short* array;
-};
-#endif  // _SEM_SEMUN_UNDEFINED
 #else
 #define FDS_USE_POSIX_MUTEX 1
 #endif  // FDS_USE_POSIX_SEM
 #endif  // !_WIN32
 
-#if defined(_WIN32) + defined(FDS_USE_POSIX_SEM) + defined(FDS_USE_SYSV_SEM) + defined(FDS_USE_POSIX_MUTEX) != 1
+#if defined(_WIN32) + defined(FDS_USE_POSIX_SEM) + defined(FDS_USE_POSIX_MUTEX) != 1
 #error "Ambiguous shared-lock implementation"
 #endif
 
@@ -282,33 +267,7 @@ typedef sem_t *fds_mutex_t, *fds_mutexref_t;
 
 int fds_sem_wait(sem_t* sem);
 
-#elif defined FDS_USE_SYSV_SEM
-
-struct fds_mutex
-{
-    int semid;
-    int semnum;
-    int* locked;
-};
-
-typedef fds_mutex fds_mutex_t[1];
-typedef fds_mutex* fds_mutexref_t;
-
-#define LOCK_MUTEX0(mutex) fds_sem_wait(mutex)
-#define UNLOCK_MUTEX(mutex)                                                                                            \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        struct sembuf sb = {0, 1, SEM_UNDO};                                                                           \
-        sb.sem_num = (mutex)->semnum;                                                                                  \
-        *(mutex)->locked = 0;                                                                                          \
-        semop((mutex)->semid, &sb, 1);                                                                                 \
-    } while (0)
-
-int fds_sem_wait(fds_mutexref_t sem);
-
-#define fds_mutex_consistent(mutex) 0
-
-#else  // FDS_USE_POSIX_MUTEX:
+#else  // FDS_USE_POSIX_SEM:
 // Shared mutex/semaphore as the original is stored.
 //
 // Not for copies. Instead it can be assigned to an fds_mutexref_t.
@@ -327,7 +286,7 @@ typedef pthread_mutex_t* fds_mutexref_t;
 // Mark mutex-protected data as repaired, after death of previous owner.
 //
 #define fds_mutex_consistent(mutex) pthread_mutex_consistent(mutex)
-#endif  // FDS_USE_POSIX_SEM || FDS_USE_SYSV_SEM
+#endif  // FDS_USE_POSIX_SEM
 
 // Get the error code for the last failed system function.
 //
@@ -352,11 +311,7 @@ typedef pthread_mutex_t* fds_mutexref_t;
 #define GET_PAGESIZE(x) ((x) = sysconf(_SC_PAGE_SIZE))
 #endif
 
-#ifdef FDS_USE_SYSV_SEM
-#define MNAME_LEN (sizeof(int))
-#else
 #define MNAME_LEN (sizeof(pthread_mutex_t))
-#endif
 
 //
 // The version number for a database's lockfile format.
@@ -494,8 +449,6 @@ enum
 #define FDS_LOCK_TYPE (0 + ALIGNOF2(fds_hash_t) / 8 % 2)
 #elif defined FDS_USE_POSIX_SEM
 #define FDS_LOCK_TYPE (4 + ALIGNOF2(fds_hash_t) / 8 % 2)
-#elif defined FDS_USE_SYSV_SEM
-#define FDS_LOCK_TYPE (8)
 #elif defined FDS_USE_POSIX_MUTEX
 // We do not know the inside of a POSIX mutex and how to check if mutexes
 // used by two executables are compatible. Just check alignment and size.
