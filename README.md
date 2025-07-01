@@ -119,28 +119,28 @@ xmake show
 ```c
 #include "lmdb.h"
 
-MDB_env *env;
-MDB_dbi dbi;
-MDB_val key, data;
-MDB_txn *txn;
+FDS_env *env;
+FDS_dbi dbi;
+FDS_val key, data;
+FDS_txn *txn;
 
 // Create environment
-mdb_env_create(&env);
-mdb_env_open(env, "./testdb", 0, 0664);
+fds_env_create(&env);
+fds_env_open(env, "./testdb", 0, 0664);
 
 // Open database
-mdb_txn_begin(env, NULL, 0, &txn);
-mdb_dbi_open(txn, NULL, 0, &dbi);
+fds_txn_begin(env, NULL, 0, &txn);
+fds_dbi_open(txn, NULL, 0, &dbi);
 
 // Store data
 key.mv_size = sizeof(int);
 key.mv_data = &some_key;
 data.mv_size = sizeof(some_data);
 data.mv_data = &some_data;
-mdb_put(txn, dbi, &key, &data, 0);
+fds_put(txn, dbi, &key, &data, 0);
 
-mdb_txn_commit(txn);
-mdb_env_close(env);
+fds_txn_commit(txn);
+fds_env_close(env);
 ```
 
 ### Planned API (Modern C++)

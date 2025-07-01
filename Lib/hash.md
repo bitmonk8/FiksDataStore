@@ -10,10 +10,10 @@ The primary purpose of these files is to provide:
 
 ## Functions
 
-### `mdb_hash`
+### `fds_hash`
 
 ```cpp
-auto mdb_hash(const void* val, size_t len) -> mdb_hash_t;
+auto fds_hash(const void* val, size_t len) -> fds_hash_t;
 ```
 
 This function computes a 64-bit hash of a given block of data.
@@ -38,12 +38,12 @@ The implementation is based on public domain code by Landon Curt Noll.
 
 #### Return Value
 
--   Returns a `mdb_hash_t` (which is a 64-bit unsigned integer) representing the computed hash value.
+-   Returns a `fds_hash_t` (which is a 64-bit unsigned integer) representing the computed hash value.
 
-### `mdb_pack85`
+### `fds_pack85`
 
 ```cpp
-void mdb_pack85(unsigned long long l, char* out);
+void fds_pack85(unsigned long long l, char* out);
 ```
 
 This function encodes a 64-bit unsigned integer into a custom ASCII-85 string representation.
@@ -75,7 +75,7 @@ A developer can use these functions to hash keys for internal data structures or
 int main() {
     const char* my_key = "some_data_to_hash";
     size_t key_len = strlen(my_key);
-    mdb_hash_t hash_value = mdb_hash(my_key, key_len);
+    fds_hash_t hash_value = fds_hash(my_key, key_len);
     printf("Hash: %llx\n", hash_value);
     return 0;
 }
@@ -89,7 +89,7 @@ int main() {
 int main() {
     unsigned long long value = 1234567890123456789ULL;
     char buffer[11];
-    mdb_pack85(value, buffer);
+    fds_pack85(value, buffer);
     printf("Encoded value: %s\n", buffer);
     return 0;
 }
@@ -97,5 +97,5 @@ int main() {
 
 ## Notes for Developers
 
--   The `mdb_hash` function is suitable for general-purpose hashing but should not be used for cryptographic purposes.
--   The `mdb_pack85` function is highly specific to MDB's internal use case for naming. If a standard Base-85 encoding is required, a different implementation should be used.
+-   The `fds_hash` function is suitable for general-purpose hashing but should not be used for cryptographic purposes.
+-   The `fds_pack85` function is highly specific to MDB's internal use case for naming. If a standard Base-85 encoding is required, a different implementation should be used.

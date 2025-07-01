@@ -14,11 +14,11 @@ This module is responsible for the low-level "physical" aspects of database page
 
 ## 3. Key Functions
 
-*   `mdb_page_alloc()`: Allocates one or more pages for a transaction.
-*   `mdb_page_free()` / `mdb_dpage_free()`: Frees a clean or dirty page.
-*   `mdb_ovpage_free()`: Frees a sequence of overflow pages.
-*   `mdb_page_get()`: Retrieves a specific page by its page number, handling dirty pages from the current or parent transactions.
-*   `mdb_page_flush()`: Writes all dirty pages for a transaction to disk.
-*   `mdb_page_spill()` / `mdb_page_unspill()`: Manages the spilling of dirty pages to disk during long transactions to save memory, and their retrieval if needed again.
-*   `mdb_page_dirty()`: Marks a page as dirty within a transaction.
-*   `mdb_page_malloc()`: Low-level memory allocation for page structures.
+*   `fds_page_alloc()`: Allocates one or more pages for a transaction.
+*   `fds_page_free()` / `fds_dpage_free()`: Frees a clean or dirty page.
+*   `fds_ovpage_free()`: Frees a sequence of overflow pages.
+*   `fds_page_get()`: Retrieves a specific page by its page number, handling dirty pages from the current or parent transactions.
+*   `fds_page_flush()`: Writes all dirty pages for a transaction to disk.
+*   `fds_page_spill()` / `fds_page_unspill()`: Manages the spilling of dirty pages to disk during long transactions to save memory, and their retrieval if needed again.
+*   `fds_page_dirty()`: Marks a page as dirty within a transaction.
+*   `fds_page_malloc()`: Low-level memory allocation for page structures.

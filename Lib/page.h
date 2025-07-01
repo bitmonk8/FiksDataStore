@@ -5,17 +5,17 @@
 #include "midl.h"
 
 // Common header for all page types. The page type depends on mp_flags.
-struct MDB_page
+struct FDS_page
 {
 #define mp_pgno mp_p.p_pgno
 #define mp_next mp_p.p_next
     union
     {
         pgno_t p_pgno;            // page number
-        struct MDB_page* p_next;  // for in-memory list of freed pages
+        struct FDS_page* p_next;  // for in-memory list of freed pages
     } mp_p;
     uint16_t mp_pad;    // padding for alignment
-    uint16_t mp_flags;  // mdb_page
+    uint16_t mp_flags;  // fds_page
 #define mp_lower mp_pb.pb.pb_lower
 #define mp_upper mp_pb.pb.pb_upper
 #define mp_pages mp_pb.pb_pages
@@ -32,7 +32,7 @@ struct MDB_page
 };
 
 // Alternate page header, for 2-byte aligned access
-struct MDB_page2
+struct FDS_page2
 {
     uint16_t mp2_p[sizeof(pgno_t) / 2];
     uint16_t mp2_pad;
@@ -42,15 +42,15 @@ struct MDB_page2
     indx_t mp2_ptrs[0];
 };
 
-#define MP_PGNO(p) (reinterpret_cast<MDB_page2*>(p)->mp2_p)
-#define MP_PAD(p) (reinterpret_cast<MDB_page2*>(p)->mp2_pad)
-#define MP_FLAGS(p) (reinterpret_cast<const MDB_page2*>(p)->mp2_flags)
-#define MP_LOWER(p) (reinterpret_cast<MDB_page2*>(p)->mp2_lower)
-#define MP_UPPER(p) (reinterpret_cast<MDB_page2*>(p)->mp2_upper)
-#define MP_PTRS(p) (reinterpret_cast<MDB_page2*>(p)->mp2_ptrs)
+#define MP_PGNO(p) (reinterpret_cast<FDS_page2*>(p)->mp2_p)
+#define MP_PAD(p) (reinterpret_cast<FDS_page2*>(p)->mp2_pad)
+#define MP_FLAGS(p) (reinterpret_cast<const FDS_page2*>(p)->mp2_flags)
+#define MP_LOWER(p) (reinterpret_cast<FDS_page2*>(p)->mp2_lower)
+#define MP_UPPER(p) (reinterpret_cast<FDS_page2*>(p)->mp2_upper)
+#define MP_PTRS(p) (reinterpret_cast<FDS_page2*>(p)->mp2_ptrs)
 
 // Size of the page header, excluding dynamic data at the end
-#define PAGEHDRSZ ((unsigned)offsetof(MDB_page, mp_ptrs))
+#define PAGEHDRSZ ((unsigned)offsetof(FDS_page, mp_ptrs))
 
 // Address of first usable data byte in a page, after the header
 #define METADATA(p) (reinterpret_cast<void*>(reinterpret_cast<char*>(p) + PAGEHDRSZ))
@@ -98,13 +98,13 @@ enum
 // The number of overflow pages needed to store the given size.
 #define OVPAGES(size, psize) (((PAGEHDRSZ - 1 + (size)) / (psize)) + 1)
 
-// Link in MDB_txn.mt_loose_pgs list.
+// Link in FDS_txn.mt_loose_pgs list.
 // Kept outside the page header, which is needed when reusing the page.
-#define NEXT_LOOSE_PAGE(p) (*(MDB_page**)((p) + 2))
+#define NEXT_LOOSE_PAGE(p) (*(FDS_page**)((p) + 2))
 
 // Header for a single key/data pair within a page.
 // Used in pages of type P_BRANCH and P_LEAF.
-// We guarantee 2-byte alignment for 'MDB_node's.
+// We guarantee 2-byte alignment for 'FDS_node's.
 //
 // mn_lo and mn_hi are used for data size on leaf nodes, and for child
 // pgno on branch nodes. On 64 bit platforms, mn_flags is also used
@@ -114,7 +114,7 @@ enum
 // Leaf node flags describe node contents. F_BIGDATA says the node's
 // data part is the page number of an overflow page with actual data.
 // F_SUBDATA indicates named databases.
-struct MDB_node
+struct FDS_node
 {
     // part of data size or pgno
 #if BYTE_ORDER == LITTLE_ENDIAN
@@ -122,13 +122,13 @@ struct MDB_node
 #else
     unsigned short mn_hi, mn_lo;
 #endif
-    unsigned short mn_flags;  // mdb_node
+    unsigned short mn_flags;  // fds_node
     unsigned short mn_ksize;  // key size
     char mn_data[1];          // key and data are appended here
 };
 
 // Size of the node header, excluding dynamic data at the end
-#define NODESIZE offsetof(MDB_node, mn_data)
+#define NODESIZE offsetof(FDS_node, mn_data)
 
 // Bit position of top word in page number, for shifting mn_flags
 #define PGNO_TOPWORD ((pgno_t) - 1 > 0xffffffffU ? 32 : 0)
@@ -142,7 +142,7 @@ struct MDB_node
 #define LEAFSIZE(k, d) (NODESIZE + (k)->mv_size + (d)->mv_size)
 
 // Address of node i in page p
-#define NODEPTR(p, i) (reinterpret_cast<MDB_node*>(reinterpret_cast<char*>(p) + MP_PTRS(p)[i] + PAGEBASE))
+#define NODEPTR(p, i) (reinterpret_cast<FDS_node*>(reinterpret_cast<char*>(p) + MP_PTRS(p)[i] + PAGEBASE))
 
 // Address of the key for the node
 #define NODEKEY(node) (reinterpret_cast<void*>((node)->mn_data))
@@ -181,7 +181,7 @@ struct MDB_node
 #undef MP_PGNO
 #define MP_PGNO(p) ((p)->mp_pgno)
 #else
-#if MDB_SIZE_MAX > 0xffffffffU
+#if FDS_SIZE_MAX > 0xffffffffU
 #define COPY_PGNO(dst, src)                                                                                            \
     do                                                                                                                 \
     {                                                                                                                  \
@@ -209,7 +209,7 @@ struct MDB_node
 #endif
 
 // Set the node's key into keyptr, if requested.
-#define MDB_GET_KEY(node, keyptr)                                                                                      \
+#define FDS_GET_KEY(node, keyptr)                                                                                      \
     {                                                                                                                  \
         if ((keyptr) != NULL)                                                                                          \
         {                                                                                                              \
@@ -219,7 +219,7 @@ struct MDB_node
     }
 
 // Set the node's key into key.
-#define MDB_GET_KEY2(node, key)                                                                                        \
+#define FDS_GET_KEY2(node, key)                                                                                        \
     {                                                                                                                  \
         (key).mv_size = NODEKSZ(node);                                                                                 \
         (key).mv_data = NODEKEY(node);                                                                                 \

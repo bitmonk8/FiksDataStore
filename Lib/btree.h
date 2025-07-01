@@ -8,20 +8,20 @@
 // Page search flags
 enum
 {
-    MDB_PS_MODIFY = 1,
-    MDB_PS_ROOTONLY = 2,
-    MDB_PS_FIRST = 4,
-    MDB_PS_LAST = 8
+    FDS_PS_MODIFY = 1,
+    FDS_PS_ROOTONLY = 2,
+    FDS_PS_FIRST = 4,
+    FDS_PS_LAST = 8
 };
 
 // Split flags
 enum
 {
-    MDB_SPLIT_REPLACE = 0x01
+    FDS_SPLIT_REPLACE = 0x01
 };
 
 #define NODE_ADD_FLAGS                                                                                                 \
-    (static_cast<unsigned>(F_SUBDATA) | static_cast<unsigned>(MDB_RESERVE) | static_cast<unsigned>(MDB_APPEND))
+    (static_cast<unsigned>(F_SUBDATA) | static_cast<unsigned>(FDS_RESERVE) | static_cast<unsigned>(FDS_APPEND))
 
 // B+ Tree Logic Module Functions
 
@@ -32,22 +32,22 @@ enum
 //  @param[in] flags Flags for the search.
 //  @return 0 on success, non-zero on failure.
 //
-auto mdb_page_search(MDB_cursor* mc, MDB_val* key, int flags) -> int;
+auto fds_page_search(FDS_cursor* mc, FDS_val* key, int flags) -> int;
 
 // @brief Search for a page, beginning from the current root.
-//  This is the main portion of #mdb_page_search().
+//  This is the main portion of #fds_page_search().
 //  @param[in] mc The cursor to operate on.
 //  @param[in] key The key to search for.
 //  @param[in] modify True if the search is for a modify operation.
 //  @return 0 on success, non-zero on failure.
 //
-auto mdb_page_search_root(MDB_cursor* mc, MDB_val* key, int modify) -> int;
+auto fds_page_search_root(FDS_cursor* mc, FDS_val* key, int modify) -> int;
 
 // @brief Search for the lowest key in the current subtree.
 //  @param[in] mc The cursor to operate on.
 //  @return 0 on success, non-zero on failure.
 //
-auto mdb_page_search_lowest(MDB_cursor* mc) -> int;
+auto fds_page_search_lowest(FDS_cursor* mc) -> int;
 
 // @brief Search for key within a page.
 //  @param[in] mc The cursor to operate on.
@@ -55,7 +55,7 @@ auto mdb_page_search_lowest(MDB_cursor* mc) -> int;
 //  @param[out] exactp Undefined on error. On success, points to 1 if exact match, 0 otherwise.
 //  @return Pointer to the node if found, NULL otherwise.
 //
-auto mdb_node_search(MDB_cursor* mc, MDB_val* key, int* exactp) -> MDB_node*;
+auto fds_node_search(FDS_cursor* mc, FDS_val* key, int* exactp) -> FDS_node*;
 
 // @brief Add a node to a page.
 //  @param[in] mc The cursor to operate on.
@@ -66,19 +66,19 @@ auto mdb_node_search(MDB_cursor* mc, MDB_val* key, int* exactp) -> MDB_node*;
 //  @param[in] flags Flags for the node.
 //  @return 0 on success, non-zero on failure.
 //
-auto mdb_node_add(MDB_cursor* mc, indx_t indx, MDB_val* key, MDB_val* data, pgno_t pgno, unsigned int flags) -> int;
+auto fds_node_add(FDS_cursor* mc, indx_t indx, FDS_val* key, FDS_val* data, pgno_t pgno, unsigned int flags) -> int;
 
 // @brief Delete a node from a page.
 //  @param[in] mc The cursor to operate on.
 //  @param[in] ksize The size of the key to delete.
 //
-void mdb_node_del(MDB_cursor* mc, int ksize);
+void fds_node_del(FDS_cursor* mc, int ksize);
 
 // @brief Shrink a node in a page.
 //  @param[in] mp The page containing the node.
 //  @param[in] indx The index of the node to shrink.
 //
-void mdb_node_shrink(MDB_page* mp, indx_t indx);
+void fds_node_shrink(FDS_page* mp, indx_t indx);
 
 // @brief Move a node from one page to another.
 //  This is part of rebalancing.
@@ -87,15 +87,15 @@ void mdb_node_shrink(MDB_page* mp, indx_t indx);
 //  @param[in] fromleft Non-zero if the node is from the left sibling.
 //  @return 0 on success, non-zero on failure.
 //
-auto mdb_node_move(MDB_cursor* csrc, MDB_cursor* cdst, int fromleft) -> int;
+auto fds_node_move(FDS_cursor* csrc, FDS_cursor* cdst, int fromleft) -> int;
 
 // @brief Read the data of a node.
 //  @param[in] mc The cursor for context.
 //  @param[in] leaf The node to read from.
-//  @param[out] data The MDB_val to store the data.
+//  @param[out] data The FDS_val to store the data.
 //  @return 0 on success, non-zero on failure.
 //
-auto mdb_node_read(MDB_cursor* mc, MDB_node* leaf, MDB_val* data) -> int;
+auto fds_node_read(FDS_cursor* mc, FDS_node* leaf, FDS_val* data) -> int;
 
 // @brief Split a page.
 //  @param[in] mc The cursor to operate on. The page to be split is at the top of the cursor stack.
@@ -105,7 +105,7 @@ auto mdb_node_read(MDB_cursor* mc, MDB_node* leaf, MDB_val* data) -> int;
 //  @param[in] nflags Flags for the new node.
 //  @return 0 on success, non-zero on failure.
 //
-auto mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t newpgno, unsigned int nflags) -> int;
+auto fds_page_split(FDS_cursor* mc, FDS_val* newkey, FDS_val* newdata, pgno_t newpgno, unsigned int nflags) -> int;
 
 // @brief Merge one page into another.
 //  The page pointed to by \b csrc will be merged into \b cdst and then \b csrc's page will be freed.
@@ -113,30 +113,30 @@ auto mdb_page_split(MDB_cursor* mc, MDB_val* newkey, MDB_val* newdata, pgno_t ne
 //  @param[in] cdst Cursor pointing to the destination page.
 //  @return 0 on success, non-zero on failure.
 //
-auto mdb_page_merge(MDB_cursor* csrc, MDB_cursor* cdst) -> int;
+auto fds_page_merge(FDS_cursor* csrc, FDS_cursor* cdst) -> int;
 
 // @brief Rebalance the tree after a delete.
 //  @param[in] mc The cursor to operate on. The page needing rebalancing is at the top of the cursor stack.
 //  @return 0 on success, non-zero on failure.
 //
-auto mdb_rebalance(MDB_cursor* mc) -> int;
+auto fds_rebalance(FDS_cursor* mc) -> int;
 
 // @brief Touch a page: make it dirty and re-insert into tree.
 //  @param[in] mc The cursor to operate on. The page is at the top of the cursor stack.
 //  @return 0 on success, non-zero on failure.
 //
-auto mdb_page_touch(MDB_cursor* mc) -> int;
+auto fds_page_touch(FDS_cursor* mc) -> int;
 
 // @brief Allocate and initialize a new page.
 //  This function is used to allocate a new page with a specific type
-//  (leaf, branch, overflow). It uses mdb_page_alloc from mdb_page_io for the actual allocation.
+//  (leaf, branch, overflow). It uses fds_page_alloc from fds_page_io for the actual allocation.
 //  @param[in] mc Cursor holding transaction and environment.
 //  @param[in] flags Flags for the new page (P_BRANCH, P_LEAF, P_OVERFLOW).
 //  @param[in] num Number of pages to allocate (usually 1).
 //  @param[out] mp Pointer to the new page.
 //  @return 0 on success, non-zero on failure.
 //
-auto mdb_page_new(MDB_cursor* mc, uint32_t flags, int num, MDB_page** mp) -> int;
+auto fds_page_new(FDS_cursor* mc, uint32_t flags, int num, FDS_page** mp) -> int;
 
 // @brief Calculate the size of a leaf node.
 //  @param[in] env The environment handle.
@@ -144,18 +144,18 @@ auto mdb_page_new(MDB_cursor* mc, uint32_t flags, int num, MDB_page** mp) -> int
 //  @param[in] data The data.
 //  @return The size of the node.
 //
-auto mdb_leaf_size(MDB_env* env, MDB_val* key, MDB_val* data) -> size_t;
+auto fds_leaf_size(FDS_env* env, FDS_val* key, FDS_val* data) -> size_t;
 
 // @brief Calculate the size of a branch node.
 //  @param[in] env The environment handle.
 //  @param[in] key The key.
 //  @return The size of the node.
 //
-auto mdb_branch_size(MDB_env* env, MDB_val* key) -> size_t;
+auto fds_branch_size(FDS_env* env, FDS_val* key) -> size_t;
 
 // @brief Copy the contents of a page.
 //  @param[out] dst The destination page.
 //  @param[in] src The source page.
 //  @param[in] psize The size of the pages.
 //
-void mdb_page_copy(MDB_page* dst, MDB_page* src, unsigned int psize);
+void fds_page_copy(FDS_page* dst, FDS_page* src, unsigned int psize);

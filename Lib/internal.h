@@ -4,23 +4,23 @@
 #include "midl.h"
 
 // Forward declarations of types defined in Lib/*.h files
-struct MDB_cursor;
-struct MDB_db;
-struct MDB_dbx;
-struct MDB_env;
-struct MDB_meta;
-struct MDB_node;
-struct MDB_page;
-struct MDB_page2;
-struct MDB_pgstate;
-struct MDB_reader;
-struct MDB_rxbody;
-struct MDB_txbody;
-struct MDB_txn;
-struct MDB_txninfo;
+struct FDS_cursor;
+struct FDS_db;
+struct FDS_dbx;
+struct FDS_env;
+struct FDS_meta;
+struct FDS_node;
+struct FDS_page;
+struct FDS_page2;
+struct FDS_pgstate;
+struct FDS_reader;
+struct FDS_rxbody;
+struct FDS_txbody;
+struct FDS_txn;
+struct FDS_txninfo;
 enum Pidlock_op : int;
 
-using mdb_hash_t = unsigned long long;
+using fds_hash_t = unsigned long long;
 
 #ifdef _WIN32
 
@@ -31,8 +31,8 @@ using mdb_hash_t = unsigned long long;
 // getpid() returns int; MinGW defines pid_t but MinGW64 typedefs it
 // as int64 which is wrong. MSVC doesn't define it at all, so just
 // don't use it.
-#define MDB_PID_T int
-#define MDB_THR_T DWORD
+#define FDS_PID_T int
+#define FDS_THR_T DWORD
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -48,14 +48,14 @@ using mdb_hash_t = unsigned long long;
 #endif
 #endif
 
-#define MDB_OFF_T int64_t
+#define FDS_OFF_T int64_t
 
 #else
 
 #include <sys/stat.h>
 #include <sys/types.h>
-#define MDB_PID_T pid_t
-#define MDB_THR_T pthread_t
+#define FDS_PID_T pid_t
+#define FDS_THR_T pthread_t
 #include <sys/mman.h>
 #include <sys/param.h>
 #include <sys/uio.h>
@@ -63,7 +63,7 @@ using mdb_hash_t = unsigned long long;
 #include <sys/file.h>
 #endif
 #include <fcntl.h>
-#define MDB_OFF_T off_t
+#define FDS_OFF_T off_t
 
 #endif
 
@@ -89,19 +89,19 @@ using ssize_t = SSIZE_T;
 #endif
 
 #if defined(__FreeBSD__) && defined(__FreeBSD_version) && __FreeBSD_version >= 1100110
-#define MDB_USE_POSIX_MUTEX 1
+#define FDS_USE_POSIX_MUTEX 1
 #elif defined(__APPLE__) || defined(BSD) || defined(__FreeBSD_kernel__)
-#if !(defined(MDB_USE_POSIX_MUTEX) || defined(MDB_USE_POSIX_SEM))
-#define MDB_USE_SYSV_SEM 1
+#if !(defined(FDS_USE_POSIX_MUTEX) || defined(FDS_USE_POSIX_SEM))
+#define FDS_USE_SYSV_SEM 1
 #endif
 #endif
 
 #ifndef _WIN32
 #include <pthread.h>
 #include <signal.h>
-#ifdef MDB_USE_POSIX_SEM
+#ifdef FDS_USE_POSIX_SEM
 #include <semaphore.h>
-#elif defined(MDB_USE_SYSV_SEM)
+#elif defined(FDS_USE_SYSV_SEM)
 #include <sys/ipc.h>
 #include <sys/sem.h>
 #ifdef _SEM_SEMUN_UNDEFINED
@@ -113,11 +113,11 @@ union semun
 };
 #endif  // _SEM_SEMUN_UNDEFINED
 #else
-#define MDB_USE_POSIX_MUTEX 1
-#endif  // MDB_USE_POSIX_SEM
+#define FDS_USE_POSIX_MUTEX 1
+#endif  // FDS_USE_POSIX_SEM
 #endif  // !_WIN32
 
-#if defined(_WIN32) + defined(MDB_USE_POSIX_SEM) + defined(MDB_USE_SYSV_SEM) + defined(MDB_USE_POSIX_MUTEX) != 1
+#if defined(_WIN32) + defined(FDS_USE_POSIX_SEM) + defined(FDS_USE_SYSV_SEM) + defined(FDS_USE_POSIX_MUTEX) != 1
 #error "Ambiguous shared-lock implementation"
 #endif
 
@@ -167,7 +167,7 @@ enum
 
 #if (BYTE_ORDER == LITTLE_ENDIAN) == (BYTE_ORDER == BIG_ENDIAN)
 #error "Unknown or unsupported endianness (BYTE_ORDER)"
-#elif (-6 & 5) || CHAR_BIT != 8 || UINT_MAX != 0xffffffff || MDB_SIZE_MAX % UINT_MAX
+#elif (-6 & 5) || CHAR_BIT != 8 || UINT_MAX != 0xffffffff || FDS_SIZE_MAX % UINT_MAX
 #error "Two's complement, reasonably sized integer types, please"
 #endif
 
@@ -207,30 +207,30 @@ enum
 #define GLIBC_VER ((__GLIBC__ << 16) | __GLIBC_MINOR__)
 #endif
 
-#define Z MDB_FMT_Z     // printf/scanf format modifier for size_t
-#define Yu MDB_PRIy(u)  // printf format for mdb_size_t
-#define Yd MDB_PRIy(d)  // printf format for 'signed mdb_size_t'
+#define Z FDS_FMT_Z     // printf/scanf format modifier for size_t
+#define Yu FDS_PRIy(u)  // printf format for fds_size_t
+#define Yd FDS_PRIy(d)  // printf format for 'signed fds_size_t'
 
-#if defined(MDB_USE_POSIX_MUTEX)
+#if defined(FDS_USE_POSIX_MUTEX)
 // glibc < 2.12 only provided _np API
 #if (defined(__GLIBC__) && GLIBC_VER < 0x02000c) || (defined(PTHREAD_MUTEX_ROBUST_NP) && !defined(PTHREAD_MUTEX_ROBUST))
 #define PTHREAD_MUTEX_ROBUST PTHREAD_MUTEX_ROBUST_NP
 #define pthread_mutexattr_setrobust(attr, flag) pthread_mutexattr_setrobust_np(attr, flag)
 #define pthread_mutex_consistent(mutex) pthread_mutex_consistent_np(mutex)
 #endif
-#endif  // MDB_USE_POSIX_MUTEX
+#endif  // FDS_USE_POSIX_MUTEX
 
 #ifdef _WIN32
 enum
 {
-    MDB_PIDLOCK = 0
+    FDS_PIDLOCK = 0
 };
 #define THREAD_RET DWORD
 #define pthread_t HANDLE
 #define pthread_mutex_t HANDLE
 #define pthread_cond_t HANDLE
-using mdb_mutex_t = HANDLE;
-using mdb_mutexref_t = HANDLE;
+using fds_mutex_t = HANDLE;
+using fds_mutexref_t = HANDLE;
 #define pthread_key_t DWORD
 #define pthread_self() GetCurrentThreadId()
 #define pthread_key_create(x, y) ((*(x) = TlsAlloc()) == TLS_OUT_OF_INDEXES ? ErrCode() : 0)
@@ -250,7 +250,7 @@ using mdb_mutexref_t = HANDLE;
 #define THREAD_FINISH(thr) (WaitForSingleObject(thr, INFINITE) ? ErrCode() : 0)
 #define LOCK_MUTEX0(mutex) WaitForSingleObject(mutex, INFINITE)
 #define UNLOCK_MUTEX(mutex) ReleaseMutex(mutex)
-#define mdb_mutex_consistent(mutex) 0
+#define fds_mutex_consistent(mutex) 0
 #define getpid() GetCurrentProcessId()
 #define ErrCode() GetLastError()
 #define GET_PAGESIZE(x)                                                                                                \
@@ -262,39 +262,39 @@ using mdb_mutexref_t = HANDLE;
 #define close(fd) (CloseHandle(fd) ? 0 : -1)
 #define munmap(ptr, len) UnmapViewOfFile(ptr)
 #ifdef PROCESS_QUERY_LIMITED_INFORMATION
-#define MDB_PROCESS_QUERY_LIMITED_INFORMATION PROCESS_QUERY_LIMITED_INFORMATION
+#define FDS_PROCESS_QUERY_LIMITED_INFORMATION PROCESS_QUERY_LIMITED_INFORMATION
 #else
-#define MDB_PROCESS_QUERY_LIMITED_INFORMATION 0x1000
+#define FDS_PROCESS_QUERY_LIMITED_INFORMATION 0x1000
 #endif
 #else
 #define THREAD_RET void*
 #define THREAD_CREATE(thr, start, arg) pthread_create(&thr, NULL, start, arg)
 #define THREAD_FINISH(thr) pthread_join(thr, NULL)
 
-// For MDB_LOCK_FORMAT: True if readers take a pid lock in the lockfile
-#define MDB_PIDLOCK 1
+// For FDS_LOCK_FORMAT: True if readers take a pid lock in the lockfile
+#define FDS_PIDLOCK 1
 
-#ifdef MDB_USE_POSIX_SEM
+#ifdef FDS_USE_POSIX_SEM
 
-typedef sem_t *mdb_mutex_t, *mdb_mutexref_t;
-#define LOCK_MUTEX0(mutex) mdb_sem_wait(mutex)
+typedef sem_t *fds_mutex_t, *fds_mutexref_t;
+#define LOCK_MUTEX0(mutex) fds_sem_wait(mutex)
 #define UNLOCK_MUTEX(mutex) sem_post(mutex)
 
-int mdb_sem_wait(sem_t* sem);
+int fds_sem_wait(sem_t* sem);
 
-#elif defined MDB_USE_SYSV_SEM
+#elif defined FDS_USE_SYSV_SEM
 
-struct mdb_mutex
+struct fds_mutex
 {
     int semid;
     int semnum;
     int* locked;
 };
 
-typedef mdb_mutex mdb_mutex_t[1];
-typedef mdb_mutex* mdb_mutexref_t;
+typedef fds_mutex fds_mutex_t[1];
+typedef fds_mutex* fds_mutexref_t;
 
-#define LOCK_MUTEX0(mutex) mdb_sem_wait(mutex)
+#define LOCK_MUTEX0(mutex) fds_sem_wait(mutex)
 #define UNLOCK_MUTEX(mutex)                                                                                            \
     do                                                                                                                 \
     {                                                                                                                  \
@@ -304,21 +304,21 @@ typedef mdb_mutex* mdb_mutexref_t;
         semop((mutex)->semid, &sb, 1);                                                                                 \
     } while (0)
 
-int mdb_sem_wait(mdb_mutexref_t sem);
+int fds_sem_wait(fds_mutexref_t sem);
 
-#define mdb_mutex_consistent(mutex) 0
+#define fds_mutex_consistent(mutex) 0
 
-#else  // MDB_USE_POSIX_MUTEX:
+#else  // FDS_USE_POSIX_MUTEX:
 // Shared mutex/semaphore as the original is stored.
 //
-// Not for copies. Instead it can be assigned to an mdb_mutexref_t.
-// When mdb_mutexref_t is a pointer and mdb_mutex_t is not, then it
+// Not for copies. Instead it can be assigned to an fds_mutexref_t.
+// When fds_mutexref_t is a pointer and fds_mutex_t is not, then it
 // is array[size 1] so it can be assigned to the pointer.
-typedef pthread_mutex_t mdb_mutex_t[1];
-// Reference to an mdb_mutex_t
-typedef pthread_mutex_t* mdb_mutexref_t;
+typedef pthread_mutex_t fds_mutex_t[1];
+// Reference to an fds_mutex_t
+typedef pthread_mutex_t* fds_mutexref_t;
 // Lock the reader or writer mutex.
-// Returns 0 or a code to give mdb_mutex_failed(), as in LOCK_MUTEX().
+// Returns 0 or a code to give fds_mutex_failed(), as in LOCK_MUTEX().
 //
 #define LOCK_MUTEX0(mutex) pthread_mutex_lock(mutex)
 // Unlock the reader or writer mutex.
@@ -326,8 +326,8 @@ typedef pthread_mutex_t* mdb_mutexref_t;
 #define UNLOCK_MUTEX(mutex) pthread_mutex_unlock(mutex)
 // Mark mutex-protected data as repaired, after death of previous owner.
 //
-#define mdb_mutex_consistent(mutex) pthread_mutex_consistent(mutex)
-#endif  // MDB_USE_POSIX_SEM || MDB_USE_SYSV_SEM
+#define fds_mutex_consistent(mutex) pthread_mutex_consistent(mutex)
+#endif  // FDS_USE_POSIX_SEM || FDS_USE_SYSV_SEM
 
 // Get the error code for the last failed system function.
 //
@@ -352,7 +352,7 @@ typedef pthread_mutex_t* mdb_mutexref_t;
 #define GET_PAGESIZE(x) ((x) = sysconf(_SC_PAGE_SIZE))
 #endif
 
-#ifdef MDB_USE_SYSV_SEM
+#ifdef FDS_USE_SYSV_SEM
 #define MNAME_LEN (sizeof(int))
 #else
 #define MNAME_LEN (sizeof(pthread_mutex_t))
@@ -362,11 +362,11 @@ typedef pthread_mutex_t* mdb_mutexref_t;
 // The version number for a database's lockfile format.
 enum
 {
-    MDB_LOCK_VERSION = 2,
-    // Number of bits representing MDB_LOCK_VERSION in MDB_LOCK_FORMAT.
-    // The remaining bits must leave room for MDB_lock_desc.
+    FDS_LOCK_VERSION = 2,
+    // Number of bits representing FDS_LOCK_VERSION in FDS_LOCK_FORMAT.
+    // The remaining bits must leave room for FDS_lock_desc.
     //
-    MDB_LOCK_VERSION_BITS = 12
+    FDS_LOCK_VERSION_BITS = 12
 };
 
 // The max size of a key we can write, or 0 for computed max.
@@ -383,13 +383,13 @@ enum
 //
 // Keys must fit on a node in a regular page.
 //
-#ifndef MDB_MAXKEYSIZE
-#define MDB_MAXKEYSIZE 511
+#ifndef FDS_MAXKEYSIZE
+#define FDS_MAXKEYSIZE 511
 #endif
 
 // The maximum size of a key we can write to the environment.
-#if MDB_MAXKEYSIZE
-#define ENV_MAXKEY(env) (MDB_MAXKEYSIZE)
+#if FDS_MAXKEYSIZE
+#define ENV_MAXKEY(env) (FDS_MAXKEYSIZE)
 #else
 #define ENV_MAXKEY(env) ((env)->me_maxkey)
 #endif
@@ -410,7 +410,7 @@ enum
 
 // Default size of memory map.
 // This is certainly too small for any actual applications. Apps should always set
-// the size explicitly using mdb_env_set_mapsize().
+// the size explicitly using fds_env_set_mapsize().
 //
 enum
 {
@@ -424,10 +424,10 @@ enum
 // slot's address is saved in thread-specific data so that subsequent read
 // transactions started by the same thread need no further locking to proceed.
 //
-// If MDB_NOTLS is set, the slot address is not saved in thread-specific data.
+// If FDS_NOTLS is set, the slot address is not saved in thread-specific data.
 //
 // No reader table is used if the database is on a read-only filesystem, or
-// if MDB_NOLOCK is set.
+// if FDS_NOLOCK is set.
 //
 // Since the database uses multi-version concurrency control, readers don't
 // actually need any locking. This table is used to keep track of which
@@ -458,7 +458,7 @@ enum
 // Number of slots in the reader table.
 // This value was chosen somewhat arbitrarily. 126 readers plus a
 // couple mutexes fit exactly into 8KB on my development machine.
-// Applications should set the table size using mdb_env_set_maxreaders().
+// Applications should set the table size using fds_env_set_maxreaders().
 //
 enum
 {
@@ -484,41 +484,41 @@ enum
 };
 
 // Lockfile format signature: version, features and field layout
-#define MDB_LOCK_FORMAT                                                                                                \
-    ((uint32_t)(((MDB_LOCK_VERSION) % (1U << MDB_LOCK_VERSION_BITS)) + (MDB_lock_desc * (1U << MDB_LOCK_VERSION_BITS))))
+#define FDS_LOCK_FORMAT                                                                                                \
+    ((uint32_t)(((FDS_LOCK_VERSION) % (1U << FDS_LOCK_VERSION_BITS)) + (FDS_lock_desc * (1U << FDS_LOCK_VERSION_BITS))))
 
-// Lock type and layout. Values 0-119. _WIN32 implies MDB_PIDLOCK.
+// Lock type and layout. Values 0-119. _WIN32 implies FDS_PIDLOCK.
 // Some low values are reserved for future tweaks.
 //
 #ifdef _WIN32
-#define MDB_LOCK_TYPE (0 + ALIGNOF2(mdb_hash_t) / 8 % 2)
-#elif defined MDB_USE_POSIX_SEM
-#define MDB_LOCK_TYPE (4 + ALIGNOF2(mdb_hash_t) / 8 % 2)
-#elif defined MDB_USE_SYSV_SEM
-#define MDB_LOCK_TYPE (8)
-#elif defined MDB_USE_POSIX_MUTEX
+#define FDS_LOCK_TYPE (0 + ALIGNOF2(fds_hash_t) / 8 % 2)
+#elif defined FDS_USE_POSIX_SEM
+#define FDS_LOCK_TYPE (4 + ALIGNOF2(fds_hash_t) / 8 % 2)
+#elif defined FDS_USE_SYSV_SEM
+#define FDS_LOCK_TYPE (8)
+#elif defined FDS_USE_POSIX_MUTEX
 // We do not know the inside of a POSIX mutex and how to check if mutexes
 // used by two executables are compatible. Just check alignment and size.
 //
-#define MDB_LOCK_TYPE (10 + LOG2_MOD(ALIGNOF2(pthread_mutex_t), 5) + sizeof(pthread_mutex_t) / 4U % 22 * 5)
+#define FDS_LOCK_TYPE (10 + LOG2_MOD(ALIGNOF2(pthread_mutex_t), 5) + sizeof(pthread_mutex_t) / 4U % 22 * 5)
 #endif
 
 enum
 {
     // Magic number for lockfile layout and features.
-    MDB_lock_desc = 42
+    FDS_lock_desc = 42
 };
 //
 
 enum
 {
-    MDB_VALID = 0x8000  // DB handle is valid, for me_dbflags
+    FDS_VALID = 0x8000  // DB handle is valid, for me_dbflags
 };
-#define PERSISTENT_FLAGS (0xffff & ~(MDB_VALID))
-// mdb_dbi_open() flags
-#define VALID_FLAGS (MDB_REVERSEKEY | MDB_CREATE)
+#define PERSISTENT_FLAGS (0xffff & ~(FDS_VALID))
+// fds_dbi_open() flags
+#define VALID_FLAGS (FDS_REVERSEKEY | FDS_CREATE)
 
-/* for MDB_cursor */
+/* for FDS_cursor */
 enum MCursorFlags : unsigned int
 {
     C_INITIALIZED = 0x01,  // cursor has been initialized and is valid
@@ -527,8 +527,8 @@ enum MCursorFlags : unsigned int
     C_DEL = 0x08,          // last op was a cursor_del
     C_UNTRACK = 0x40       // Un-track cursor when closing
 };
-#define C_WRITEMAP MDB_TXN_WRITEMAP  // Copy of txn flag
-#define C_ORIG_RDONLY MDB_TXN_RDONLY
+#define C_WRITEMAP FDS_TXN_WRITEMAP  // Copy of txn flag
+#define C_ORIG_RDONLY FDS_TXN_RDONLY
 
 // Handle for the DB used to track free pages.
 enum
@@ -547,9 +547,9 @@ enum
 };
 
 // A transaction ID.
-// See struct MDB_txn.mt_txnid for details.
+// See struct FDS_txn.mt_txnid for details.
 //
-using txnid_t = MDB_ID;
+using txnid_t = FDS_ID;
 
 // Used for offsets within a single page.
 // Since memory pages are typically 4 or 8KB in size, 12-13 bits,
@@ -569,7 +569,7 @@ enum
 // already represent 12-13 bits of addressable memory, and the OS will
 // always limit applications to a maximum of 63 bits of address space.
 //
-// In the MDB_node structure, we only store 48 bits of this value,
+// In the FDS_node structure, we only store 48 bits of this value,
 // which thus limits us to only 60 bits of addressable data.
 //
-using pgno_t = MDB_ID;
+using pgno_t = FDS_ID;

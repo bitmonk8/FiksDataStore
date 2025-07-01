@@ -1,11 +1,11 @@
 mtest
 mtest[23456]
 testdb
-mdb_copy
-mdb_stat
-mdb_dump
-mdb_load
-mdb_drop
+fds_copy
+fds_stat
+fds_dump
+fds_load
+fds_drop
 *.lo
 *.[ao]
 *.so

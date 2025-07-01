@@ -14,7 +14,7 @@ This document outlines the mandatory coding conventions for the LMDB codebase to
 **Examples**:
 ```cpp
 // ✅ Correct - Modern C++ style
-struct MDB_env
+struct FDS_env
 {
     HANDLE me_fd;
     HANDLE me_lfd;
@@ -22,12 +22,12 @@ struct MDB_env
 };
 
 // ❌ Incorrect - Legacy C style
-typedef struct MDB_env
+typedef struct FDS_env
 {
     HANDLE me_fd;
     HANDLE me_lfd;
     // ... members
-} MDB_env;
+} FDS_env;
 ```
 
 ### 2. Comment Style
@@ -41,18 +41,18 @@ typedef struct MDB_env
 ```cpp
 // ✅ Correct - Human-readable comment
 // Initialize the environment
-int mdb_env_create(MDB_env **env)
+int fds_env_create(FDS_env **env)
 {
     // Allocate memory for the environment
-    MDB_env *e = (MDB_env*) calloc(1, sizeof(MDB_env));
+    FDS_env *e = (FDS_env*) calloc(1, sizeof(FDS_env));
 
     // Set default values
     e->me_maxreaders = DEFAULT_READERS;
-    return MDB_SUCCESS;
+    return FDS_SUCCESS;
 }
 
 // ✅ Correct - Multiline comments for temporary code removal
-int mdb_env_create(MDB_env **env)
+int fds_env_create(FDS_env **env)
 {
     /*
     // Temporarily disabled debug code
@@ -60,13 +60,13 @@ int mdb_env_create(MDB_env **env)
     debug_print_state();
     */
 
-    MDB_env *e = (MDB_env*) calloc(1, sizeof(MDB_env));
-    return MDB_SUCCESS;
+    FDS_env *e = (FDS_env*) calloc(1, sizeof(FDS_env));
+    return FDS_SUCCESS;
 }
 
 // ✅ Correct - No special tags or annotations needed
 // This function initializes the environment
-int mdb_env_create(MDB_env **env);
+int fds_env_create(FDS_env **env);
 ```
 
 ### 3. Brace Placement
@@ -79,16 +79,16 @@ int mdb_env_create(MDB_env **env);
 **Examples**:
 ```cpp
 // ✅ Correct - Braces on separate lines
-struct MDB_env
+struct FDS_env
 {
     HANDLE me_fd;
     HANDLE me_lfd;
     uint32_t me_flags;
 };
 
-int mdb_env_create(MDB_env **env)
+int fds_env_create(FDS_env **env)
 {
-    MDB_env *e = (MDB_env*) calloc(1, sizeof(MDB_env));
+    FDS_env *e = (FDS_env*) calloc(1, sizeof(FDS_env));
     if (!e)
         return ENOMEM;
     
@@ -96,20 +96,20 @@ int mdb_env_create(MDB_env **env)
         e->readers[i] = NULL;
     
     *env = e;
-    return MDB_SUCCESS;
+    return FDS_SUCCESS;
 }
 
 // ❌ Incorrect - Opening braces on same line
-struct MDB_env {
+struct FDS_env {
     HANDLE me_fd;
     HANDLE me_lfd;
 };
 
-int mdb_env_create(MDB_env **env) {
+int fds_env_create(FDS_env **env) {
     if (!env) {
         return EINVAL;
     }
-    return MDB_SUCCESS;
+    return FDS_SUCCESS;
 }
 ```
 
@@ -125,8 +125,8 @@ int mdb_env_create(MDB_env **env) {
 // ✅ Correct - Single variable per declaration
 int status;
 int count;
-MDB_env *env;
-MDB_txn *txn;
+FDS_env *env;
+FDS_txn *txn;
 
 // ✅ Correct - Each variable clearly initialized
 int readers = 0;
@@ -134,13 +134,13 @@ int writers = 0;
 bool is_valid = false;
 
 // ✅ Correct - Different types clearly separated
-size_t data_size = sizeof(MDB_val);
+size_t data_size = sizeof(FDS_val);
 void *data_ptr = nullptr;
-uint32_t flags = MDB_RDONLY;
+uint32_t flags = FDS_RDONLY;
 
 // ❌ Incorrect - Multiple variables in single declaration
 int status, count;
-MDB_env *env, *backup_env;
+FDS_env *env, *backup_env;
 
 // ❌ Incorrect - Mixed initialization patterns
 int readers = 0, writers, max_readers = DEFAULT_READERS;
@@ -179,15 +179,15 @@ e. Temporary throw-away names such as t1, t2, tmp are discouraged; give meaningf
 **Examples**:
 ```cpp
 // ✅ Correct - Single-purpose variables with const preference
-int mdb_page_search(MDB_page *page, MDB_val *key)
+int fds_page_search(FDS_page *page, FDS_val *key)
 {
     const int num_keys = NUMKEYS(page);
     const char *base_ptr = NODEPTR(page, 0);
     
     for (int index = 0; index < num_keys; index++)
     {
-        const MDB_node *current_node = NODEPTR(page, index);
-        const int comparison_result = mdb_cmp(key, &current_node->mn_data);
+        const FDS_node *current_node = NODEPTR(page, index);
+        const int comparison_result = fds_cmp(key, &current_node->mn_data);
         
         if (comparison_result == 0)
             return index;
@@ -197,13 +197,13 @@ int mdb_page_search(MDB_page *page, MDB_val *key)
 }
 
 // ✅ Correct - Loop counter mutation is acceptable (single purpose)
-int mdb_cursor_count(MDB_cursor *cursor)
+int fds_cursor_count(FDS_cursor *cursor)
 {
     int total_count = 0;
     
     for (int page_index = 0; page_index < cursor->mc_snum; page_index++)
     {
-        const MDB_page *current_page = cursor->mc_pg[page_index];
+        const FDS_page *current_page = cursor->mc_pg[page_index];
         total_count += NUMKEYS(current_page);
     }
     
@@ -211,10 +211,10 @@ int mdb_cursor_count(MDB_cursor *cursor)
 }
 
 // ❌ Incorrect - Variable repurposed for different meanings
-int mdb_bad_example(MDB_env *env)
+int fds_bad_example(FDS_env *env)
 {
-    int result = mdb_env_open(env, "/tmp/db", 0, 0644);  // result = status code
-    if (result != MDB_SUCCESS)
+    int result = fds_env_open(env, "/tmp/db", 0, 0644);  // result = status code
+    if (result != FDS_SUCCESS)
         return result;
     
     result = env->me_maxreaders;  // ❌ Now result = reader count (different purpose!)
@@ -225,14 +225,14 @@ int mdb_bad_example(MDB_env *env)
         return result;
     }
     
-    return MDB_SUCCESS;
+    return FDS_SUCCESS;
 }
 
 // ✅ Correct - Separate variables for different purposes
-int mdb_good_example(MDB_env *env)
+int fds_good_example(FDS_env *env)
 {
-    const int open_status = mdb_env_open(env, "/tmp/db", 0, 0644);
-    if (open_status != MDB_SUCCESS)
+    const int open_status = fds_env_open(env, "/tmp/db", 0, 0644);
+    if (open_status != FDS_SUCCESS)
         return open_status;
     
     const int max_readers = env->me_maxreaders;
@@ -240,7 +240,7 @@ int mdb_good_example(MDB_env *env)
     if (max_readers > 100)
         return EINVAL;
     
-    return MDB_SUCCESS;
+    return FDS_SUCCESS;
 }
 ```
 
@@ -252,8 +252,8 @@ int mdb_good_example(MDB_env *env)
 **Rules**:
 - All `.cpp` files must include their corresponding `.h` file first
 - **Exception**: `.cpp` files containing a `main` function do not need a corresponding header file.
-- All `Lib/*.h` files (except exceptions) must include `mdb_internal.h`
-- **Exception**: `Lib/midl.h` does not need a to include include `mdb_internal.h`.
+- All `Lib/*.h` files (except exceptions) must include `fds_internal.h`
+- **Exception**: `Lib/midl.h` does not need a to include include `fds_internal.h`.
 - Use `#pragma once` for include guards
 
 ## Validation

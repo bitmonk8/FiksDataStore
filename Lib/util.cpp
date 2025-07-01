@@ -9,48 +9,48 @@
 #endif
 
 // Return the library version info.
-auto mdb_version(int* major, int* minor, int* patch) -> const char*
+auto fds_version(int* major, int* minor, int* patch) -> const char*
 {
     if (major != nullptr)
-        *major = MDB_VERSION_MAJOR;
+        *major = FDS_VERSION_MAJOR;
     if (minor != nullptr)
-        *minor = MDB_VERSION_MINOR;
+        *minor = FDS_VERSION_MINOR;
     if (patch != nullptr)
-        *patch = MDB_VERSION_PATCH;
-    return MDB_VERSION_STRING;
+        *patch = FDS_VERSION_PATCH;
+    return FDS_VERSION_STRING;
 }
 
 // Table of descriptions for LMDB errors
-static const char* const mdb_errstr[] = {
-    "MDB_KEYEXIST: Key/data pair already exists",
-    "MDB_NOTFOUND: No matching key/data pair found",
-    "MDB_PAGE_NOTFOUND: Requested page not found",
-    "MDB_CORRUPTED: Located page was wrong type",
-    "MDB_PANIC: Update of meta page failed or environment had a fatal error",
-    "MDB_VERSION_MISMATCH: DB file version mismatch with expected version",
-    "MDB_INVALID: File is not an MDB file",
-    "MDB_MAP_FULL: Environment mapsize limit reached",
-    "MDB_DBS_FULL: Environment maxdbs limit reached",
-    "MDB_READERS_FULL: Environment maxreaders limit reached",
-    "MDB_TLS_FULL: Thread-local storage keys full - too many environments open",
-    "MDB_TXN_FULL: Transaction has too many dirty pages",
-    "MDB_CURSOR_FULL: Internal error - cursor stack limit reached",
-    "MDB_PAGE_FULL: Internal error - page has no more space",
-    "MDB_MAP_RESIZED: Database contents grew beyond environment mapsize",
-    "MDB_INCOMPATIBLE: Operation and DB incompatible, or DB type changed",
-    "MDB_BAD_RSLOT: Invalid reuse of reader locktable slot",
-    "MDB_BAD_TXN: Transaction must abort, has a child, or is invalid",
-    "MDB_BAD_VALSIZE: Unsupported size of key/data for target DB",
-    "MDB_BAD_DBI: The specified DBI was changed unexpectedly",
-    "MDB_PROBLEM: Unexpected problem - txn should abort",
-    "MDB_LAST_ERRCODE: MDB_LAST_ERRCODE",
+static const char* const fds_errstr[] = {
+    "FDS_KEYEXIST: Key/data pair already exists",
+    "FDS_NOTFOUND: No matching key/data pair found",
+    "FDS_PAGE_NOTFOUND: Requested page not found",
+    "FDS_CORRUPTED: Located page was wrong type",
+    "FDS_PANIC: Update of meta page failed or environment had a fatal error",
+    "FDS_VERSION_MISMATCH: DB file version mismatch with expected version",
+    "FDS_INVALID: File is not an MDB file",
+    "FDS_MAP_FULL: Environment mapsize limit reached",
+    "FDS_DBS_FULL: Environment maxdbs limit reached",
+    "FDS_READERS_FULL: Environment maxreaders limit reached",
+    "FDS_TLS_FULL: Thread-local storage keys full - too many environments open",
+    "FDS_TXN_FULL: Transaction has too many dirty pages",
+    "FDS_CURSOR_FULL: Internal error - cursor stack limit reached",
+    "FDS_PAGE_FULL: Internal error - page has no more space",
+    "FDS_MAP_RESIZED: Database contents grew beyond environment mapsize",
+    "FDS_INCOMPATIBLE: Operation and DB incompatible, or DB type changed",
+    "FDS_BAD_RSLOT: Invalid reuse of reader locktable slot",
+    "FDS_BAD_TXN: Transaction must abort, has a child, or is invalid",
+    "FDS_BAD_VALSIZE: Unsupported size of key/data for target DB",
+    "FDS_BAD_DBI: The specified DBI was changed unexpectedly",
+    "FDS_PROBLEM: Unexpected problem - txn should abort",
+    "FDS_LAST_ERRCODE: FDS_LAST_ERRCODE",
 };
 
-auto mdb_strerror(int err) -> const char*
+auto fds_strerror(int err) -> const char*
 {
 #ifdef _WIN32
     // HACK: pad 4KB on stack over the buf. Return system msgs in buf.
-    // This works as long as no function between the call to mdb_strerror
+    // This works as long as no function between the call to fds_strerror
     // and the actual use of the message uses more than 4K of stack.
 #define MSGSIZE 1024
 #define PADSIZE 4096
@@ -60,9 +60,9 @@ auto mdb_strerror(int err) -> const char*
     if (err == 0)
         return ("Successful return: 0");
 
-    if (err >= MDB_KEYEXIST && err <= MDB_LAST_ERRCODE)
+    if (err >= FDS_KEYEXIST && err <= FDS_LAST_ERRCODE)
     {
-        return mdb_errstr[err - MDB_KEYEXIST];
+        return fds_errstr[err - FDS_KEYEXIST];
     }
 
 #ifdef _WIN32

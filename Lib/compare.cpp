@@ -3,16 +3,16 @@
 #include "db.h"
 #include "txn.h"
 
-// Compare two items pointing at aligned mdb_size_t's
-auto mdb_cmp_long(const MDB_val* a, const MDB_val* b) -> int
+// Compare two items pointing at aligned fds_size_t's
+auto fds_cmp_long(const FDS_val* a, const FDS_val* b) -> int
 {
-    return (*(mdb_size_t*)a->mv_data < *(mdb_size_t*)b->mv_data)
+    return (*(fds_size_t*)a->mv_data < *(fds_size_t*)b->mv_data)
                ? -1
-               : static_cast<int>(*(mdb_size_t*)a->mv_data > *(mdb_size_t*)b->mv_data);
+               : static_cast<int>(*(fds_size_t*)a->mv_data > *(fds_size_t*)b->mv_data);
 }
 
 // Compare two items lexically
-auto mdb_cmp_memn(const MDB_val* a, const MDB_val* b) -> int
+auto fds_cmp_memn(const FDS_val* a, const FDS_val* b) -> int
 {
     unsigned int len = a->mv_size;
     ssize_t len_diff{(ssize_t)a->mv_size - (ssize_t)b->mv_size};
@@ -27,7 +27,7 @@ auto mdb_cmp_memn(const MDB_val* a, const MDB_val* b) -> int
 }
 
 // Compare two items in reverse byte order
-auto mdb_cmp_memnr(const MDB_val* a, const MDB_val* b) -> int
+auto fds_cmp_memnr(const FDS_val* a, const FDS_val* b) -> int
 {
     const unsigned char* p1_lim{(const unsigned char*)a->mv_data};
     const unsigned char* p1{(const unsigned char*)a->mv_data + a->mv_size};
@@ -49,7 +49,7 @@ auto mdb_cmp_memnr(const MDB_val* a, const MDB_val* b) -> int
     return len_diff < 0 ? -1 : len_diff;
 }
 
-auto mdb_cmp(MDB_txn* txn, MDB_dbi dbi, const MDB_val* a, const MDB_val* b) -> int
+auto fds_cmp(FDS_txn* txn, FDS_dbi dbi, const FDS_val* a, const FDS_val* b) -> int
 {
     return txn->mt_dbxs[dbi].md_cmp(a, b);
 }

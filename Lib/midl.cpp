@@ -30,7 +30,7 @@
 //
 #define CMP(x, y) ((x) < (y) ? -1 : (x) > (y))
 
-auto mdb_midl_search(const MDB_IDL ids, MDB_ID id) -> unsigned
+auto fds_midl_search(const FDS_IDL ids, FDS_ID id) -> unsigned
 {
     //
     // binary search of id in ids
@@ -70,9 +70,9 @@ auto mdb_midl_search(const MDB_IDL ids, MDB_ID id) -> unsigned
     return cursor;
 }
 
-auto mdb_midl_alloc(int num) -> MDB_IDL
+auto fds_midl_alloc(int num) -> FDS_IDL
 {
-    auto ids = (MDB_IDL)malloc((num + 2) * sizeof(MDB_ID));
+    auto ids = (FDS_IDL)malloc((num + 2) * sizeof(FDS_ID));
     if (ids != nullptr)
     {
         *ids++ = num;
@@ -81,33 +81,33 @@ auto mdb_midl_alloc(int num) -> MDB_IDL
     return ids;
 }
 
-void mdb_midl_free(MDB_IDL ids)
+void fds_midl_free(FDS_IDL ids)
 {
     if (ids != nullptr)
         free(ids - 1);
 }
 
-void mdb_midl_shrink(MDB_IDL* idp)
+void fds_midl_shrink(FDS_IDL* idp)
 {
-    MDB_IDL ids = *idp;
+    FDS_IDL ids = *idp;
     --ids;
-    if (*ids > MDB_IDL_UM_MAX)
+    if (*ids > FDS_IDL_UM_MAX)
     {
-        auto new_ids = (MDB_IDL)realloc(ids, (MDB_IDL_UM_MAX + 2) * sizeof(MDB_ID));
+        auto new_ids = (FDS_IDL)realloc(ids, (FDS_IDL_UM_MAX + 2) * sizeof(FDS_ID));
         if (new_ids != nullptr)
         {
             ids = new_ids;
-            *ids++ = MDB_IDL_UM_MAX;
+            *ids++ = FDS_IDL_UM_MAX;
             *idp = ids;
         }
     }
 }
 
-static auto mdb_midl_grow(MDB_IDL* idp, int num) -> int
+static auto fds_midl_grow(FDS_IDL* idp, int num) -> int
 {
-    MDB_IDL idn = *idp - 1;
+    FDS_IDL idn = *idp - 1;
     /* grow it */
-    auto new_idn = (MDB_IDL)realloc(idn, (*idn + num + 2) * sizeof(MDB_ID));
+    auto new_idn = (FDS_IDL)realloc(idn, (*idn + num + 2) * sizeof(FDS_ID));
     if (new_idn == nullptr)
         return ENOMEM;
     idn = new_idn;
@@ -116,14 +116,14 @@ static auto mdb_midl_grow(MDB_IDL* idp, int num) -> int
     return 0;
 }
 
-auto mdb_midl_need(MDB_IDL* idp, unsigned num) -> int
+auto fds_midl_need(FDS_IDL* idp, unsigned num) -> int
 {
-    MDB_IDL ids = *idp;
+    FDS_IDL ids = *idp;
     num += (unsigned)ids[0];
     if (num > ids[-1])
     {
         num = (num + num / 4 + (256 + 2)) & -256;
-        ids = (MDB_IDL)realloc(ids - 1, num * sizeof(MDB_ID));
+        ids = (FDS_IDL)realloc(ids - 1, num * sizeof(FDS_ID));
         if (ids == nullptr)
             return ENOMEM;
         *ids++ = num - 2;
@@ -132,13 +132,13 @@ auto mdb_midl_need(MDB_IDL* idp, unsigned num) -> int
     return 0;
 }
 
-auto mdb_midl_append(MDB_IDL* idp, MDB_ID id) -> int
+auto fds_midl_append(FDS_IDL* idp, FDS_ID id) -> int
 {
-    MDB_IDL ids = *idp;
+    FDS_IDL ids = *idp;
     /* Too big? */
     if (ids[0] >= ids[-1])
     {
-        if (mdb_midl_grow(idp, MDB_IDL_UM_MAX) != 0)
+        if (fds_midl_grow(idp, FDS_IDL_UM_MAX) != 0)
             return ENOMEM;
         ids = *idp;
     }
@@ -147,29 +147,29 @@ auto mdb_midl_append(MDB_IDL* idp, MDB_ID id) -> int
     return 0;
 }
 
-auto mdb_midl_append_list(MDB_IDL* idp, MDB_IDL app) -> int
+auto fds_midl_append_list(FDS_IDL* idp, FDS_IDL app) -> int
 {
-    MDB_IDL ids = *idp;
+    FDS_IDL ids = *idp;
     /* Too big? */
     if (ids[0] + app[0] >= ids[-1])
     {
-        if (mdb_midl_grow(idp, (int)app[0]) != 0)
+        if (fds_midl_grow(idp, (int)app[0]) != 0)
             return ENOMEM;
         ids = *idp;
     }
-    memcpy(&ids[ids[0] + 1], &app[1], app[0] * sizeof(MDB_ID));
+    memcpy(&ids[ids[0] + 1], &app[1], app[0] * sizeof(FDS_ID));
     ids[0] += app[0];
     return 0;
 }
 
-auto mdb_midl_append_range(MDB_IDL* idp, MDB_ID id, unsigned n) -> int
+auto fds_midl_append_range(FDS_IDL* idp, FDS_ID id, unsigned n) -> int
 {
-    MDB_ID* ids = *idp;
-    MDB_ID len = ids[0];
+    FDS_ID* ids = *idp;
+    FDS_ID len = ids[0];
     /* Too big? */
     if (len + n > ids[-1])
     {
-        if (mdb_midl_grow(idp, n | MDB_IDL_UM_MAX) != 0)
+        if (fds_midl_grow(idp, n | FDS_IDL_UM_MAX) != 0)
             return ENOMEM;
         ids = *idp;
     }
@@ -180,22 +180,22 @@ auto mdb_midl_append_range(MDB_IDL* idp, MDB_ID id, unsigned n) -> int
     return 0;
 }
 
-void mdb_midl_xmerge(MDB_IDL idl, const MDB_IDL merge)
+void fds_midl_xmerge(FDS_IDL idl, const FDS_IDL merge)
 {
-    const MDB_ID merge_count = merge[0];
-    const MDB_ID idl_count = idl[0];
-    const MDB_ID total_count = merge_count + idl_count;
+    const FDS_ID merge_count = merge[0];
+    const FDS_ID idl_count = idl[0];
+    const FDS_ID total_count = merge_count + idl_count;
 
-    idl[0] = (MDB_ID)-1; /* delimiter for idl scan below */
+    idl[0] = (FDS_ID)-1; /* delimiter for idl scan below */
 
-    MDB_ID remaining_merge = merge_count;
-    MDB_ID remaining_idl = idl_count;
-    MDB_ID write_pos = total_count;
-    MDB_ID current_idl_value = idl[remaining_idl];
+    FDS_ID remaining_merge = merge_count;
+    FDS_ID remaining_idl = idl_count;
+    FDS_ID write_pos = total_count;
+    FDS_ID current_idl_value = idl[remaining_idl];
 
     while (remaining_merge != 0U)
     {
-        const MDB_ID current_merge_value = merge[remaining_merge--];
+        const FDS_ID current_merge_value = merge[remaining_merge--];
         for (; current_idl_value < current_merge_value; current_idl_value = idl[--remaining_idl])
             idl[write_pos--] = current_idl_value;
         idl[write_pos--] = current_merge_value;
@@ -216,7 +216,7 @@ enum
         (b) = itmp;                                                                                                    \
     }
 
-void mdb_midl_sort(MDB_IDL ids)
+void fds_midl_sort(FDS_IDL ids)
 {
     /* Max possible depth of int-indexed tree * 2 items/level */
     int istack[sizeof(int) * CHAR_BIT * 2];
@@ -233,7 +233,7 @@ void mdb_midl_sort(MDB_IDL ids)
         { /* Insertion sort */
             for (j = l + 1; j <= ir; j++)
             {
-                MDB_ID a{ids[j]};
+                FDS_ID a{ids[j]};
                 for (i = j - 1; i >= 1; i--)
                 {
                     if (ids[i] >= a)
@@ -250,7 +250,7 @@ void mdb_midl_sort(MDB_IDL ids)
         else
         {
             int k{(l + ir) >> 1}; /* Choose median of left, center, right */
-            MDB_ID itmp{};
+            FDS_ID itmp{};
             MIDL_SWAP(ids[k], ids[l + 1]);
             if (ids[l] < ids[ir])
             {
@@ -266,7 +266,7 @@ void mdb_midl_sort(MDB_IDL ids)
             }
             i = l + 1;
             j = ir;
-            MDB_ID a{ids[l + 1]};
+            FDS_ID a{ids[l + 1]};
             for (;;)
             {
                 do
@@ -298,7 +298,7 @@ void mdb_midl_sort(MDB_IDL ids)
     }
 }
 
-auto mdb_mid2l_search(MDB_ID2L ids, MDB_ID id) -> unsigned
+auto fds_mid2l_search(FDS_ID2L ids, FDS_ID id) -> unsigned
 {
     // binary search of id in ids
     // if found, returns position of id
@@ -336,9 +336,9 @@ auto mdb_mid2l_search(MDB_ID2L ids, MDB_ID id) -> unsigned
     return cursor;
 }
 
-auto mdb_mid2l_insert(MDB_ID2L ids, MDB_ID2* id) -> int
+auto fds_mid2l_insert(FDS_ID2L ids, FDS_ID2* id) -> int
 {
-    unsigned x{mdb_mid2l_search(ids, id->mid)};
+    unsigned x{fds_mid2l_search(ids, id->mid)};
 
     if (x < 1)
     {
@@ -352,7 +352,7 @@ auto mdb_mid2l_insert(MDB_ID2L ids, MDB_ID2* id) -> int
         return -1;
     }
 
-    if (ids[0].mid >= MDB_IDL_UM_MAX)
+    if (ids[0].mid >= FDS_IDL_UM_MAX)
     {
         /* too big */
         return -2;
@@ -367,10 +367,10 @@ auto mdb_mid2l_insert(MDB_ID2L ids, MDB_ID2* id) -> int
     return 0;
 }
 
-auto mdb_mid2l_append(MDB_ID2L ids, MDB_ID2* id) -> int
+auto fds_mid2l_append(FDS_ID2L ids, FDS_ID2* id) -> int
 {
     /* Too big? */
-    if (ids[0].mid >= MDB_IDL_UM_MAX)
+    if (ids[0].mid >= FDS_IDL_UM_MAX)
     {
         return -2;
     }

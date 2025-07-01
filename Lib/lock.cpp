@@ -6,11 +6,11 @@
 #include <utility>
 
 #ifdef _WIN32
-#define MDB_OWNERDEAD ((int)WAIT_ABANDONED)
-#elif defined MDB_USE_SYSV_SEM
-#define MDB_OWNERDEAD (MDB_LAST_ERRCODE + 11)
-#elif defined(MDB_USE_POSIX_MUTEX)
-#define MDB_OWNERDEAD EOWNERDEAD /* LOCK_MUTEX0() result if dead owner */
+#define FDS_OWNERDEAD ((int)WAIT_ABANDONED)
+#elif defined FDS_USE_SYSV_SEM
+#define FDS_OWNERDEAD (FDS_LAST_ERRCODE + 11)
+#elif defined(FDS_USE_POSIX_MUTEX)
+#define FDS_OWNERDEAD EOWNERDEAD /* LOCK_MUTEX0() result if dead owner */
 #endif
 
 // Set or check a pid lock. Set returns 0 on success.
@@ -20,9 +20,9 @@
 // On Windows Pidset is a no-op, we merely check for the existence
 // of the process with the given pid. On POSIX we use a single byte
 // lock on the lockfile, set at an offset equal to the pid.
-auto mdb_reader_pid(MDB_env* env, enum Pidlock_op op, MDB_PID_T pid) -> int
+auto fds_reader_pid(FDS_env* env, enum Pidlock_op op, FDS_PID_T pid) -> int
 {
-#if !(MDB_PIDLOCK) /* Currently the same as defined(_WIN32) */
+#if !(FDS_PIDLOCK) /* Currently the same as defined(_WIN32) */
     if (op == Pidcheck)
     {
         HANDLE h{OpenProcess(env->me_pidquery, FALSE, pid)};
@@ -58,7 +58,7 @@ auto mdb_reader_pid(MDB_env* env, enum Pidlock_op op, MDB_PID_T pid) -> int
 #endif
 }
 
-auto ESECT mdb_reader_list(MDB_env* env, MDB_msg_func func, void* ctx) -> int
+auto ESECT fds_reader_list(FDS_env* env, FDS_msg_func func, void* ctx) -> int
 {
     if ((env == nullptr) || (func == nullptr))
         return -1;
@@ -68,7 +68,7 @@ auto ESECT mdb_reader_list(MDB_env* env, MDB_msg_func func, void* ctx) -> int
     }
 
     unsigned int rdrs{env->me_txns->mti_numreaders};
-    MDB_reader* mr{env->me_txns->mti_readers};
+    FDS_reader* mr{env->me_txns->mti_readers};
     int rc{0};
     int first{1};
 
@@ -105,7 +105,7 @@ auto ESECT mdb_reader_list(MDB_env* env, MDB_msg_func func, void* ctx) -> int
 
 // Insert pid into list if not already present.
 // return -1 if already present.
-static auto ESECT mdb_pid_insert(MDB_PID_T* ids, MDB_PID_T pid) -> int
+static auto ESECT fds_pid_insert(FDS_PID_T* ids, FDS_PID_T pid) -> int
 {
     // binary search of pid in list
     unsigned base{0};
@@ -146,13 +146,13 @@ static auto ESECT mdb_pid_insert(MDB_PID_T* ids, MDB_PID_T pid) -> int
     return 0;
 }
 
-auto ESECT mdb_reader_check(MDB_env* env, int* dead) -> int
+auto ESECT fds_reader_check(FDS_env* env, int* dead) -> int
 {
     if (env == nullptr)
         return EINVAL;
     if (dead != nullptr)
         *dead = 0;
-    return (env->me_txns != nullptr) ? mdb_reader_check0(env, 0, dead) : MDB_SUCCESS;
+    return (env->me_txns != nullptr) ? fds_reader_check0(env, 0, dead) : FDS_SUCCESS;
 }
 
 // Handle #LOCK_MUTEX0() failure.
@@ -161,39 +161,39 @@ auto ESECT mdb_reader_check(MDB_env* env, int* dead) -> int
 // mutex: LOCK_MUTEX0() mutex
 // rc: LOCK_MUTEX0() error (nonzero)
 // Returns 0 on success with the mutex locked, or an error code on failure.
-auto ESECT mdb_mutex_failed(MDB_env* env, mdb_mutexref_t mutex, int rc) -> int
+auto ESECT fds_mutex_failed(FDS_env* env, fds_mutexref_t mutex, int rc) -> int
 {
-    if (rc == MDB_OWNERDEAD)
+    if (rc == FDS_OWNERDEAD)
     {
         // We own the mutex. Clean up after dead previous owner.
-        int cleanup_result{MDB_SUCCESS};
+        int cleanup_result{FDS_SUCCESS};
         const int rlocked{static_cast<int>(mutex == env->me_rmutex)};
         if (rlocked == 0)
         {
             // Keep mti_txnid updated, otherwise next writer can
             // overwrite data which latest meta page refers to.
-            MDB_meta* meta{mdb_env_pick_meta(env)};
+            FDS_meta* meta{fds_env_pick_meta(env)};
             env->me_txns->mti_txnid = meta->mm_txnid;
             // env is hosed if the dead thread was ours
             if (env->me_txn != nullptr)
             {
-                env->me_flags |= MDB_FATAL_ERROR;
+                env->me_flags |= FDS_FATAL_ERROR;
                 env->me_txn = nullptr;
-                cleanup_result = MDB_PANIC;
+                cleanup_result = FDS_PANIC;
             }
         }
         DPRINTF(("%cmutex owner died, %s",
                  (rlocked ? 'r' : 'w'),
                  (cleanup_result ? "this process' env is hosed" : "recovering")));
-        const int reader_check_result{mdb_reader_check0(env, rlocked, nullptr)};
+        const int reader_check_result{fds_reader_check0(env, rlocked, nullptr)};
         int consistency_result = reader_check_result;
         if (reader_check_result == 0)
-            consistency_result = mdb_mutex_consistent(mutex);
+            consistency_result = fds_mutex_consistent(mutex);
         if (cleanup_result == 0)
             cleanup_result = consistency_result;
         if (cleanup_result != 0)
         {
-            DPRINTF(("LOCK_MUTEX recovery failed, %s", mdb_strerror(cleanup_result)));
+            DPRINTF(("LOCK_MUTEX recovery failed, %s", fds_strerror(cleanup_result)));
             UNLOCK_MUTEX(mutex);
         }
         return cleanup_result;
@@ -201,35 +201,35 @@ auto ESECT mdb_mutex_failed(MDB_env* env, mdb_mutexref_t mutex, int rc) -> int
 
 #ifdef _WIN32
     const int error_code = ErrCode();
-    DPRINTF(("LOCK_MUTEX failed, %s", mdb_strerror(error_code)));
+    DPRINTF(("LOCK_MUTEX failed, %s", fds_strerror(error_code)));
     return error_code;
 #else
-    DPRINTF(("LOCK_MUTEX failed, %s", mdb_strerror(rc)));
+    DPRINTF(("LOCK_MUTEX failed, %s", fds_strerror(rc)));
     return rc;
 #endif
 }
 
-// As #mdb_reader_check(). rlocked is set if caller locked #me_rmutex.
-auto ESECT mdb_reader_check0(MDB_env* env, int rlocked, int* dead) -> int
+// As #fds_reader_check(). rlocked is set if caller locked #me_rmutex.
+auto ESECT fds_reader_check0(FDS_env* env, int rlocked, int* dead) -> int
 {
-    mdb_mutexref_t rmutex{(rlocked != 0) ? nullptr : env->me_rmutex};
+    fds_mutexref_t rmutex{(rlocked != 0) ? nullptr : env->me_rmutex};
     unsigned int rdrs{env->me_txns->mti_numreaders};
-    MDB_PID_T* pids{(MDB_PID_T*)malloc((rdrs + 1) * sizeof(MDB_PID_T))};
+    FDS_PID_T* pids{(FDS_PID_T*)malloc((rdrs + 1) * sizeof(FDS_PID_T))};
     if (pids == nullptr)
         return ENOMEM;
     pids[0] = 0;
-    MDB_reader* mr{env->me_txns->mti_readers};
-    int rc{MDB_SUCCESS};
+    FDS_reader* mr{env->me_txns->mti_readers};
+    int rc{FDS_SUCCESS};
     int count{0};
 
     for (unsigned int i{0}; i < rdrs; i++)
     {
-        MDB_PID_T pid{mr[i].mr_pid};
+        FDS_PID_T pid{mr[i].mr_pid};
         if ((pid != 0) && pid != env->me_pid)
         {
-            if (mdb_pid_insert(pids, pid) == 0)
+            if (fds_pid_insert(pids, pid) == 0)
             {
-                if (mdb_reader_pid(env, Pidcheck, pid) == 0)
+                if (fds_reader_pid(env, Pidcheck, pid) == 0)
                 {
                     // Stale reader found
                     unsigned int j{i};
@@ -238,7 +238,7 @@ auto ESECT mdb_reader_check0(MDB_env* env, int rlocked, int* dead) -> int
                         rc = LOCK_MUTEX0(rmutex);
                         if (rc != 0)
                         {
-                            rc = mdb_mutex_failed(env, rmutex, rc);
+                            rc = fds_mutex_failed(env, rmutex, rc);
                             if (rc != 0)
                                 break;
                             rdrs = 0;  // the above checked all readers
@@ -246,7 +246,7 @@ auto ESECT mdb_reader_check0(MDB_env* env, int rlocked, int* dead) -> int
                         else
                         {
                             // Recheck, a new process may have reused pid
-                            if (mdb_reader_pid(env, Pidcheck, pid) != 0)
+                            if (fds_reader_pid(env, Pidcheck, pid) != 0)
                                 j = rdrs;
                         }
                     }
@@ -271,9 +271,9 @@ auto ESECT mdb_reader_check0(MDB_env* env, int rlocked, int* dead) -> int
 
 #ifndef _WIN32
 
-#ifdef MDB_USE_POSIX_SEM
+#ifdef FDS_USE_POSIX_SEM
 
-int mdb_sem_wait(sem_t* sem)
+int fds_sem_wait(sem_t* sem)
 {
     int rc;
     while ((rc = sem_wait(sem)) && (rc = errno) == EINTR)
@@ -281,9 +281,9 @@ int mdb_sem_wait(sem_t* sem)
     return rc;
 }
 
-#elif defined MDB_USE_SYSV_SEM
+#elif defined FDS_USE_SYSV_SEM
 
-int mdb_sem_wait(mdb_mutexref_t sem)
+int fds_sem_wait(fds_mutexref_t sem)
 {
     int* locked{sem->locked};
     struct sembuf sb{0, -1, SEM_UNDO};
@@ -293,7 +293,7 @@ int mdb_sem_wait(mdb_mutexref_t sem)
     {
         if (!semop(sem->semid, &sb, 1))
         {
-            rc = *locked ? MDB_OWNERDEAD : MDB_SUCCESS;
+            rc = *locked ? FDS_OWNERDEAD : FDS_SUCCESS;
             *locked = 1;
             break;
         }

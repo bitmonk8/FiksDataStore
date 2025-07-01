@@ -4,5 +4,5 @@
 
 #include <stddef.h>
 
-auto mdb_hash(const void* val, size_t len) -> mdb_hash_t;
-void mdb_pack85(unsigned long long l, char* out);
+auto fds_hash(const void* val, size_t len) -> fds_hash_t;
+void fds_pack85(unsigned long long l, char* out);

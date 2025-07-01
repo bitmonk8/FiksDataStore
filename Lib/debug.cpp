@@ -4,13 +4,13 @@
 #include "env.h"
 #include "page.h"
 
-#if MDB_DEBUG
-int mdb_debug;
-txnid_t mdb_debug_start;
+#if FDS_DEBUG
+int fds_debug;
+txnid_t fds_debug_start;
 #endif
 
 #ifndef NDEBUG
-void ESECT mdb_assert_fail(MDB_env* env, const char* expr_txt, const char* func, const char* file, int line)
+void ESECT fds_assert_fail(FDS_env* env, const char* expr_txt, const char* func, const char* file, int line)
 {
     char buf[400]{};
 
@@ -29,9 +29,9 @@ void ESECT mdb_assert_fail(MDB_env* env, const char* expr_txt, const char* func,
 }
 #endif /* NDEBUG */
 
-#if MDB_DEBUG
+#if FDS_DEBUG
 // Return the page number of mp which may be sub-page, for debug output
-auto mdb_dbg_pgno(MDB_page* mp) -> pgno_t
+auto fds_dbg_pgno(FDS_page* mp) -> pgno_t
 {
     pgno_t ret{};
     COPY_PGNO(ret, MP_PGNO(mp));
@@ -42,7 +42,7 @@ auto mdb_dbg_pgno(MDB_page* mp) -> pgno_t
 // key the key to display
 // buf the buffer to write into. Should always be DKBUF.
 // The key in hexadecimal form.
-auto mdb_dkey(MDB_val* key, char* buf) -> char*
+auto fds_dkey(FDS_val* key, char* buf) -> char*
 {
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -52,7 +52,7 @@ auto mdb_dkey(MDB_val* key, char* buf) -> char*
         return (char*)"";
 
     if (key->mv_size > DKBUF_MAXKEYSIZE)
-        return (char*)"MDB_MAXKEYSIZE";
+        return (char*)"FDS_MAXKEYSIZE";
 
     // may want to make this a dynamic check: if the key is mostly
     // printable characters, print it as-is instead of converting to hex.
@@ -68,13 +68,13 @@ auto mdb_dkey(MDB_val* key, char* buf) -> char*
 #endif
 }
 
-auto mdb_dval(MDB_txn* txn, MDB_dbi dbi, MDB_val* data, char* buf) -> char*
+auto fds_dval(FDS_txn* txn, FDS_dbi dbi, FDS_val* data, char* buf) -> char*
 {
     *buf = '\0';
     return buf;
 }
 
-auto mdb_leafnode_type(MDB_node* n) -> const char*
+auto fds_leafnode_type(FDS_node* n) -> const char*
 {
     static const char* const tp[2][2] = {
         {          "",     ": DB"},
@@ -85,9 +85,9 @@ auto mdb_leafnode_type(MDB_node* n) -> const char*
 }
 
 // Display all the keys in the page.
-void mdb_page_list(MDB_page* mp)
+void fds_page_list(FDS_page* mp)
 {
-    pgno_t pgno{mdb_dbg_pgno(mp)};
+    pgno_t pgno{fds_dbg_pgno(mp)};
     const char* state{((MP_FLAGS(mp) & P_DIRTY) != 0) ? ", dirty" : ""};
     const char* type{nullptr};
     DKBUF;
@@ -107,7 +107,7 @@ void mdb_page_list(MDB_page* mp)
         fprintf(stderr,
                 "Meta-page %" Yu " txnid %" Yu "\n",
                 pgno,
-                reinterpret_cast<MDB_meta*>(reinterpret_cast<char*>(mp) + PAGEHDRSZ)->mm_txnid);
+                reinterpret_cast<FDS_meta*>(reinterpret_cast<char*>(mp) + PAGEHDRSZ)->mm_txnid);
         return;
     default:
         fprintf(stderr, "Bad page %" Yu " flags 0x%X\n", pgno, MP_FLAGS(mp));
@@ -120,8 +120,8 @@ void mdb_page_list(MDB_page* mp)
     unsigned int total{0};
     for (unsigned int i{0}; i < nkeys; i++)
     {
-        MDB_node* node{NODEPTR(mp, i)};
-        MDB_val key{};
+        FDS_node* node{NODEPTR(mp, i)};
+        FDS_val key{};
         key.mv_size = node->mn_ksize;
         key.mv_data = node->mn_data;
         unsigned int nsize{unsigned(NODESIZE + key.mv_size)};
@@ -138,7 +138,7 @@ void mdb_page_list(MDB_page* mp)
                 nsize += NODEDSZ(node);
             total += nsize;
             nsize += sizeof(indx_t);
-            fprintf(stderr, "key %d: nsize %d, %s%s\n", i, nsize, DKEY(&key), mdb_leafnode_type(node));
+            fprintf(stderr, "key %d: nsize %d, %s%s\n", i, nsize, DKEY(&key), fds_leafnode_type(node));
         }
         total = EVEN(total);
     }
@@ -146,30 +146,30 @@ void mdb_page_list(MDB_page* mp)
 }
 #endif
 
-#if (MDB_DEBUG) > 2
+#if (FDS_DEBUG) > 2
 // Count all the pages in each DB and in the freelist
 // and make sure it matches the actual number of pages
 // being used.
 // All named DBs must be open for a correct count.
-void mdb_audit(MDB_txn* txn)
+void fds_audit(FDS_txn* txn)
 {
-    MDB_cursor mc{};
-    MDB_val key{}, data{};
+    FDS_cursor mc{};
+    FDS_val key{}, data{};
 
-    MDB_ID freecount{0};
-    mdb_cursor_init(&mc, txn, FREE_DBI, NULL);
+    FDS_ID freecount{0};
+    fds_cursor_init(&mc, txn, FREE_DBI, NULL);
     int rc{};
-    while ((rc = mdb_cursor_get(&mc, &key, &data, MDB_NEXT)) == 0)
-        freecount += *(MDB_ID*)data.mv_data;
-    mdb_tassert(txn, rc == MDB_NOTFOUND);
+    while ((rc = fds_cursor_get(&mc, &key, &data, FDS_NEXT)) == 0)
+        freecount += *(FDS_ID*)data.mv_data;
+    fds_tassert(txn, rc == FDS_NOTFOUND);
 
-    MDB_ID count{0};
-    for (MDB_dbi i{0}; i < txn->mt_numdbs; i++)
+    FDS_ID count{0};
+    for (FDS_dbi i{0}; i < txn->mt_numdbs; i++)
     {
         if (!(txn->mt_dbflags[i] & DB_VALID))
             continue;
-        MDB_xcursor mx{};
-        mdb_cursor_init(&mc, txn, i, &mx);
+        FDS_xcursor mx{};
+        fds_cursor_init(&mc, txn, i, &mx);
         if (txn->mt_dbs[i].md_root == P_INVALID)
             continue;
         count += txn->mt_dbs[i].md_branch_pages + txn->mt_dbs[i].md_leaf_pages + txn->mt_dbs[i].md_overflow_pages;

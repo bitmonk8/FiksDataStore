@@ -2,7 +2,7 @@
 
 #include "internal.h"
 
-#if !(MDB_PIDLOCK)  // Currently the same as defined(_WIN32)
+#if !(FDS_PIDLOCK)  // Currently the same as defined(_WIN32)
 enum Pidlock_op : int
 {
     Pidset,
@@ -23,7 +23,7 @@ enum Pidlock_op : int
 // We currently don't check for stale records. We simply re-init
 // the table when we know that we're the only process opening the
 // lock file.
-struct MDB_rxbody
+struct FDS_rxbody
 {
     // Current Transaction ID when this transaction began, or (txnid_t)-1.
     // Multiple readers that start at the same time will probably have the
@@ -33,30 +33,30 @@ struct MDB_rxbody
     // particular version.
     volatile txnid_t mrb_txnid;
     // The process ID of the process owning this reader txn.
-    volatile MDB_PID_T mrb_pid;
+    volatile FDS_PID_T mrb_pid;
     // The thread ID of the thread owning this txn.
-    volatile MDB_THR_T mrb_tid;
+    volatile FDS_THR_T mrb_tid;
 };
 
 // The actual reader record, with cacheline padding.
-struct MDB_reader
+struct FDS_reader
 {
     union
     {
-        MDB_rxbody mrx;
+        FDS_rxbody mrx;
         // shorthand for mrb_txnid
 #define mr_txnid mru.mrx.mrb_txnid
 #define mr_pid mru.mrx.mrb_pid
 #define mr_tid mru.mrx.mrb_tid
         // cache line alignment
-        char pad[(sizeof(MDB_rxbody) + CACHELINE - 1) & ~(CACHELINE - 1)];
+        char pad[(sizeof(FDS_rxbody) + CACHELINE - 1) & ~(CACHELINE - 1)];
     } mru;
 };
 
 // Lock mutex, handle any error, set rc = result.
 // Return 0 on success, nonzero (not rc) on error.
-#define LOCK_MUTEX(rc, env, mutex) (((rc) = LOCK_MUTEX0(mutex)) && ((rc) = mdb_mutex_failed(env, mutex, rc)))
+#define LOCK_MUTEX(rc, env, mutex) (((rc) = LOCK_MUTEX0(mutex)) && ((rc) = fds_mutex_failed(env, mutex, rc)))
 
-auto mdb_mutex_failed(MDB_env* env, mdb_mutexref_t mutex, int rc) -> int;
-auto mdb_reader_pid(MDB_env* env, enum Pidlock_op op, MDB_PID_T pid) -> int;
-auto mdb_reader_check0(MDB_env* env, int rlocked, int* dead) -> int;
+auto fds_mutex_failed(FDS_env* env, fds_mutexref_t mutex, int rc) -> int;
+auto fds_reader_pid(FDS_env* env, enum Pidlock_op op, FDS_PID_T pid) -> int;
+auto fds_reader_check0(FDS_env* env, int rlocked, int* dead) -> int;

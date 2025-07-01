@@ -16,7 +16,7 @@ end
 
 set_languages("cxx20")
 set_warnings("error")
-add_defines("MDB_DEBUG=1")
+add_defines("FDS_DEBUG=1")
 function apply_common_flags()
     if is_plat("windows") then
         add_cxxflags("/wd4146")

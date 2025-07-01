@@ -28,11 +28,11 @@
  * @param len: Length of value.
  * @return: 64-bit hash.
  */
-auto mdb_hash(const void* val, size_t len) -> mdb_hash_t
+auto fds_hash(const void* val, size_t len) -> fds_hash_t
 {
     const unsigned char* s{(const unsigned char*)val};
     const unsigned char* end{s + len};
-    mdb_hash_t hval{0xcbf29ce484222325ULL};
+    fds_hash_t hval{0xcbf29ce484222325ULL};
     // FNV-1a hash each octet of the buffer
     while (s < end)
     {
@@ -43,7 +43,7 @@ auto mdb_hash(const void* val, size_t len) -> mdb_hash_t
 }
 
 /* The ASCII-85 character set for encoding 64-bit integers */
-static const char mdb_a85[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~";
+static const char fds_a85[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~";
 
 /*
  * Pack a 64-bit integer into an ASCII-85 string.
@@ -53,11 +53,11 @@ static const char mdb_a85[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklm
  * @param l: The 64-bit value to pack.
  * @param out: The destination buffer. Must be at least 11 bytes.
  */
-void mdb_pack85(unsigned long long l, char* out)
+void fds_pack85(unsigned long long l, char* out)
 {
     for (int i{}; i < 10 && (l != 0U); ++i)
     {
-        *out++ = mdb_a85[l % 85];
+        *out++ = fds_a85[l % 85];
         l /= 85;
     }
     *out = '\0';

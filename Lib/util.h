@@ -29,15 +29,15 @@
         align_))
 
 // max number of pages to commit in one writev() call
-#define MDB_COMMIT_PAGES 64
-#if defined(IOV_MAX) && IOV_MAX < MDB_COMMIT_PAGES
-#undef MDB_COMMIT_PAGES
-#define MDB_COMMIT_PAGES IOV_MAX
+#define FDS_COMMIT_PAGES 64
+#if defined(IOV_MAX) && IOV_MAX < FDS_COMMIT_PAGES
+#undef FDS_COMMIT_PAGES
+#define FDS_COMMIT_PAGES IOV_MAX
 #endif
 
 // Platform-specific string duplication function
 #ifdef _WIN32
-#define mdb_strdup _strdup
+#define fds_strdup _strdup
 #else
-#define mdb_strdup strdup
+#define fds_strdup strdup
 #endif

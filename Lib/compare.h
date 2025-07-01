@@ -2,6 +2,6 @@
 
 #include "internal.h"
 
-auto mdb_cmp_memn(const MDB_val* a, const MDB_val* b) -> int;
-auto mdb_cmp_memnr(const MDB_val* a, const MDB_val* b) -> int;
-auto mdb_cmp_long(const MDB_val* a, const MDB_val* b) -> int;
+auto fds_cmp_memn(const FDS_val* a, const FDS_val* b) -> int;
+auto fds_cmp_memnr(const FDS_val* a, const FDS_val* b) -> int;
+auto fds_cmp_long(const FDS_val* a, const FDS_val* b) -> int;

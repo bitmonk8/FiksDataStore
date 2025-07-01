@@ -27,7 +27,7 @@
 #define mkdir(dir, mode) _mkdir(dir)
 #endif
 
-#define E(expr) CHECK((rc = (expr)) == MDB_SUCCESS, #expr)
+#define E(expr) CHECK((rc = (expr)) == FDS_SUCCESS, #expr)
 #define RES(err, expr)                                                                                                 \
     (                                                                                                                  \
         [&]()                                                                                                          \
@@ -37,7 +37,7 @@
         }())
 #define CHECK(test, msg)                                                                                               \
     ((test) ? (void)0                                                                                                  \
-            : ((void)fprintf(stderr, "TEST FAILED: %s:%d: %s: %s\n", __FILE__, __LINE__, msg, mdb_strerror(rc)),       \
+            : ((void)fprintf(stderr, "TEST FAILED: %s:%d: %s: %s\n", __FILE__, __LINE__, msg, fds_strerror(rc)),       \
                abort()))
 
 char dkbuf[1024];
@@ -47,14 +47,14 @@ auto main(int argc, char* argv[]) -> int
     int i = 0;
     int j = 0;
     int rc;
-    MDB_env* env;
-    MDB_dbi dbi;
-    MDB_val key;
-    MDB_val data;
-    MDB_val sdata;
-    MDB_txn* txn;
-    MDB_stat mst;
-    MDB_cursor* cursor;
+    FDS_env* env;
+    FDS_dbi dbi;
+    FDS_val key;
+    FDS_val data;
+    FDS_val sdata;
+    FDS_txn* txn;
+    FDS_stat mst;
+    FDS_cursor* cursor;
     char kbuf[16];
     char* sval;
     struct stat st;
@@ -63,15 +63,15 @@ auto main(int argc, char* argv[]) -> int
 
     srand((unsigned int)time(nullptr));
 
-    E(mdb_env_create(&env));
-    E(mdb_env_set_mapsize(env, 10485760));
-    E(mdb_env_set_maxdbs(env, 4));
-    E(mdb_env_open(env, "testdb", MDB_NOSYNC, 0664));
+    E(fds_env_create(&env));
+    E(fds_env_set_mapsize(env, 10485760));
+    E(fds_env_set_maxdbs(env, 4));
+    E(fds_env_open(env, "testdb", FDS_NOSYNC, 0664));
 
-    E(mdb_txn_begin(env, nullptr, 0, &txn));
-    E(mdb_dbi_open(txn, "id6", MDB_CREATE, &dbi));
-    E(mdb_cursor_open(txn, dbi, &cursor));
-    E(mdb_stat(txn, dbi, &mst));
+    E(fds_txn_begin(env, nullptr, 0, &txn));
+    E(fds_dbi_open(txn, "id6", FDS_CREATE, &dbi));
+    E(fds_cursor_open(txn, dbi, &cursor));
+    E(fds_stat(txn, dbi, &mst));
 
     sval = (char*)calloc(1, mst.ms_psize / 4);
     key.mv_data = kbuf;
@@ -85,7 +85,7 @@ auto main(int argc, char* argv[]) -> int
         key.mv_size = strlen(kbuf);
         snprintf(sval, mst.ms_psize / 4, "%03d", i * 5);
         data = sdata;
-        (void)RES(MDB_KEYEXIST, mdb_cursor_put(cursor, &key, &data, MDB_NOOVERWRITE));
+        (void)RES(FDS_KEYEXIST, fds_cursor_put(cursor, &key, &data, FDS_NOOVERWRITE));
     }
     printf("Adding 6 more values, should yield 2 splits\n");
     for (i = 0; i < 6; i++)
@@ -94,20 +94,20 @@ auto main(int argc, char* argv[]) -> int
         key.mv_size = strlen(kbuf);
         snprintf(sval, mst.ms_psize / 4, "%03d", (i * 5) + 4);
         data = sdata;
-        (void)RES(MDB_KEYEXIST, mdb_cursor_put(cursor, &key, &data, MDB_NOOVERWRITE));
+        (void)RES(FDS_KEYEXIST, fds_cursor_put(cursor, &key, &data, FDS_NOOVERWRITE));
     }
-    E(mdb_cursor_get(cursor, &key, &data, MDB_FIRST));
+    E(fds_cursor_get(cursor, &key, &data, FDS_FIRST));
 
     do
     {
         // printf("key: %p %s, data: %p %.*s\n",
-        // 	key.mv_data,  mdb_dkey(&key, dkbuf),
+        // 	key.mv_data,  fds_dkey(&key, dkbuf),
         // 	data.mv_data, (int) data.mv_size, (char *) data.mv_data);
-    } while ((rc = mdb_cursor_get(cursor, &key, &data, MDB_NEXT)) == 0);
-    CHECK(rc == MDB_NOTFOUND, "mdb_cursor_get");
-    mdb_cursor_close(cursor);
-    mdb_txn_commit(txn);
-    mdb_env_close(env);
+    } while ((rc = fds_cursor_get(cursor, &key, &data, FDS_NEXT)) == 0);
+    CHECK(rc == FDS_NOTFOUND, "fds_cursor_get");
+    fds_cursor_close(cursor);
+    fds_txn_commit(txn);
+    fds_env_close(env);
 
     return 0;
 }
