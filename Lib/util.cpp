@@ -20,7 +20,7 @@ auto fds_version(int* major, int* minor, int* patch) -> const char*
     return FDS_VERSION_STRING;
 }
 
-// Table of descriptions for LMDB errors
+// Table of descriptions for FiksDataStore errors
 static const char* const fds_errstr[] = {
     "FDS_KEYEXIST: Key/data pair already exists",
     "FDS_NOTFOUND: No matching key/data pair found",
@@ -69,7 +69,7 @@ auto fds_strerror(int err) -> const char*
     // These are the C-runtime error codes we use. The comment indicates
     // their numeric value, and the Win32 error they would correspond to
     // if the error actually came from a Win32 API. A major mess, we should
-    // have used LMDB-specific error codes for everything.
+    // have used FiksDataStore-specific error codes for everything.
     switch (err)
     {
     case ENOENT:  // 2, FILE_NOT_FOUND

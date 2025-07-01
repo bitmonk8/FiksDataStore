@@ -2,12 +2,12 @@
 
 ## 1. Overview
 
-The `env.h` and `env.cpp` files are the core of the LMDB library's environment management. The "environment" is the highest-level object, representing a database location. It encapsulates the data file, the lock file, memory maps, and the overall context for transactions and concurrency control. It is the primary entry point for any application using LMDB.
+The `env.h` and `env.cpp` files are the core of the FiksDataStore library's environment management. The "environment" is the highest-level object, representing a database location. It encapsulates the data file, the lock file, memory maps, and the overall context for transactions and concurrency control. It is the primary entry point for any application using FiksDataStore.
 
 The key design principles evident in this module are:
 
 *   **Memory-Mapped I/O:** The entire database is treated as a single memory-mapped file, delegating caching and page management to the operating system's virtual memory manager. This simplifies the code and often yields superior performance.
-*   **Multi-Version Concurrency Control (MVCC):** LMDB uses a non-locking MVCC model that allows for concurrent read transactions without blocking a single write transaction, and vice-versa. This is the cornerstone of its high read performance.
+*   **Multi-Version Concurrency Control (MVCC):** FiksDataStore uses a non-locking MVCC model that allows for concurrent read transactions without blocking a single write transaction, and vice-versa. This is the cornerstone of its high read performance.
 *   **Transactional Integrity:** The environment uses a double-buffered meta-page system to ensure that the database is always in a consistent state, making transactions atomic and durable (ACID).
 *   **Copy-on-Write:** Data pages are never modified in place. When a write transaction needs to modify a page, it creates a copy, writes to the copy, and updates parent pages to point to the new version.
 
@@ -37,7 +37,7 @@ Defined in [`Lib/env.h:18`](Lib/env.h:18), this structure represents the header 
 
 **Key Fields:**
 
-*   `mm_magic`, `mm_version`: Constants (`0xBEEFC0DE` and `1`) that identify the file as a valid LMDB data file.
+*   `mm_magic`, `mm_version`: Constants (`0xFDFDC0DE` and `1`) that identify the file as a valid FiksDataStore data file.
 *   `mm_txnid`: The transaction ID that committed this meta page. The meta page with the higher `txnid` represents the most recent, consistent state of the database.
 *   `mm_dbs[CORE_DBS]`: An array of two `FDS_db` structures.
     *   `[FREE_DBI]` (index 0): The root and metadata for the B-tree that tracks free pages.

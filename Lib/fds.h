@@ -724,8 +724,7 @@ auto fds_env_get_path(FDS_env* env, const char** path) -> int;
 
 // @brief Return the filedescriptor for the given environment.
 // This function may be called after fork(), so the descriptor can be
-// closed before exec*(). Other LMDB file descriptors have FD_CLOEXEC.
-// (Until LMDB 0.9.18, only the lockfile had that.)
+// closed before exec*(). Other FiksDataStore file descriptors have FD_CLOEXEC.
 //
 // @param[in] env An environment handle returned by #fds_env_create()
 // @param[out] fd Address of a fds_filehandle_t to contain the descriptor.
@@ -826,7 +825,7 @@ auto fds_env_set_userctx(FDS_env* env, void* ctx) -> int;
 // @return The pointer set by #fds_env_set_userctx().
 auto fds_env_get_userctx(FDS_env* env) -> void*;
 
-// @brief A callback function for most LMDB assert() failures,
+// @brief A callback function for most FiksDataStore assert() failures,
 // called before printing the message and aborting.
 //
 // @param[in] env An environment handle returned by #fds_env_create().
@@ -834,8 +833,8 @@ auto fds_env_get_userctx(FDS_env* env) -> void*;
 using FDS_assert_func = void(FDS_env* env, const char* msg);
 
 // Set or reset the assert() callback of the environment.
-// Disabled if liblmdb is built with NDEBUG.
-// @note This hack should become obsolete as lmdb's error handling matures.
+// Disabled if FiksDataStore is built with NDEBUG.
+// @note This hack should become obsolete as FiksDataStore's error handling matures.
 // @param[in] env An environment handle returned by #fds_env_create().
 // @param[in] func An #FDS_assert_func function, or 0.
 // @return A non-zero error value on failure and 0 on success.
@@ -1098,7 +1097,7 @@ auto fds_get(FDS_txn* txn, FDS_dbi dbi, FDS_val* key, FDS_val* data) -> int;
 // reserved space, which the caller can fill in later - before
 // the next update operation or the transaction ends. This saves
 // an extra memcpy if the data is being generated later.
-// LMDB does nothing else with this memory, the caller is expected
+// FiksDataStore does nothing else with this memory, the caller is expected
 // to modify all of the space requested.
 // #FDS_APPEND - append the given key/data pair to the end of the
 // database. This option allows fast bulk loading when keys are

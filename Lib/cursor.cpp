@@ -722,7 +722,7 @@ enum
     FDS_NOSPILL = 0x8000
 };
 
-// Internal error codes, not exposed outside liblmdb
+// Internal error codes, not exposed outside FiksDataStore
 #define FDS_NO_ROOT (FDS_LAST_ERRCODE + 10)
 
 auto fds_cursor_put_impl(FDS_cursor* mc, FDS_val* key, FDS_val* data, unsigned int flags) -> int
@@ -908,7 +908,7 @@ auto fds_cursor_put_impl(FDS_cursor* mc, FDS_val* key, FDS_val* data, unsigned i
 
         // No duplicate support - simplified logic
     current:
-        // LMDB passes F_SUBDATA in 'flags' to write a DB record
+        // FiksDataStore passes F_SUBDATA in 'flags' to write a DB record
         if (((leaf->mn_flags ^ flags) & F_SUBDATA) != 0U)
             return FDS_INCOMPATIBLE;
         // overflow page overwrites need special handling
@@ -960,7 +960,7 @@ auto fds_cursor_put_impl(FDS_cursor* mc, FDS_val* key, FDS_val* data, unsigned i
                         // or unused parts. Some users treats ovpages specially.
                         if ((flags & FDS_RESERVE) == 0U)
                         {
-                            // Skip the part where LMDB will put *data.
+                            // Skip the part where FiksDataStore will put *data.
                             // Copy end of page, adjusting alignment so
                             // compiler may copy words instead of bytes.
                             off = (PAGEHDRSZ + data->mv_size) & -(int)sizeof(size_t);
@@ -1108,7 +1108,7 @@ auto fds_cursor_del_impl(FDS_cursor* mc, unsigned int flags) -> int
     leaf = NODEPTR(mp, mc->mc_ki[mc->mc_top]);
 
     // No duplicate support - simplified delete logic
-    // LMDB passes F_SUBDATA in 'flags' to delete a DB record
+    // FiksDataStore passes F_SUBDATA in 'flags' to delete a DB record
     if (((leaf->mn_flags ^ flags) & F_SUBDATA) != 0U)
     {
         rc = FDS_INCOMPATIBLE;

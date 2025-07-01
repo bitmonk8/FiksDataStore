@@ -3,7 +3,7 @@
 #include "internal.h"
 #include "midl.h"
 
-// General-purpose utility macros for LMDB.
+// General-purpose utility macros for FiksDataStore.
 // Test if the flags \b f are set in a flag word \b w.
 #define F_ISSET(w, f) (((w) & (f)) == (f))
 

@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-The files [`db.h`](Lib/db.h:1) and [`db.cpp`](Lib/db.cpp:1) are central to the management of individual databases within the LMDB environment. They provide the API and implementation for creating, opening, closing, and clearing databases. These files also contain the primary functions for data manipulation at the database level, such as adding, retrieving, and deleting key-value pairs.
+The files [`db.h`](Lib/db.h:1) and [`db.cpp`](Lib/db.cpp:1) are central to the management of individual databases within the FiksDataStore environment. They provide the API and implementation for creating, opening, closing, and clearing databases. These files also contain the primary functions for data manipulation at the database level, such as adding, retrieving, and deleting key-value pairs.
 
 The core design revolves around a special "main database" that acts as a directory, storing the metadata for all other "named databases" within the environment. Operations are transaction-based, ensuring ACID properties. The implementation uses integer handles ([`FDS_dbi`](Lib/db.h:29)) rather than pointers to refer to databases, which enhances safety and simplifies management across multiple transactions.
 

@@ -1,6 +1,6 @@
-# LMDB Design Constraints
+# FiksDataStore Design Constraints
 
-This document outlines the mandatory design constraints for the LMDB codebase to ensure consistency, maintainability, and proper dependency management.
+This document outlines the mandatory design constraints for the FiksDataStore codebase to ensure consistency, maintainability, and proper dependency management.
 
 ## Header File Constraints
 
@@ -15,7 +15,7 @@ All `Lib/*.h` files except `midl.h`, `fds_internal.h`, and `fds.h` MUST include 
 **Rationale**: Ensures consistent access to internal definitions and maintains proper dependency hierarchy.
 
 **Exceptions**:
-- `midl.h`: Standalone utility, should not depend on LMDB internals
+- `midl.h`: Standalone utility, should not depend on FiksDataStore internals
 - `fds_internal.h`: Base internal header, cannot include itself
 - `fds.h`: Public API header, must not include internal headers
 

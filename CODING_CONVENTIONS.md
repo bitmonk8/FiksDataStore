@@ -1,6 +1,6 @@
-# LMDB Coding Conventions
+# FiksDataStore Coding Conventions
 
-This document outlines the mandatory coding conventions for the LMDB codebase to ensure consistency, readability, and maintainability across all source files.
+This document outlines the mandatory coding conventions for the FiksDataStore codebase to ensure consistency, readability, and maintainability across all source files.
 
 ## C++ Language Conventions
 

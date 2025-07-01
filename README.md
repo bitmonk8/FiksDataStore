@@ -1,4 +1,4 @@
-# FiksStore
+# FiksDataStore
 
 **A Modern C++ Fork of LMDB (Lightning Memory-Mapped Database)**
 
@@ -10,9 +10,9 @@
 
 FiksStore is a modern C++ reimplementation of the Lightning Memory-Mapped Database (LMDB), originally created by Howard Chu at Symas Corporation. This project aims to modernize the LMDB codebase while maintaining its exceptional performance characteristics and reliability.
 
-## About LMDB
+## About FiksDataStore
 
-LMDB is a Btree-based database management library modeled loosely on the BerkeleyDB API, but much simplified. The entire database is exposed in a memory map, and all data fetches return data directly from the mapped memory, so no malloc's or memcpy's occur during data fetches. Key features include:
+FiksDataStore is a Btree-based database management library modeled loosely on the BerkeleyDB API, but much simplified. The entire database is exposed in a memory map, and all data fetches return data directly from the mapped memory, so no malloc's or memcpy's occur during data fetches. Key features include:
 
 - **Zero-copy architecture**: Data is accessed directly from memory-mapped files
 - **ACID compliance**: Full transactional semantics with durability guarantees
@@ -23,7 +23,7 @@ LMDB is a Btree-based database management library modeled loosely on the Berkele
 
 ## Project Goals
 
-FiksStore aims to modernize LMDB by:
+FiksDataStore aims to modernize LMDB by:
 
 - **Modern C++ Standards**: Converting from C to modern C++ (C++17/20/23)
 - **Type Safety**: Leveraging C++ type system for better safety
@@ -181,11 +181,6 @@ xmake run mtest3
 # ... etc
 ```
 
-## Tools
-
-FiksStore includes the standard LMDB command-line tools:
-
-
 ## Documentation
 
 - [Original LMDB Documentation](http://www.lmdb.tech/doc/)
@@ -212,7 +207,7 @@ Contributions are welcome! This project is in active development and we're looki
 
 ## License
 
-FiksStore maintains the same licensing as the original LMDB:
+FiksDataStore maintains the same licensing as the original LMDB:
 
 - **OpenLDAP Public License 2.8** - See [LICENSE](LICENSE) file
 - Copyright 2011-2021 Howard Chu, Symas Corp.
@@ -228,9 +223,6 @@ FiksStore maintains the same licensing as the original LMDB:
 ## Related Projects
 
 - [Original LMDB](https://github.com/LMDB/lmdb) - The source project
-- [py-lmdb](https://github.com/jnwatson/py-lmdb) - Python bindings
-- [lmdb-rs](https://github.com/danburkert/lmdb-rs) - Rust bindings
-- [node-lmdb](https://github.com/Venemo/node-lmdb) - Node.js bindings
 
 ## Contact
 

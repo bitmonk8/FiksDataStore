@@ -1,8 +1,8 @@
 // midl.h
-// LMDB ID List header file.
+// FiksDataStore ID List header file.
 //
 // MIDL stands for "Memory ID List" and provides specialized data structures
-// and operations for managing sorted arrays of IDs in the LMDB system.
+// and operations for managing sorted arrays of IDs in the FiksDataStore system.
 //
 // This file was originally part of back-bdb but has been
 // modified for use in libmdb. Most of the macros defined
@@ -11,8 +11,8 @@
 // This file is only used internally in libmdb and its definitions
 // are not exposed publicly.
 //
-// Usage in LMDB Context
-// This code is used internally by LMDB for:
+// Usage in FiksDataStore Context
+// This code is used internally by FiksDataStore for:
 // - Free page management: Tracking which database pages are available for reuse
 // - Transaction management: Managing transaction IDs and their associated data
 // - Index operations: Maintaining sorted lists of record IDs
@@ -47,7 +47,7 @@
 
 #include "fds.h"
 
-// LMDB Internals
+// FiksDataStore Internals
 //
 // ID List Management
 // A generic unsigned ID number. These were entryIDs in back-bdb.

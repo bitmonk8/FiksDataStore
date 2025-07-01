@@ -1,6 +1,6 @@
 # `util.h` and `util.cpp`
 
-These files provide various utility functions and macros for the LMDB library.
+These files provide various utility functions and macros for the FiksDataStore library.
 
 ## `fds_util.h`
 
@@ -27,7 +27,7 @@ This implementation file provides functions for versioning and error handling.
 
 #### `const char* fds_version(int* major, int* minor, int* patch)`
 
-This function returns the LMDB library version information.
+This function returns the FiksDataStore library version information.
 
 *   **Parameters:**
     *   `major` (out): If not null, will be filled with the major version number.
@@ -37,12 +37,12 @@ This function returns the LMDB library version information.
 
 #### `const char* fds_strerror(int err)`
 
-This function returns a string description for a given LMDB error code.
+This function returns a string description for a given FiksDataStore error code.
 
 *   **Parameters:**
     *   `err`: The error code.
 *   **Returns:** A string describing the error.
 *   **Details:**
-    *   It handles standard LMDB error codes by looking them up in an internal `fds_errstr` table.
+    *   It handles standard FiksDataStore error codes by looking them up in an internal `fds_errstr` table.
     *   For system-dependent error codes, it uses `strerror_s` on Windows and `strerror` on other platforms to get the corresponding system error message.
     *   It includes special handling for common C-runtime error codes on Windows.

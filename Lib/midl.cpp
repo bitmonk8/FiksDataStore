@@ -24,7 +24,7 @@
 #include <cstdlib>
 #include <cstring>
 
-// LMDB Internals
+// FiksDataStore Internals
 //
 // ID List Management
 //

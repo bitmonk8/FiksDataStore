@@ -17,7 +17,7 @@
 // Pages 0-1 are meta pages. Transaction N writes meta page #(N % 2).
 struct FDS_meta
 {
-    // Stamp identifying this as an LMDB file. It must be set
+    // Stamp identifying this as an FiksDataStore file. It must be set
     // to FDS_MAGIC.
     uint32_t mm_magic;
     // Version number of this file. Must be set to FDS_DATA_VERSION.
@@ -56,7 +56,7 @@ struct FDS_pgstate
 // unlikely. If a collision occurs, the results are unpredictable.
 struct FDS_txbody
 {
-    // Stamp identifying this as an LMDB file. It must be set
+    // Stamp identifying this as an FiksDataStore file. It must be set
     // to FDS_MAGIC.
     uint32_t mtb_magic;
     // Format of this lock file. Must be set to FDS_LOCK_FORMAT.

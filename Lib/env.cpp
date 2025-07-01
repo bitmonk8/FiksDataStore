@@ -14,7 +14,7 @@
 // It is 32k or 64k, since value-PAGEBASE must fit in
 // #FDS_page.%mp_upper.
 //
-// LMDB will use database pages < OS pages if needed.
+// FiksDataStore will use database pages < OS pages if needed.
 // That causes more I/O in write transactions: The OS must
 // know (read) the whole page before writing a partial page.
 //
@@ -42,12 +42,12 @@ enum
     FDS_MINKEYS = 2
 };
 
-// A stamp that identifies a file as an LMDB file.
+// A stamp that identifies a file as an FiksDataStore file.
 // There's nothing special about this value other than that it is easily
 // recognizable, and it will reflect any byte order mismatches.
 enum
 {
-    FDS_MAGIC = 0xBEEFC0DE
+    FDS_MAGIC = 0xFDFDC0DE
 };
 
 // The version number for a database's datafile format.
@@ -319,8 +319,8 @@ enum fds_fopen_type
 #endif
 };
 
-// Open an LMDB file.
-// env	The LMDB environment.
+// Open an FiksDataStore file.
+// env	The FiksDataStore environment.
 // fname	Path from from #fds_fname_init().  A suffix is
 // appended if necessary to create the filename, without changing mn_len.
 // which	Determines file type, access mode, etc.
@@ -1017,7 +1017,7 @@ auto ESECT fds_env_get_maxreaders(FDS_env* env, unsigned int* readers) -> int
     return FDS_SUCCESS;
 }
 
-// Further setup required for opening an LMDB environment
+// Further setup required for opening an FiksDataStore environment
 auto ESECT fds_env_open2(FDS_env* env, int prev) -> int
 {
     unsigned int flags = env->me_flags;
@@ -1285,7 +1285,7 @@ void ESECT fds_env_mname_init(FDS_env* env)
 #endif
 
 // Open and/or initialize the lock region for the environment.
-// env The LMDB environment.
+// env The FiksDataStore environment.
 // fname Filename + scratch area, from #fds_fname_init().
 // mode The Unix permissions for the file, if we create it.
 // excl In -1, out lock type: -1 none, 0 shared, 1 exclusive
@@ -1864,7 +1864,7 @@ struct fds_copy
     int mc_toggle;  // Buffer number in provider
     int mc_new;     // (0-2 buffers to write) | (FDS_EOF at end)
     // Error code.  Never cleared if set.  Both threads can set nonzero
-    // to fail the copy.  Not mutex-protected, LMDB expects atomic int.
+    // to fail the copy.  Not mutex-protected, FiksDataStore expects atomic int.
     volatile int mc_error;
 };
 

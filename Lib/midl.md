@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-The `midl.h` and `midl.cpp` files provide a specialized set of data structures and functions for managing sorted lists of unsigned integer IDs within the LMDB (Lightning Memory-Mapped Database) library. The name "MIDL" stands for "Memory ID List." This component was originally part of OpenLDAP's `back-bdb` backend and has been adapted for internal use in `libmdb`.
+The `midl.h` and `midl.cpp` files provide a specialized set of data structures and functions for managing sorted lists of unsigned integer IDs within the FiksDataStore library. The name "MIDL" stands for "Memory ID List." This component was originally part of OpenLDAP's `back-bdb` backend and has been adapted for internal use in `libmdb`.
 
 The primary purpose of MIDL is to efficiently handle lists of page numbers, transaction IDs, and other identifiers that are crucial for the database's operation. It is designed for high performance, with optimized algorithms for searching, sorting, and merging ID lists.
 
@@ -66,17 +66,17 @@ The `midl.cpp` file implements several important algorithms for managing these I
 -   **Merging**:
     -   [`midl_xmerge(idl, merge)`](Lib/midl.cpp:218): Merges two sorted `FDS_IDL`s into the destination list (`idl`). The destination list must have enough pre-allocated capacity to hold the combined result. The merge is performed in-place from the end of the arrays backwards.
 
-## 4. Usage in LMDB Context
+## 4. Usage in FiksDataStore Context
 
-The MIDL functionality is a critical internal component of LMDB, used for several core database operations:
+The MIDL functionality is a critical internal component of FiksDataStore, used for several core database operations:
 
--   **Free Page Management**: LMDB maintains a list of database pages that have been freed and are available for reuse. This list is managed as an `FDS_IDL`, allowing for efficient tracking and retrieval of free pages.
+-   **Free Page Management**: FiksDataStore maintains a list of database pages that have been freed and are available for reuse. This list is managed as an `FDS_IDL`, allowing for efficient tracking and retrieval of free pages.
 -   **Transaction Management**: When multiple transactions are active, their IDs and associated data need to be tracked. MIDL structures can be used to manage these lists of transaction IDs.
 -   **Index Operations**: In certain scenarios, MIDL can be used to maintain sorted lists of record identifiers that match a particular index query, which can then be merged or filtered.
 
 ## 5. Developer's Guide
 
--   **Internal Use Only**: The functions and data structures in `midl.h` are not part of the public LMDB API and are subject to change. They should not be used directly by applications linking against `libmdb`.
+-   **Internal Use Only**: The functions and data structures in `midl.h` are not part of the public FiksDataStore API and are subject to change. They should not be used directly by applications linking against `libmdb`.
 -   **Memory Model**: Understanding the `ids[-1]` and `ids[0]` memory layout is crucial for anyone working on this part of the codebase. All memory management and list manipulation functions rely on this convention.
 -   **Sort Order**: Be aware of the different sort orders. `FDS_IDL`s are sorted in **descending** order, while `FDS_ID2L`s are sorted in **ascending** order by ID.
 -   **Performance**: The choice of algorithms (binary search, hybrid quicksort) reflects a focus on performance. Changes to these functions should be benchmarked to avoid performance regressions.
