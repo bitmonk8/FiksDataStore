@@ -1,6 +1,6 @@
 ### 1. Main Functionality
 
-The project, **FiksStore**, is a modern C++ fork of the **Lightning Memory-Mapped Database (LMDB)**. As confirmed by the [`README.md`](README.md:3) and [`Lib/fds.h`](Lib/fds.h:6), it is a high-performance, embedded, transactional key-value store.
+The project, **FiksDataStore**, is a modern C++ fork of the **Lightning Memory-Mapped Database (LMDB)**. As confirmed by the [`README.md`](README.md:3) and [`Lib/fds.h`](Lib/fds.h:6), it is a high-performance, embedded, transactional key-value store.
 
 Its core purpose is to provide an extremely fast and memory-efficient database by directly mapping the database file into memory. This "zero-copy" architecture means that data is accessed directly from the memory map, eliminating the overhead of copying data between the database and application memory.
 
@@ -42,7 +42,7 @@ A new developer working on this codebase would need to understand the following 
 
 1.  **Environment (`FDS_env`):** This is the top-level container for the entire database. It corresponds to a physical location on disk (a directory or a pair of files) and manages the memory map. All operations happen within the context of an environment.
 
-2.  **Transactions (`FDS_txn`):** The unit of work in FiksStore. All database operations (reads and writes) must occur within a transaction.
+2.  **Transactions (`FDS_txn`):** The unit of work in FiksDataStore. All database operations (reads and writes) must occur within a transaction.
     *   **Read-Only Transactions:** Provide a consistent, isolated view (snapshot) of the database at the time they are created. They are cheap to create and do not block writers.
     *   **Write Transactions:** Are serialized (only one can be active at a time) and are used to modify the database. They see the latest committed state of the database plus their own changes.
 

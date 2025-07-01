@@ -1,10 +1,10 @@
 // @file fds.h
-// @brief FiksStore memory-mapped database library
+// @brief FiksDataStore memory-mapped database library
 
-// @mainpage FiksStore Memory-Mapped Database Manager
+// @mainpage FiksDataStore Memory-Mapped Database Manager
 
 // @section intro_sec Introduction
-// FiksStore is a Btree-based database management library modeled loosely on the
+// FiksDataStore is a Btree-based database management library modeled loosely on the
 // BerkeleyDB API, but much simplified. The entire database is exposed
 // in a memory map, and all data fetches return data directly
 // from the mapped memory, so no malloc's or memcpy's occur during
@@ -15,7 +15,7 @@
 // database integrity cannot be corrupted by stray pointer writes from
 // application code.
 
-// FiksStore is built upon the foundation of LMDB (Lightning Memory-Mapped Database),
+// FiksDataStore is built upon the foundation of LMDB (Lightning Memory-Mapped Database),
 // originally created by Howard Chu at Symas Corporation. We gratefully acknowledge
 // their contributions. For the original LMDB project, please visit
 // https://github.com/LMDB/lmdb.
@@ -31,10 +31,10 @@
 // readers, and readers don't block writers.
 
 // Unlike other well-known database mechanisms which use either write-ahead
-// transaction logs or append-only data writes, FiksStore requires no maintenance
+// transaction logs or append-only data writes, FiksDataStore requires no maintenance
 // during operation. Both write-ahead loggers and append-only databases
 // require periodic checkpointing and/or compaction of their log or database
-// files otherwise they grow without bound. FiksStore tracks free pages within
+// files otherwise they grow without bound. FiksDataStore tracks free pages within
 // the database and re-uses them for new write operations, so the database
 // size does not grow without bound in normal use.
 
@@ -83,7 +83,7 @@
 // access to locks and lock file. Exceptions: On read-only filesystems
 // or with the #FDS_NOLOCK flag described under #fds_env_open().
 
-// - A FiksStore configuration will often reserve considerable \b unused
+// - A FiksDataStore configuration will often reserve considerable \b unused
 // memory address space and maybe file size for future growth.
 // This does not use actual memory or disk space, but users may need
 // to understand the difference so they won't be scared off.
@@ -104,7 +104,7 @@
 
 // - Use an FDS_env* in the process which opened it, not after fork().
 
-// - Do not have open a FiksStore database twice in the same process at
+// - Do not have open a FiksDataStore database twice in the same process at
 // the same time. Not even from a plain open() call - close()ing it
 // breaks fcntl() advisory locking. (It is OK to reopen it after
 // fork() - exec*(), since the lockfile has FD_CLOEXEC set.)
@@ -131,7 +131,7 @@
 // - If you do that anyway, do a periodic check for stale readers. Or
 // close the environment once in a while, so the lockfile can get reset.
 
-// - Do not use FiksStore databases on remote filesystems, even between
+// - Do not use FiksDataStore databases on remote filesystems, even between
 // processes on the same host. This breaks flock() on some OSes,
 // possibly memory map sync, and certainly sync between programs
 // on different hosts.
@@ -207,9 +207,9 @@ using fds_filehandle_t = void*;
 typedef int fds_filehandle_t;
 #endif
 
-// @defgroup mdb FiksStore API
+// @defgroup mdb FiksDataStore API
 // @{
-// @brief FiksStore Memory-Mapped Database Manager
+// @brief FiksDataStore Memory-Mapped Database Manager
 
 // @defgroup Version Version Macros
 // @{
@@ -234,7 +234,7 @@ enum
 #define FDS_VERSION_DATE "December 19, 2015"
 
 // A stringifier for the version info
-#define FDS_VERSTR(a, b, c, d) "FiksStore " #a "." #b "." #c ": (" d ")"
+#define FDS_VERSTR(a, b, c, d) "FiksDataStore " #a "." #b "." #c ": (" d ")"
 // A helper for the stringifier macro
 #define FDS_VERFOO(a, b, c, d) FDS_VERSTR(a, b, c, d)
 
@@ -379,7 +379,7 @@ enum
     FDS_PANIC = (-30795),
     // Environment version mismatch
     FDS_VERSION_MISMATCH = (-30794),
-    // File is not a valid FiksStore file
+    // File is not a valid FiksDataStore file
     FDS_INVALID = (-30793),
     // Environment mapsize reached
     FDS_MAP_FULL = (-30792),
@@ -438,7 +438,7 @@ struct FDS_envinfo
     unsigned int me_numreaders;  // max reader slots used in the environment
 };
 
-// @brief Return the FiksStore library version information.
+// @brief Return the FiksDataStore library version information.
 // @param[out] major if non-NULL, the library major version number is copied here
 // @param[out] minor if non-NULL, the library minor version number is copied here
 // @param[out] patch if non-NULL, the library patch version number is copied here
@@ -449,13 +449,13 @@ auto fds_version(int* major, int* minor, int* patch) -> const char*;
 // This function is a superset of the ANSI C X3.159-1989 (ANSI C) strerror(3)
 // function. If the error code is greater than or equal to 0, then the string
 // returned by the system function strerror(3) is returned. If the error code
-// is less than 0, an error string corresponding to the FiksStore library error is
-// returned. See @ref errors for a list of FiksStore-specific error codes.
+// is less than 0, an error string corresponding to the FiksDataStore library error is
+// returned. See @ref errors for a list of FiksDataStore-specific error codes.
 // @param[in] err The error code
 // @retval "error message" The description of the error
 auto fds_strerror(int err) -> const char*;
 
-// @brief Create a FiksStore environment handle.
+// @brief Create a FiksDataStore environment handle.
 // This function allocates memory for a #FDS_env structure. To release
 // the allocated memory and discard the handle, call #fds_env_close().
 // Before the handle may be used, it must be opened using #fds_env_open().
@@ -477,15 +477,15 @@ auto fds_env_create(FDS_env** env) -> int;
 // Flags set by fds_env_set_flags() are also used.
 //
 // #FDS_NOSUBDIR
-// By default, FiksStore creates its environment in a directory whose
+// By default, FiksDataStore creates its environment in a directory whose
 // pathname is given in \b path, and creates its data and lock files
 // under that directory. With this option, \b path is used as-is for
 // the database main data file. The database lock file is the \b path
 // with "-lock" appended.
 // #FDS_RDONLY
 // Open the environment in read-only mode. No write operations will be
-// allowed. FiksStore will still modify the lock file - except on read-only
-// filesystems, where FiksStore does not use locks.
+// allowed. FiksDataStore will still modify the lock file - except on read-only
+// filesystems, where FiksDataStore does not use locks.
 // #FDS_WRITEMAP
 // Use a writeable memory map unless FDS_RDONLY is set. This uses
 // fewer mallocs but loses protection from application bugs
@@ -531,7 +531,7 @@ auto fds_env_create(FDS_env** env) -> int;
 // the user synchronizes its use. Applications that multiplex many
 // user threads over individual OS threads need this option. Such an
 // application must also serialize the write transactions in an OS
-// thread, since FiksStore's write locking is unaware of the user threads.
+// thread, since FiksDataStore's write locking is unaware of the user threads.
 // #FDS_NOLOCK
 // Don't do any locking. If concurrent access is anticipated, the
 // caller must manage all concurrency itself. For proper operation
@@ -576,7 +576,7 @@ auto fds_env_create(FDS_env** env) -> int;
 // @return A non-zero error value on failure and 0 on success. Some possible
 // errors are:
 //
-// #FDS_VERSION_MISMATCH - the version of the FiksStore library doesn't match the
+// #FDS_VERSION_MISMATCH - the version of the FiksDataStore library doesn't match the
 // version that created the database environment.
 // #FDS_INVALID - the environment file headers are corrupted.
 // ENOENT - the directory specified by the path parameter doesn't exist.
@@ -584,7 +584,7 @@ auto fds_env_create(FDS_env** env) -> int;
 // EAGAIN - the environment was locked by another process.
 auto fds_env_open(FDS_env* env, const char* path, unsigned int flags, fds_mode_t mode) -> int;
 
-// @brief Copy a FiksStore environment to the specified path.
+// @brief Copy a FiksDataStore environment to the specified path.
 // This function may be used to make a backup of an existing environment.
 // No lockfile is created, since it gets recreated at need.
 // @note This call can trigger significant file size growth if run in
@@ -598,7 +598,7 @@ auto fds_env_open(FDS_env* env, const char* path, unsigned int flags, fds_mode_t
 // @return A non-zero error value on failure and 0 on success.
 auto fds_env_copy(FDS_env* env, const char* path) -> int;
 
-// @brief Copy a FiksStore environment to the specified file descriptor.
+// @brief Copy a FiksDataStore environment to the specified file descriptor.
 // This function may be used to make a backup of an existing environment.
 // No lockfile is created, since it gets recreated at need.
 // @note This call can trigger significant file size growth if run in
@@ -611,7 +611,7 @@ auto fds_env_copy(FDS_env* env, const char* path) -> int;
 // @return A non-zero error value on failure and 0 on success.
 auto fds_env_copyfd(FDS_env* env, fds_filehandle_t fd) -> int;
 
-// @brief Copy a FiksStore environment to the specified path, with options.
+// @brief Copy a FiksDataStore environment to the specified path, with options.
 // This function may be used to make a backup of an existing environment.
 // No lockfile is created, since it gets recreated at need.
 // @note This call can trigger significant file size growth if run in
@@ -634,7 +634,7 @@ auto fds_env_copyfd(FDS_env* env, fds_filehandle_t fd) -> int;
 // @return A non-zero error value on failure and 0 on success.
 auto fds_env_copy2(FDS_env* env, const char* path, unsigned int flags) -> int;
 
-// @brief Copy a FiksStore environment to the specified file descriptor,
+// @brief Copy a FiksDataStore environment to the specified file descriptor,
 // with options.
 // This function may be used to make a backup of an existing environment.
 // No lockfile is created, since it gets recreated at need. See
@@ -651,13 +651,13 @@ auto fds_env_copy2(FDS_env* env, const char* path, unsigned int flags) -> int;
 // @return A non-zero error value on failure and 0 on success.
 auto fds_env_copyfd2(FDS_env* env, fds_filehandle_t fd, unsigned int flags) -> int;
 
-// @brief Return statistics about the FiksStore environment.
+// @brief Return statistics about the FiksDataStore environment.
 // @param[in] env An environment handle returned by #fds_env_create()
 // @param[out] stat The address of an #FDS_stat structure
 // where the statistics will be copied
 auto fds_env_stat(FDS_env* env, FDS_stat* stat) -> int;
 
-// @brief Return information about the FiksStore environment.
+// @brief Return information about the FiksDataStore environment.
 // @param[in] env An environment handle returned by #fds_env_create()
 // @param[out] stat The address of an #FDS_envinfo structure
 // where the information will be copied
@@ -665,7 +665,7 @@ auto fds_env_info(FDS_env* env, FDS_envinfo* stat) -> int;
 
 // @brief Flush the data buffers to disk.
 // Data is always written to disk when #fds_txn_commit() is called,
-// but the operating system may keep it buffered. FiksStore always flushes
+// but the operating system may keep it buffered. FiksDataStore always flushes
 // the OS buffers upon commit as well, unless the environment was
 // opened with #FDS_NOSYNC or in part #FDS_NOMETASYNC. This call is
 // not valid if the environment was opened with #FDS_RDONLY.
@@ -1291,8 +1291,8 @@ auto fds_dkey(FDS_val* key, char* buf) -> char*;
 
 // @}
 
-// @page tools FiksStore Command Line Tools
-// The following describes the command line tools that are available for FiksStore.
+// @page tools FiksDataStore Command Line Tools
+// The following describes the command line tools that are available for FiksDataStore.
 // \li \ref fds_copy_1
 // \li \ref fds_dump_1
 // \li \ref fds_load_1

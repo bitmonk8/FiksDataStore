@@ -23,7 +23,7 @@ function apply_common_flags()
     end
 end
 
-target("fiksstore")
+target("fiksdatastore")
     set_kind("static")
     add_files("Lib/midl.cpp",
               "Lib/hash.cpp",
@@ -44,7 +44,7 @@ local testdir1 = path.join(os.tmpdir(), "test1")
 target("mtest")
     set_kind("binary")
     add_files("Tests/mtest.cpp")
-    add_deps("fiksstore")
+    add_deps("fiksdatastore")
     apply_common_flags()
     if is_plat("windows") then
         add_syslinks("advapi32")
@@ -67,7 +67,7 @@ local testdir2 = path.join(os.tmpdir(), "test2")
 target("mtest2")
     set_kind("binary")
     add_files("Tests/mtest2.cpp")
-    add_deps("fiksstore")
+    add_deps("fiksdatastore")
     apply_common_flags()
     if is_plat("windows") then
         add_syslinks("advapi32")
@@ -91,7 +91,7 @@ local testdir3 = path.join(os.tmpdir(), "test3")
 target("mtest3")
     set_kind("binary")
     add_files("Tests/mtest3.cpp")
-    add_deps("fiksstore")
+    add_deps("fiksdatastore")
     apply_common_flags()
     if is_plat("windows") then
         add_syslinks("advapi32")

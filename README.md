@@ -8,7 +8,7 @@
 
 ## Overview
 
-FiksStore is a modern C++ reimplementation of the Lightning Memory-Mapped Database (LMDB), originally created by Howard Chu at Symas Corporation. This project aims to modernize the LMDB codebase while maintaining its exceptional performance characteristics and reliability.
+FiksDataStore is a modern C++ reimplementation of the Lightning Memory-Mapped Database (LMDB), originally created by Howard Chu at Symas Corporation. This project aims to modernize the LMDB codebase while maintaining its exceptional performance characteristics and reliability.
 
 ## About FiksDataStore
 
@@ -146,10 +146,10 @@ fds_env_close(env);
 ### Planned API (Modern C++)
 
 ```cpp
-#include <fiksstore/database.hpp>
+#include <fiksdatastore/database.hpp>
 
 // Planned modern C++ API
-fiksstore::Environment env("./testdb");
+fiksdatastore::Environment env("./testdb");
 auto db = env.open_database();
 
 // RAII transaction
@@ -211,7 +211,7 @@ FiksDataStore maintains the same licensing as the original LMDB:
 
 - **OpenLDAP Public License 2.8** - See [LICENSE](LICENSE) file
 - Copyright 2011-2021 Howard Chu, Symas Corp.
-- Additional modernization work: Copyright 2025 FiksStore contributors
+- Additional modernization work: Copyright 2025 FiksDataStore contributors
 
 ## Acknowledgments
 
@@ -226,8 +226,8 @@ FiksDataStore maintains the same licensing as the original LMDB:
 
 ## Contact
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/FiksStore/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/FiksStore/discussions)
+- **Issues**: [GitHub Issues](https://github.com/yourusername/FiksDataStore/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/FiksDataStore/discussions)
 
 ---
 
