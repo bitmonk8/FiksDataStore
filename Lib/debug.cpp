@@ -3,6 +3,7 @@
 #include "btree.h"
 #include "env.h"
 #include "page.h"
+#include "txn.h"
 
 #if FDS_DEBUG
 int fds_debug;
@@ -146,7 +147,6 @@ void fds_page_list(FDS_page* mp)
 }
 #endif
 
-#if (FDS_DEBUG) > 2
 // Count all the pages in each DB and in the freelist
 // and make sure it matches the actual number of pages
 // being used.
@@ -157,7 +157,7 @@ void fds_audit(FDS_txn* txn)
     FDS_val key{}, data{};
 
     FDS_ID freecount{0};
-    fds_cursor_init(&mc, txn, FREE_DBI, NULL);
+    fds_cursor_init(&mc, txn, FREE_DBI);
     int rc{};
     while ((rc = fds_cursor_get(&mc, &key, &data, FDS_NEXT)) == 0)
         freecount += *(FDS_ID*)data.mv_data;
@@ -168,8 +168,7 @@ void fds_audit(FDS_txn* txn)
     {
         if (!(txn->mt_dbflags[i] & DB_VALID))
             continue;
-        FDS_xcursor mx{};
-        fds_cursor_init(&mc, txn, i, &mx);
+        fds_cursor_init(&mc, txn, i);
         if (txn->mt_dbs[i].md_root == P_INVALID)
             continue;
         count += txn->mt_dbs[i].md_branch_pages + txn->mt_dbs[i].md_leaf_pages + txn->mt_dbs[i].md_overflow_pages;
@@ -185,4 +184,3 @@ void fds_audit(FDS_txn* txn)
                 txn->mt_next_pgno);
     }
 }
-#endif

@@ -617,7 +617,7 @@ auto fds_freelist_save(FDS_txn* txn) -> int
     ssize_t mop_len{};
     ssize_t clean_limit{};
 
-    fds_cursor_init(&mc, txn, FREE_DBI, nullptr);
+    fds_cursor_init(&mc, txn, FREE_DBI);
 
     if (env->me_pghead != nullptr)
     {
@@ -1076,7 +1076,7 @@ auto fds_txn_commit_impl(FDS_txn* txn) -> int
         FDS_val data;
         data.mv_size = sizeof(FDS_db);
 
-        fds_cursor_init(&mc, txn, MAIN_DBI, nullptr);
+        fds_cursor_init(&mc, txn, MAIN_DBI);
         for (i = CORE_DBS; i < txn->mt_numdbs; i++)
         {
             if ((txn->mt_dbflags[i] & DB_DIRTY) != 0)

@@ -84,7 +84,7 @@ auto fds_dbi_open(FDS_txn* txn, const char* name, unsigned int flags, FDS_dbi* d
     key.mv_data = (void*)name;
     FDS_val data{};
     FDS_cursor mc{};
-    fds_cursor_init(&mc, txn, MAIN_DBI, nullptr);
+    fds_cursor_init(&mc, txn, MAIN_DBI);
     int rc{fds_cursor_set(&mc, &key, &data, FDS_SET, &exact)};
     if (rc == FDS_SUCCESS)
     {
@@ -189,7 +189,7 @@ auto fds_drop0(FDS_cursor* mc, int subs) -> int
         // This also avoids any P_LEAF2 pages, which have no nodes.
         // Also if the DB doesn't have sub-DBs and has no overflow
         // pages, omit scanning leaves.
-        if (((mc->mc_flags & C_SUB) != 0U) || ((subs == 0) && (mc->mc_db->md_overflow_pages == 0U)))
+        if (((subs == 0) && (mc->mc_db->md_overflow_pages == 0U)))
             fds_cursor_pop(mc);
 
         FDS_cursor mx{};
@@ -284,7 +284,7 @@ static auto fds_del0(FDS_txn* txn, FDS_dbi dbi, FDS_val* key, FDS_val* data, uns
     DPRINTF(("====> delete db %u key [%s]", dbi, DKEY(key)));
 
     FDS_cursor mc{};
-    fds_cursor_init(&mc, txn, dbi, nullptr);
+    fds_cursor_init(&mc, txn, dbi);
 
     FDS_cursor_op op{};
     FDS_val* xdata{nullptr};
@@ -415,7 +415,7 @@ auto fds_put(FDS_txn* txn, FDS_dbi dbi, FDS_val* key, FDS_val* data, unsigned in
                flags));
 #endif
     FDS_cursor mc{};
-    fds_cursor_init(&mc, txn, dbi, nullptr);
+    fds_cursor_init(&mc, txn, dbi);
     mc.mc_next = txn->mt_cursors[dbi];
     txn->mt_cursors[dbi] = &mc;
     int rc{fds_cursor_put_impl(&mc, key, data, flags)};
@@ -445,7 +445,7 @@ auto fds_get(FDS_txn* txn, FDS_dbi dbi, FDS_val* key, FDS_val* data) -> int
         return FDS_BAD_TXN;
 
     FDS_cursor mc{};
-    fds_cursor_init(&mc, txn, dbi, nullptr);
+    fds_cursor_init(&mc, txn, dbi);
     int exact{};
     int rc{fds_cursor_set(&mc, key, data, FDS_SET, &exact)};
     return rc;

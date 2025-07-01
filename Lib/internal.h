@@ -523,7 +523,6 @@ enum MCursorFlags : unsigned int
 {
     C_INITIALIZED = 0x01,  // cursor has been initialized and is valid
     C_EOF = 0x02,          // No more data
-    C_SUB = 0x04,          // Cursor is a sub-cursor
     C_DEL = 0x08,          // last op was a cursor_del
     C_UNTRACK = 0x40       // Un-track cursor when closing
 };

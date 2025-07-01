@@ -52,7 +52,6 @@ Utilities are provided to format and display internal MDB data structures in a h
 A high-level auditing function is available to perform an integrity check of the database's space management.
 
 *   **Function:** `fds_audit(FDS_txn *txn)`
-*   **Activation:** This function is only available when `FDS_DEBUG` is set to a value greater than 2.
 *   **Algorithm:**
     1.  It calculates the total number of pages marked as free by traversing the freelist database (`FREE_DBI`).
     2.  It iterates through all active databases in the transaction and sums the recorded number of branch, leaf, and overflow pages for each.

@@ -394,20 +394,7 @@ static auto fds_pages_xkeep(FDS_cursor* mc, unsigned pflags, int all) -> int
                         mp->mp_flags ^= P_KEEP;
                 }
 
-                // Check if we can and should proceed to a sub-cursor (xcursor).
-                auto* const mx = m3->mc_xcursor;
-                if (mx == nullptr || (mx->mx_cursor.mc_flags & C_INITIALIZED) == 0U)
-                    break;  // No valid sub-cursor to follow.
-
-                if (mp == nullptr || (mp->mp_flags & P_LEAF) == 0)
-                    break;  // Last page was not a leaf, cannot have a sub-db.
-
-                const auto* leaf = NODEPTR(mp, m3->mc_ki[j - 1]);
-                if ((leaf->mn_flags & F_SUBDATA) == 0)
-                    break;  // Last node was not a sub-database entry.
-
-                // Descend to the sub-cursor.
-                m3 = &mx->mx_cursor;
+                break;  // No valid sub-cursor to follow.
             }
         }
 
@@ -485,9 +472,6 @@ all_cursors_processed:
 auto fds_page_spill(FDS_cursor* m0, FDS_val* key, FDS_val* data) -> int
 {
     auto* const txn = m0->mc_txn;
-
-    if ((m0->mc_flags & C_SUB) != 0U)
-        return FDS_SUCCESS;
 
     // Estimate how much space this op will take
     unsigned int space_estimate = m0->mc_db->md_depth;
@@ -733,7 +717,7 @@ auto fds_page_alloc(FDS_cursor* mc, int num, FDS_page** mp) -> int
             {
                 last_freed_txn_id = env->me_pglast;
                 oldest_reader_txn_id = env->me_pgoldest;
-                fds_cursor_init(&m2, txn, FREE_DBI, nullptr);
+                fds_cursor_init(&m2, txn, FREE_DBI);
                 if (last_freed_txn_id != 0U)
                 {
                     next_op = FDS_SET_RANGE;

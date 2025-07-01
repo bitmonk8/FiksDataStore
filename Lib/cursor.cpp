@@ -698,7 +698,7 @@ auto fds_cursor_touch(FDS_cursor* mc) -> int
         FDS_cursor mc2;
         if (TXN_DBI_CHANGED(mc->mc_txn, mc->mc_dbi))
             return FDS_BAD_DBI;
-        fds_cursor_init(&mc2, mc->mc_txn, MAIN_DBI, nullptr);
+        fds_cursor_init(&mc2, mc->mc_txn, MAIN_DBI);
         rc = fds_page_search(&mc2, &mc->mc_dbx->md_name, FDS_PS_MODIFY);
         if (rc != 0)
             return rc;
@@ -989,18 +989,10 @@ auto fds_cursor_put_impl(FDS_cursor* mc, FDS_val* key, FDS_val* data, unsigned i
             // but instead we opt to shrink the node in that case.
             if (F_ISSET(flags, FDS_RESERVE))
                 data->mv_data = olddata.mv_data;
-            else if ((mc->mc_flags & C_SUB) == 0U)
-                memcpy(olddata.mv_data, data->mv_data, data->mv_size);
             else
-            {
-                if (key->mv_size != NODEKSZ(leaf))
-                    goto new_ksize;
-                memcpy(NODEKEY(leaf), key->mv_data, key->mv_size);
-                // No fix_parent needed - simplified
-            }
+                memcpy(olddata.mv_data, data->mv_data, data->mv_size);
             return FDS_SUCCESS;
         }
-    new_ksize:
         fds_node_del(mc, 0);
     }
 
@@ -1147,7 +1139,7 @@ auto fds_cursor_del(FDS_cursor* cursor, unsigned int flags) -> int
 }
 
 // Initialize a cursor for a given transaction and database.
-void fds_cursor_init(FDS_cursor* mc, FDS_txn* txn, FDS_dbi dbi, FDS_xcursor* mx)
+void fds_cursor_init(FDS_cursor* mc, FDS_txn* txn, FDS_dbi dbi)
 {
     mc->mc_next = nullptr;
     mc->mc_backup = nullptr;
@@ -1161,7 +1153,6 @@ void fds_cursor_init(FDS_cursor* mc, FDS_txn* txn, FDS_dbi dbi, FDS_xcursor* mx)
     mc->mc_pg[0] = nullptr;
     mc->mc_ki[0] = 0;
     MC_SET_OVPG(mc, NULL);
-    mc->mc_xcursor = mx;  // Set xcursor for compatibility
     mc->mc_flags = txn->mt_flags & (C_ORIG_RDONLY | C_WRITEMAP);
     if ((*mc->mc_dbflag & DB_STALE) != 0)
     {
@@ -1186,7 +1177,7 @@ auto fds_cursor_open(FDS_txn* txn, FDS_dbi dbi, FDS_cursor** cursor) -> int
     mc = (FDS_cursor*)malloc(size);
     if (mc != nullptr)
     {
-        fds_cursor_init(mc, txn, dbi, nullptr);
+        fds_cursor_init(mc, txn, dbi);
         if (txn->mt_cursors != nullptr)
         {
             mc->mc_next = txn->mt_cursors[dbi];
@@ -1216,7 +1207,7 @@ auto fds_cursor_renew(FDS_txn* txn, FDS_cursor* cursor) -> int
     if ((txn->mt_flags & FDS_TXN_BLOCKED) != 0U)
         return FDS_BAD_TXN;
 
-    fds_cursor_init(cursor, txn, cursor->mc_dbi, nullptr);
+    fds_cursor_init(cursor, txn, cursor->mc_dbi);
     return FDS_SUCCESS;
 }
 

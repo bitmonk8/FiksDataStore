@@ -2242,7 +2242,7 @@ auto ESECT fds_env_copyfd1(FDS_env* env, HANDLE fd) -> int
         FDS_cursor mc;
         FDS_val key;
         FDS_val data;
-        fds_cursor_init(&mc, txn, FREE_DBI, nullptr);
+        fds_cursor_init(&mc, txn, FREE_DBI);
         while ((rc = fds_cursor_get(&mc, &key, &data, FDS_NEXT)) == 0)
             freecount += *(FDS_ID*)data.mv_data;
         if (rc != FDS_NOTFOUND)
@@ -2561,7 +2561,7 @@ auto ESECT fds_stat(FDS_txn* txn, FDS_dbi dbi, FDS_stat* stat) -> int
     {
         FDS_cursor mc;
         // Stale, must read the DB's root. cursor_init does it for us.
-        fds_cursor_init(&mc, txn, dbi, nullptr);
+        fds_cursor_init(&mc, txn, dbi);
     }
     return fds_stat0(txn->mt_env, &txn->mt_dbs[dbi], stat);
 }

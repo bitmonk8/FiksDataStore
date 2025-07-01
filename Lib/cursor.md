@@ -34,9 +34,6 @@ struct FDS_cursor
 
     // State Flags
     unsigned int  mc_flags;
-
-    // Compatibility field for removed duplicate support
-    FDS_xcursor*  mc_xcursor;
 };
 ```
 

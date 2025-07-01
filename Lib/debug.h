@@ -45,7 +45,7 @@ extern txnid_t fds_debug_start;
 #define DPUTS(arg) DPRINTF(("%s", arg))
 
 // Debugging output value of a cursor DBI: Negative in a sub-cursor.
-#define DDBI(mc) (((mc)->mc_flags & C_SUB) ? -(int)(mc)->mc_dbi : (int)(mc)->mc_dbi)
+#define DDBI(mc) ((int)(mc)->mc_dbi)
 
 #if FDS_DEBUG
 //	Key size which fits in a #DKBUF.

@@ -189,31 +189,17 @@ auto fds_page_touch(FDS_cursor* mc) -> int
 done:
     // Adjust cursors pointing to mp
     mc->mc_pg[mc->mc_top] = new_page;
-    if ((mc->mc_flags & C_SUB) != 0U)
+    for (auto* m2 = txn->mt_cursors[mc->mc_dbi]; m2 != nullptr; m2 = m2->mc_next)
     {
-        for (auto* m2 = txn->mt_cursors[mc->mc_dbi]; m2 != nullptr; m2 = m2->mc_next)
+        if (m2->mc_snum < mc->mc_snum)
+            continue;
+        if (m2 == mc)
+            continue;
+        if (m2->mc_pg[mc->mc_top] == mp)
         {
-            auto* m3 = &m2->mc_xcursor->mx_cursor;
-            if (m3->mc_snum < mc->mc_snum)
-                continue;
-            if (m3->mc_pg[mc->mc_top] == mp)
-                m3->mc_pg[mc->mc_top] = new_page;
-        }
-    }
-    else
-    {
-        for (auto* m2 = txn->mt_cursors[mc->mc_dbi]; m2 != nullptr; m2 = m2->mc_next)
-        {
-            if (m2->mc_snum < mc->mc_snum)
-                continue;
-            if (m2 == mc)
-                continue;
-            if (m2->mc_pg[mc->mc_top] == mp)
-            {
-                m2->mc_pg[mc->mc_top] = new_page;
-                if (IS_LEAF(new_page))
-                    XCURSOR_REFRESH(m2, mc->mc_top, new_page);
-            }
+            m2->mc_pg[mc->mc_top] = new_page;
+            if (IS_LEAF(new_page))
+                XCURSOR_REFRESH(m2, mc->mc_top, new_page);
         }
     }
     return 0;
@@ -350,7 +336,7 @@ auto fds_page_search(FDS_cursor* mc, FDS_val* key, int flags) -> int
             return FDS_BAD_DBI;
 
         FDS_cursor mc2;
-        fds_cursor_init(&mc2, mc->mc_txn, MAIN_DBI, nullptr);
+        fds_cursor_init(&mc2, mc->mc_txn, MAIN_DBI);
         rc = fds_page_search(&mc2, &mc->mc_dbx->md_name, 0);
         if (rc != 0)
             return rc;
@@ -731,7 +717,6 @@ auto fds_node_move(FDS_cursor* csrc, FDS_cursor* cdst, int fromleft) -> int
         data.mv_size = NODEDSZ(srcnode);
         data.mv_data = NODEDATA(srcnode);
     }
-    mn.mc_xcursor = nullptr;
     if (IS_BRANCH(cdst->mc_pg[cdst->mc_top]) && cdst->mc_ki[cdst->mc_top] == 0)
     {
         unsigned int snum = cdst->mc_snum;
@@ -786,10 +771,7 @@ auto fds_node_move(FDS_cursor* csrc, FDS_cursor* cdst, int fromleft) -> int
             mpd = cdst->mc_pg[csrc->mc_top];
             for (m2 = csrc->mc_txn->mt_cursors[dbi]; m2 != nullptr; m2 = m2->mc_next)
             {
-                if ((csrc->mc_flags & C_SUB) != 0U)
-                    m3 = &m2->mc_xcursor->mx_cursor;
-                else
-                    m3 = m2;
+                m3 = m2;
                 if (((m3->mc_flags & C_INITIALIZED) == 0U) || m3->mc_top < csrc->mc_top)
                     continue;
                 if (m3 != cdst && m3->mc_pg[csrc->mc_top] == mpd &&
@@ -813,10 +795,7 @@ auto fds_node_move(FDS_cursor* csrc, FDS_cursor* cdst, int fromleft) -> int
         {
             for (m2 = csrc->mc_txn->mt_cursors[dbi]; m2 != nullptr; m2 = m2->mc_next)
             {
-                if ((csrc->mc_flags & C_SUB) != 0U)
-                    m3 = &m2->mc_xcursor->mx_cursor;
-                else
-                    m3 = m2;
+                m3 = m2;
                 if (m3 == csrc)
                     continue;
                 if (((m3->mc_flags & C_INITIALIZED) == 0U) || m3->mc_top < csrc->mc_top)
@@ -944,7 +923,6 @@ auto fds_page_merge(FDS_cursor* csrc, FDS_cursor* cdst) -> int
             FDS_cursor mn;
             FDS_node* s2;
             fds_cursor_copy(csrc, &mn);
-            mn.mc_xcursor = nullptr;
             // must find the lowest key below src
             rc = fds_page_search_lowest(&mn);
             if (rc != 0)
@@ -1008,10 +986,7 @@ auto fds_page_merge(FDS_cursor* csrc, FDS_cursor* cdst) -> int
 
         for (m2 = csrc->mc_txn->mt_cursors[dbi]; m2 != nullptr; m2 = m2->mc_next)
         {
-            if ((csrc->mc_flags & C_SUB) != 0U)
-                m3 = &m2->mc_xcursor->mx_cursor;
-            else
-                m3 = m2;
+            m3 = m2;
             if (m3 == csrc)
                 continue;
             if (m3->mc_snum < csrc->mc_snum)
@@ -1110,10 +1085,7 @@ auto fds_rebalance(FDS_cursor* mc) -> int
 
                 for (m2 = mc->mc_txn->mt_cursors[dbi]; m2 != nullptr; m2 = m2->mc_next)
                 {
-                    if ((mc->mc_flags & C_SUB) != 0U)
-                        m3 = &m2->mc_xcursor->mx_cursor;
-                    else
-                        m3 = m2;
+                    m3 = m2;
                     if (((m3->mc_flags & C_INITIALIZED) == 0U) || (m3->mc_snum < mc->mc_snum))
                         continue;
                     if (m3->mc_pg[0] == mp)
@@ -1158,10 +1130,7 @@ auto fds_rebalance(FDS_cursor* mc) -> int
 
                 for (m2 = mc->mc_txn->mt_cursors[dbi]; m2 != nullptr; m2 = m2->mc_next)
                 {
-                    if ((mc->mc_flags & C_SUB) != 0U)
-                        m3 = &m2->mc_xcursor->mx_cursor;
-                    else
-                        m3 = m2;
+                    m3 = m2;
                     if (m3 == mc)
                         continue;
                     if ((m3->mc_flags & C_INITIALIZED) == 0U)
@@ -1197,7 +1166,6 @@ auto fds_rebalance(FDS_cursor* mc) -> int
     /* Find neighbors.
      */
     fds_cursor_copy(mc, &mn);
-    mn.mc_xcursor = nullptr;
 
     oldki = mc->mc_ki[mc->mc_top];
     if (mc->mc_ki[ptop] == 0)
@@ -1354,7 +1322,6 @@ auto fds_page_split(FDS_cursor* mc, FDS_val* newkey, FDS_val* newdata, pgno_t ne
 
     FDS_cursor mn{};
     fds_cursor_copy(mc, &mn);
-    mn.mc_xcursor = nullptr;
     mn.mc_pg[mn.mc_top] = rp;
     mn.mc_ki[ptop] = mc->mc_ki[ptop] + 1;
 
@@ -1699,10 +1666,7 @@ auto fds_page_split(FDS_cursor* mc, FDS_val* newkey, FDS_val* newdata, pgno_t ne
 
         for (m2 = mc->mc_txn->mt_cursors[dbi]; m2 != nullptr; m2 = m2->mc_next)
         {
-            if ((mc->mc_flags & C_SUB) != 0U)
-                m3 = &m2->mc_xcursor->mx_cursor;
-            else
-                m3 = m2;
+            m3 = m2;
             if (m3 == mc)
                 continue;
             if ((m2->mc_flags & m3->mc_flags & C_INITIALIZED) == 0U)

@@ -5,9 +5,6 @@
 
 #include <array>
 
-// Forward declaration for FDS_xcursor
-struct FDS_xcursor;
-
 // Cursors are used for all DB operations.
 // A cursor holds a path of (page pointer, key index) from the DB
 // root to a position in the DB, plus other state. Write txns
@@ -34,7 +31,6 @@ struct FDS_cursor
 // Cursor state flags.
 #define C_INITIALIZED 0x01           // cursor has been initialized and is valid
 #define C_EOF 0x02                   // No more data
-#define C_SUB 0x04                   // Cursor is a sub-cursor
 #define C_DEL 0x08                   // last op was a cursor_del
 #define C_UNTRACK 0x40               // Un-track cursor when closing
 #define C_WRITEMAP FDS_TXN_WRITEMAP  // Copy of txn flag
@@ -44,16 +40,8 @@ struct FDS_cursor
     unsigned int mc_flags;                      // fds_cursor
     std::array<FDS_page*, CURSOR_STACK> mc_pg;  // stack of pushed pages
     std::array<indx_t, CURSOR_STACK> mc_ki;     // stack of page indices
-    // Extended cursor for duplicate data (removed but kept for compatibility)
-    FDS_xcursor* mc_xcursor;
 #define MC_OVPG(mc) ((FDS_page*)0)
 #define MC_SET_OVPG(mc, pg) ((void)0)
-};
-
-// Extended cursor structure (removed but kept for compatibility)
-struct FDS_xcursor
-{
-    FDS_cursor mx_cursor;
 };
 
 // Macros for duplicate support (removed but kept for compatibility)
@@ -75,7 +63,7 @@ struct FDS_xcursor
         *tp = tracked->mc_next;                                                                                        \
     } while (0)
 
-void fds_cursor_init(FDS_cursor* mc, FDS_txn* txn, FDS_dbi dbi, FDS_xcursor* mx = nullptr);
+void fds_cursor_init(FDS_cursor* mc, FDS_txn* txn, FDS_dbi dbi);
 
 void fds_cursor_copy(const FDS_cursor* csrc, FDS_cursor* cdst);
 void fds_cursor_pop(FDS_cursor* mc);
