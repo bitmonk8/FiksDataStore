@@ -270,7 +270,7 @@ To validate compliance with coding conventions:
 To check for prohibited C style multiline comments in regular code:
 ```bash
 # Search for C style multiline comments (excluding temporary code blocks)
-grep -r "/\*" Lib/ Tools/ Tests/ --include="*.cpp" --include="*.h"
+grep -r "/\*" Lib/ Tests/ --include="*.cpp" --include="*.h"
 ```
 Any `/* */` comments found should be converted to single-line `//` comments unless they are clearly used for temporary code commenting during development.
 

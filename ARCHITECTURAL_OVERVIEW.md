@@ -34,7 +34,6 @@ The codebase is organized logically, with core functionalities separated into di
 | **Page & Node Management** | [`Lib/mdb_page.h`](Lib/mdb_page.h), [`Lib/mdb_page.cpp`](Lib/mdb_page.cpp) | Defines the low-level structures for data storage: `MDB_page` (the nodes of the B+ tree) and `MDB_node` (the key/value entries within a page). This is where the logic for splitting, merging, and searching pages resides. |
 | **Database Operations** | [`Lib/mdb_db.h`](Lib/mdb_db.h), [`Lib/mdb_db.cpp`](Lib/mdb_db.cpp) | Manages individual databases within an environment. An environment can contain multiple named databases, which are themselves stored as key/value pairs in the main database. |
 | **Internal Definitions** | [`Lib/mdb_internal.h`](Lib/mdb_internal.h) | A central header containing common type definitions, constants, and macros used across the entire library, providing a consistent set of internal APIs. |
-| **Command-Line Tools** | `Tools/` | Contains source code for utilities like `mdb_stat`, `mdb_dump`, and `mdb_copy`, which provide command-line access to database functionality. |
 | **Tests** | `Tests/` | Contains the test suite for verifying the correctness and performance of the database. |
 
 ### 4. Key Concepts for New Developers

@@ -66,9 +66,9 @@ This function is responsible for acquiring a database handle.
 8.  Register the new DBI handle in the transaction by populating a slot in the `mt_dbs` and `mt_dbxs` arrays with the retrieved or newly created information.
 9.  Set the default comparison function using [`mdb_default_cmp()`](Lib/mdb_db.cpp:13).
 
-### 4.2. `mdb_drop()` and `mdb_drop0()`
+### 4.2. `mdb_drop0()`
 
-[`mdb_drop()`](Lib/mdb_db.cpp:343) is the public API for clearing or deleting a database. It uses the internal function [`mdb_drop0()`](Lib/mdb_db.cpp:181) to perform the core work of freeing the database's pages.
+[`mdb_drop0()`](Lib/mdb_db.cpp:181) is the internal function to perform the core work of freeing a database's pages.
 
 **Algorithm (`mdb_drop0`)**:
 1.  Initialize a cursor at the beginning of the database's B+ tree.
@@ -78,8 +78,6 @@ This function is responsible for acquiring a database handle.
     -   If a node represents a large item (`F_BIGDATA`), retrieve the chain of overflow pages and add them to the free list.
 5.  After traversing all pages, add the database's root page itself to the free list.
 6.  The database's metadata is then reset to an empty state.
-
-If the `del` parameter in [`mdb_drop()`](Lib/mdb_db.cpp:343) is non-zero, an additional step deletes the database's entry from the main database, effectively removing it from the environment.
 
 ### 4.3. Data Manipulation Functions (`mdb_get`, `mdb_put`, `mdb_del`)
 
@@ -94,6 +92,6 @@ These functions provide the primary API for reading and writing data. They are e
 A developer modifying this code should be aware that it appears to be a simplified version of the standard LMDB library. Key features have been removed or stubbed out:
 
 -   **No Duplicate Support**: The code consistently ignores the `data` parameter in deletion operations and sets the data comparison function `md_dcmp` to `nullptr`. This indicates that support for sorted duplicates (`MDB_DUPSORT`) is not implemented.
--   **No Sub-Databases**: The logic for handling sub-databases (`F_SUBDATA`) in [`mdb_drop0()`](Lib/mdb_db.cpp:181) is present but appears incomplete or simplified.
+-   **No Sub-Databases**: The logic for handling sub-databases (`F_SUBDATA`) is present but appears incomplete or simplified.
 
 These simplifications reduce complexity but also limit functionality. Any modifications or extensions should account for the absence of these features.

@@ -112,57 +112,13 @@ target("mtest3")
 
 
 
-target("mdb_copy")
-    set_kind("binary")
-    add_files("Tools/mdb_copy.cpp")
-    add_deps("fiksstore")
-    apply_common_flags()
-    if is_plat("windows") then
-        add_syslinks("advapi32")
-    end
-
-target("mdb_drop")
-    set_kind("binary")
-    add_files("Tools/mdb_drop.cpp")
-    add_deps("fiksstore")
-    apply_common_flags()
-    if is_plat("windows") then
-        add_syslinks("advapi32")
-    end
-
-target("mdb_dump")
-    set_kind("binary")
-    add_files("Tools/mdb_dump.cpp")
-    add_deps("fiksstore")
-    apply_common_flags()
-    if is_plat("windows") then
-        add_syslinks("advapi32")
-    end
-
-target("mdb_load")
-    set_kind("binary")
-    add_files("Tools/mdb_load.cpp")
-    add_deps("fiksstore")
-    apply_common_flags()
-    if is_plat("windows") then
-        add_syslinks("advapi32")
-    end
-
-target("mdb_stat")
-    set_kind("binary")
-    add_files("Tools/mdb_stat.cpp")
-    add_deps("fiksstore")
-    apply_common_flags()
-    if is_plat("windows") then
-        add_syslinks("advapi32")
-    end
 
 -- Format target for code formatting with clang-format
 target("format")
     set_kind("phony")
     on_run(function (target)
         -- Find all .h and .cpp files in the specified directories
-        local source_dirs = {"Lib", "Tests", "Tools"}
+        local source_dirs = {"Lib", "Tests"}
         local file_patterns = {"*.h", "*.cpp"}
         local files = {}
         
@@ -222,7 +178,7 @@ target("lint")
             end
         else
             print("Running clang-tidy on all project files...")
-            local source_dirs = {"Lib", "Tests", "Tools"}
+            local source_dirs = {"Lib", "Tests"}
             local file_patterns = {"*.cpp"}
             for _, dir in ipairs(source_dirs) do
                 if os.isdir(dir) then

@@ -185,11 +185,6 @@ xmake run mtest3
 
 FiksStore includes the standard LMDB command-line tools:
 
-- **mdb_stat**: Display database statistics
-- **mdb_copy**: Copy/backup databases
-- **mdb_dump**: Export database contents
-- **mdb_load**: Import database contents
-- **mdb_drop**: Delete databases
 
 ## Documentation
 
