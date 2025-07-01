@@ -362,7 +362,7 @@ fds_fopen(const FDS_env* env, FDS_name* fname, enum fds_fopen_type which, fds_mo
     // the source data is already in the OS cache.
     //
     // The lockfile needs FD_CLOEXEC (close file descriptor on exec*())
-    // to avoid the flock() issues noted under Caveats in lmdb.h.
+    // to avoid the flock() issues noted under Caveats in fds.h.
     // Also set it for other filehandles which the user cannot get at
     // and close himself, which he may need after fork().  I.e. all but
     // me_fd, which programs do use via fds_env_get_fd().

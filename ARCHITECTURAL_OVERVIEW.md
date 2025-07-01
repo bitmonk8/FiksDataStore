@@ -1,6 +1,6 @@
 ### 1. Main Functionality
 
-The project, **FiksStore**, is a modern C++ fork of the **Lightning Memory-Mapped Database (LMDB)**. As confirmed by the [`README.md`](README.md:3) and [`Lib/lmdb.h`](Lib/lmdb.h:6), it is a high-performance, embedded, transactional key-value store.
+The project, **FiksStore**, is a modern C++ fork of the **Lightning Memory-Mapped Database (LMDB)**. As confirmed by the [`README.md`](README.md:3) and [`Lib/fds.h`](Lib/fds.h:6), it is a high-performance, embedded, transactional key-value store.
 
 Its core purpose is to provide an extremely fast and memory-efficient database by directly mapping the database file into memory. This "zero-copy" architecture means that data is accessed directly from the memory map, eliminating the overhead of copying data between the database and application memory.
 

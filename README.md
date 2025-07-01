@@ -117,7 +117,7 @@ xmake show
 ### Current API (C-style)
 
 ```c
-#include "lmdb.h"
+#include "fds.h"
 
 FDS_env *env;
 FDS_dbi dbi;

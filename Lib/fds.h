@@ -1,4 +1,4 @@
-// @file lmdb.h
+// @file fds.h
 // @brief FiksStore memory-mapped database library
 
 // @mainpage FiksStore Memory-Mapped Database Manager

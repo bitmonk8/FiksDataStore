@@ -11,7 +11,7 @@
 // top-level directory of the distribution or, alternatively, at
 // <http://www.OpenLDAP.org/license.html>.
 //
-#include "lmdb.h"
+#include "fds.h"
 
 #include <sys/stat.h>
 

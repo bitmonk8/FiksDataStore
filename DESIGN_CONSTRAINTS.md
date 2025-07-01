@@ -10,14 +10,14 @@ All `Lib/*.h` files MUST use `#pragma once` as their include guard mechanism.
 **Rationale**: `#pragma once` is more reliable than traditional include guards, prevents macro name conflicts, and is supported by all modern compilers.
 
 ### 2. Internal Header Dependency
-All `Lib/*.h` files except `midl.h`, `fds_internal.h`, and `lmdb.h` MUST include `fds_internal.h` as their first `#include`.
+All `Lib/*.h` files except `midl.h`, `fds_internal.h`, and `fds.h` MUST include `fds_internal.h` as their first `#include`.
 
 **Rationale**: Ensures consistent access to internal definitions and maintains proper dependency hierarchy.
 
 **Exceptions**:
 - `midl.h`: Standalone utility, should not depend on LMDB internals
 - `fds_internal.h`: Base internal header, cannot include itself
-- `lmdb.h`: Public API header, must not include internal headers
+- `fds.h`: Public API header, must not include internal headers
 
 ### 3. Source File Header Inclusion
 All `Lib/*.cpp` files MUST `#include` their corresponding `.h` file as their first `#include`.

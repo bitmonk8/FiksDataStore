@@ -12,7 +12,7 @@
 // <http://www.OpenLDAP.org/license.html>.
 //
 // Tests for DB splits and merges
-#include "lmdb.h"
+#include "fds.h"
 
 #include <sys/stat.h>
 
