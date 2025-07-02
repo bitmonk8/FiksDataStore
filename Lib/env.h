@@ -72,6 +72,9 @@ struct FDS_txbody
 #if defined(_WIN32) || defined(FDS_USE_POSIX_SEM)
     // Binary form of names of the reader/writer locks
     fds_hash_t mtb_mutexid;
+#elif defined(FDS_USE_SYSV_SEM)
+    int mtb_semid;
+    int mtb_rlocked;
 #else
     // Mutex protecting access to this table.
     // This is the reader table lock used with LOCK_MUTEX().
@@ -85,13 +88,28 @@ struct FDS_txninfo
     union
     {
         FDS_txbody mtb;
+#define mti_magic mt1.mtb.mtb_magic
+#define mti_format mt1.mtb.mtb_format
+#define mti_rmutex mt1.mtb.mtb_rmutex
+#define mti_txnid mt1.mtb.mtb_txnid
+#define mti_numreaders mt1.mtb.mtb_numreaders
+#define mti_mutexid mt1.mtb.mtb_mutexid
+#ifdef FDS_USE_SYSV_SEM
+#define mti_semid mt1.mtb.mtb_semid
+#define mti_rlocked mt1.mtb.mtb_rlocked
+#endif
         char pad[(sizeof(FDS_txbody) + CACHELINE - 1) & ~(CACHELINE - 1)];
     } mt1;
 #if !(defined(_WIN32) || defined(FDS_USE_POSIX_SEM))
     union
     {
+#ifdef FDS_USE_SYSV_SEM
+        int mt2_wlocked;
+#define mti_wlocked mt2.mt2_wlocked
+#else
         fds_mutex_t mt2_wmutex;
 #define mti_wmutex mt2.mt2_wmutex
+#endif
         char pad[(MNAME_LEN + CACHELINE - 1) & ~(CACHELINE - 1)];
     } mt2;
 #endif
@@ -119,7 +137,7 @@ struct FDS_env
     unsigned int me_psize;       // DB page size, inited from me_os_psize
     unsigned int me_os_psize;    // OS page size, from GET_PAGESIZE
     unsigned int me_maxreaders;  // size of the reader table
-    // Max FDS_txninfo.mt1.mtb.mtb_numreaders of interest to fds_env_close()
+    // Max FDS_txninfo.mti_numreaders of interest to fds_env_close()
     volatile int me_close_readers;
     FDS_dbi me_numdbs;              // number of DBs opened
     FDS_dbi me_maxdbs;              // size of the DB table
@@ -161,7 +179,7 @@ struct FDS_env
     int ovs;          // Count of OVERLAPPEDs
 #endif
 #ifdef FDS_USE_POSIX_MUTEX             /* Posix mutexes reside in shared mem */
-#define me_rmutex me_txns->mt1.mtb.mtb_rmutex  // Shared reader lock
+#define me_rmutex me_txns->mti_rmutex  // Shared reader lock
 #define me_wmutex me_txns->mti_wmutex  // Shared writer lock
 #else
     fds_mutex_t me_rmutex;

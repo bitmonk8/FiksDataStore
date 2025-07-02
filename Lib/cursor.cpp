@@ -998,7 +998,8 @@ auto fds_cursor_put_impl(FDS_cursor* mc, FDS_val* key, FDS_val* data, unsigned i
 
     rdata = data;
 
-    nflags = flags & (static_cast<unsigned>(F_SUBDATA) | static_cast<unsigned>(FDS_RESERVE) | static_cast<unsigned>(FDS_APPEND));
+    // Simplified node addition - no duplicate support
+    nflags = flags & NODE_ADD_FLAGS;
     nsize = fds_leaf_size(env, key, rdata);
     if (SIZELEFT(mc->mc_pg[mc->mc_top]) < nsize)
     {

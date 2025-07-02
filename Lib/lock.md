@@ -62,7 +62,7 @@ This function ([`Lib/lock.cpp:164`](Lib/lock.cpp:164)) handles the critical scen
 -   When a mutex lock attempt returns `FDS_OWNERDEAD` (or a platform-specific equivalent like `EOWNERDEAD`), it means the caller has been granted ownership of the mutex, but the previous owner terminated abnormally.
 -   The database is now in a potentially inconsistent state. The `fds_mutex_failed` function's job is to perform recovery.
 -   Its primary action is to call [`fds_reader_check0()`](Lib/lock.cpp:213) to clean up any stale reader locks left by the dead process (or any other dead processes).
--   If the dead process was a writer, it also updates the shared transaction ID (`mt1.mtb.mtb_txnid`) to the latest meta page, ensuring the next writer starts from a consistent state.
+-   If the dead process was a writer, it also updates the shared transaction ID (`mti_txnid`) to the latest meta page, ensuring the next writer starts from a consistent state.
 -   If the dead thread belonged to the *current* process, the environment is considered irrecoverably corrupted (`FDS_FATAL_ERROR`), and a `FDS_PANIC` error is returned.
 
 ## 4. Usage by Developers

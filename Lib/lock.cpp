@@ -7,6 +7,8 @@
 
 #ifdef _WIN32
 #define FDS_OWNERDEAD ((int)WAIT_ABANDONED)
+#elif defined FDS_USE_SYSV_SEM
+#define FDS_OWNERDEAD (FDS_LAST_ERRCODE + 11)
 #elif defined(FDS_USE_POSIX_MUTEX)
 #define FDS_OWNERDEAD EOWNERDEAD /* LOCK_MUTEX0() result if dead owner */
 #endif
@@ -65,7 +67,7 @@ auto ESECT fds_reader_list(FDS_env* env, FDS_msg_func func, void* ctx) -> int
         return func("(no reader locks)\n", ctx);
     }
 
-    unsigned int rdrs{env->me_txns->mt1.mtb.mtb_numreaders};
+    unsigned int rdrs{env->me_txns->mti_numreaders};
     FDS_reader* mr{env->me_txns->mti_readers};
     int rc{0};
     int first{1};
@@ -168,10 +170,10 @@ auto ESECT fds_mutex_failed(FDS_env* env, fds_mutexref_t mutex, int rc) -> int
         const int rlocked{static_cast<int>(mutex == env->me_rmutex)};
         if (rlocked == 0)
         {
-            // Keep mt1.mtb.mtb_txnid updated, otherwise next writer can
+            // Keep mti_txnid updated, otherwise next writer can
             // overwrite data which latest meta page refers to.
             FDS_meta* meta{fds_env_pick_meta(env)};
-            env->me_txns->mt1.mtb.mtb_txnid = meta->mm_txnid;
+            env->me_txns->mti_txnid = meta->mm_txnid;
             // env is hosed if the dead thread was ours
             if (env->me_txn != nullptr)
             {
@@ -211,7 +213,7 @@ auto ESECT fds_mutex_failed(FDS_env* env, fds_mutexref_t mutex, int rc) -> int
 auto ESECT fds_reader_check0(FDS_env* env, int rlocked, int* dead) -> int
 {
     fds_mutexref_t rmutex{(rlocked != 0) ? nullptr : env->me_rmutex};
-    unsigned int rdrs{env->me_txns->mt1.mtb.mtb_numreaders};
+    unsigned int rdrs{env->me_txns->mti_numreaders};
     FDS_PID_T* pids{(FDS_PID_T*)malloc((rdrs + 1) * sizeof(FDS_PID_T))};
     if (pids == nullptr)
         return ENOMEM;
@@ -276,6 +278,26 @@ int fds_sem_wait(sem_t* sem)
     int rc;
     while ((rc = sem_wait(sem)) && (rc = errno) == EINTR)
         ;
+    return rc;
+}
+
+#elif defined FDS_USE_SYSV_SEM
+
+int fds_sem_wait(fds_mutexref_t sem)
+{
+    int* locked{sem->locked};
+    struct sembuf sb{0, -1, SEM_UNDO};
+    sb.sem_num = sem->semnum;
+    int rc{};
+    do
+    {
+        if (!semop(sem->semid, &sb, 1))
+        {
+            rc = *locked ? FDS_OWNERDEAD : FDS_SUCCESS;
+            *locked = 1;
+            break;
+        }
+    } while ((rc = errno) == EINTR);
     return rc;
 }
 

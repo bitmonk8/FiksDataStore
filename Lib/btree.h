@@ -20,6 +20,9 @@ enum
     FDS_SPLIT_REPLACE = 0x01
 };
 
+#define NODE_ADD_FLAGS                                                                                                 \
+    (static_cast<unsigned>(F_SUBDATA) | static_cast<unsigned>(FDS_RESERVE) | static_cast<unsigned>(FDS_APPEND))
+
 // B+ Tree Logic Module Functions
 
 // @brief Search for a page in the database.

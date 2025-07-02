@@ -608,7 +608,7 @@ static auto fds_find_oldest(FDS_txn* txn) -> txnid_t
     if (txn->mt_env->me_txns != nullptr)
     {
         const auto* const r = txn->mt_env->me_txns->mti_readers;
-        for (int i = txn->mt_env->me_txns->mt1.mtb.mtb_numreaders; --i >= 0;)
+        for (int i = txn->mt_env->me_txns->mti_numreaders; --i >= 0;)
         {
             if (r[i].mr_pid != 0)
             {
