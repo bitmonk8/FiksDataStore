@@ -92,17 +92,11 @@ using ssize_t = SSIZE_T;
 #include <resolv.h>  // defines BYTE_ORDER on HPUX and Solaris
 #endif
 
-#if defined(__FreeBSD__) && defined(__FreeBSD_version) && __FreeBSD_version >= 1100110
-#define FDS_LINUX 1
-#elif defined(__APPLE__) || defined(BSD) || defined(__FreeBSD_kernel__)
-#if !(defined(FDS_LINUX))
-#define FDS_MACOS 1
-#endif
-#endif
-
 #ifndef FDS_WINDOWS
 #include <pthread.h>
 #include <signal.h>
+#endif  // !FDS_WINDOWS
+
 #if defined(FDS_MACOS)
 #include <sys/ipc.h>
 #include <sys/sem.h>
@@ -114,10 +108,7 @@ union semun
     unsigned short* array;
 };
 #endif  // _SEM_SEMUN_UNDEFINED
-#else
-#define FDS_LINUX 1
 #endif
-#endif  // !FDS_WINDOWS
 
 #ifdef USE_VALGRIND
 #include <valgrind/memcheck.h>

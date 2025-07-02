@@ -113,7 +113,7 @@ The copy functionality, defined in [`Lib/env.cpp:2426`](Lib/env.cpp:2426), provi
 The code is rich with `#ifdef` blocks to handle differences between operating systems, primarily for file I/O, memory mapping, and synchronization primitives.
 
 *   **Windows (`FDS_WINDOWS`)**: Uses `CreateFile`, `NtCreateSection`, `NtMapViewOfSection`, named `Mutex` objects for synchronization, and `OVERLAPPED` I/O for certain operations.
-*   **POSIX (`FDS_LINUX`)**: The preferred modern Unix implementation. Uses `mmap` and process-shared, robust `pthread_mutex_t` mutexes stored directly in the lock file's shared memory.
-*   **System V Semaphores (`FDS_MACOS`)**: A fallback for older Unix systems, using `semget` and `semctl`.
+*   **POSIX (`FDS_LINUX`)**: Uses `mmap` and process-shared, robust `pthread_mutex_t` mutexes stored directly in the lock file's shared memory.
+*   **System V Semaphores (`FDS_MACOS`)**: Uses `semget` and `semctl`.
 
 This cross-platform support is a major feature, but also a source of complexity within the codebase.
