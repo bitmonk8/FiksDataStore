@@ -311,17 +311,6 @@ enum
 };
 // @}
 
-// @defgroup fds_copy Copy Flags
-// @{
-
-// Compacting copy: Omit free space from copy, and renumber all
-// pages sequentially.
-enum
-{
-    FDS_CP_COMPACT = 0x01
-};
-// @}
-
 // @brief Cursor Get operations.
 // This is the set of all operations for retrieving data
 // using a cursor.
@@ -560,73 +549,6 @@ auto fds_env_create(FDS_env** env) -> int;
 // EACCES - the user didn't have permission to access the environment files.
 // EAGAIN - the environment was locked by another process.
 auto fds_env_open(FDS_env* env, const char* path, unsigned int flags, fds_mode_t mode) -> int;
-
-// @brief Copy a FiksDataStore environment to the specified path.
-// This function may be used to make a backup of an existing environment.
-// No lockfile is created, since it gets recreated at need.
-// @note This call can trigger significant file size growth if run in
-// parallel with write transactions, because it employs a read-only
-// transaction. See long-lived transactions under @ref caveats_sec.
-// @param[in] env An environment handle returned by #fds_env_create(). It
-// must have already been opened successfully.
-// @param[in] path The directory in which the copy will reside. This
-// directory must already exist and be writable but must otherwise be
-// empty.
-// @return A non-zero error value on failure and 0 on success.
-auto fds_env_copy(FDS_env* env, const char* path) -> int;
-
-// @brief Copy a FiksDataStore environment to the specified file descriptor.
-// This function may be used to make a backup of an existing environment.
-// No lockfile is created, since it gets recreated at need.
-// @note This call can trigger significant file size growth if run in
-// parallel with write transactions, because it employs a read-only
-// transaction. See long-lived transactions under @ref caveats_sec.
-// @param[in] env An environment handle returned by #fds_env_create(). It
-// must have already been opened successfully.
-// @param[in] fd The filedescriptor to write the copy to. It must
-// have already been opened for Write access.
-// @return A non-zero error value on failure and 0 on success.
-auto fds_env_copyfd(FDS_env* env, fds_filehandle_t fd) -> int;
-
-// @brief Copy a FiksDataStore environment to the specified path, with options.
-// This function may be used to make a backup of an existing environment.
-// No lockfile is created, since it gets recreated at need.
-// @note This call can trigger significant file size growth if run in
-// parallel with write transactions, because it employs a read-only
-// transaction. See long-lived transactions under @ref caveats_sec.
-// @param[in] env An environment handle returned by #fds_env_create(). It
-// must have already been opened successfully.
-// @param[in] path The directory in which the copy will reside. This
-// directory must already exist and be writable but must otherwise be
-// empty.
-// @param[in] flags Special options for this operation. This parameter
-// must be set to 0 or by bitwise OR'ing together one or more of the
-// values described here.
-//
-// #FDS_CP_COMPACT - Perform compaction while copying: omit free
-// pages and sequentially renumber all pages in output. This option
-// consumes more CPU and runs more slowly than the default.
-// Currently it fails if the environment has suffered a page leak.
-//
-// @return A non-zero error value on failure and 0 on success.
-auto fds_env_copy2(FDS_env* env, const char* path, unsigned int flags) -> int;
-
-// @brief Copy a FiksDataStore environment to the specified file descriptor,
-// with options.
-// This function may be used to make a backup of an existing environment.
-// No lockfile is created, since it gets recreated at need. See
-// #fds_env_copy2() for further details.
-// @note This call can trigger significant file size growth if run in
-// parallel with write transactions, because it employs a read-only
-// transaction. See long-lived transactions under @ref caveats_sec.
-// @param[in] env An environment handle returned by #fds_env_create(). It
-// must have already been opened successfully.
-// @param[in] fd The filedescriptor to write the copy to. It must
-// have already been opened for Write access.
-// @param[in] flags Special options for this operation.
-// See #fds_env_copy2() for options.
-// @return A non-zero error value on failure and 0 on success.
-auto fds_env_copyfd2(FDS_env* env, fds_filehandle_t fd, unsigned int flags) -> int;
 
 // @brief Return statistics about the FiksDataStore environment.
 // @param[in] env An environment handle returned by #fds_env_create()

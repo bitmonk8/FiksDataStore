@@ -95,17 +95,6 @@ The environment manages concurrency through a clever interplay between the data 
 *   **Reader Registration:** When a read transaction begins, it acquires the reader lock (`me_rmutex`), finds a free slot in the reader table (`mti_readers`), records its PID and the current latest `txnid`, and then releases the lock. The transaction is now "live" and operates on a fixed snapshot of the database.
 *   **Page Reclamation:** When a write transaction commits, it needs to add old, now-unreferenced pages to the free list. To do this safely, it scans the reader table to find the oldest `txnid` being used by any active reader. Any page that was freed by a transaction *older* than this oldest reader is guaranteed to be no longer visible to any transaction and can be safely reclaimed.
 
-### 3.4. Environment Copy (`fds_env_copyfd2`)
-
-The copy functionality, defined in [`Lib/env.cpp:2426`](Lib/env.cpp:2426), provides two modes:
-
-1.  **As-is Copy (`fds_env_copyfd0`)**: This performs a direct, byte-for-byte copy of the active pages in the database file. It takes a read lock to ensure it's copying a consistent state.
-2.  **Compacting Copy (`fds_env_copyfd1`)**: This is a more sophisticated operation designed to reduce file size by removing fragmentation.
-    *   It launches a dedicated writer thread (`fds_env_copythr`) to handle file I/O.
-    *   The main thread performs a depth-first traversal of the B-tree (`fds_env_cwalk`).
-    *   As it visits each live page, it copies the page into a buffer.
-    *   The writer thread consumes these buffers and writes them sequentially to the destination file, resulting in a perfectly compacted new database.
-
 ---
 
 ## 4. Platform-Specific Implementations
