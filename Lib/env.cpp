@@ -58,7 +58,7 @@ enum
 
 static void fds_env_reader_dest(void* ptr);
 
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
 using fds_nchar_t = wchar_t;
 #define FDS_NAME(str) L##str
 // Suppress deprecation warning for wcscpy - we know the buffer sizes
@@ -79,7 +79,7 @@ typedef char fds_nchar_t;
 #define FDS_CLOEXEC 0
 #endif
 
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
 
 // Junk for arranging thread-specific callbacks on Windows. This is
 // necessarily platform and compiler-specific. Windows supports up
@@ -168,7 +168,7 @@ static NtMapViewOfSectionFunc NtMapViewOfSection;
 #define FDS_FDATASYNC fsync
 #endif
 
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
 #define FDS_FDATASYNC(fd) (!FlushFileBuffers(fd))
 #define FDS_MSYNC(addr, len, flags) (!FlushViewOfFile(addr, len))
 #endif
@@ -179,7 +179,7 @@ static NtMapViewOfSectionFunc NtMapViewOfSection;
 #define FDS_FDATASYNC fdatasync
 #endif
 
-#ifndef _WIN32
+#ifndef FDS_WINDOWS
 // A flag for opening a file and requesting synchronous data writes.
 // This is only used when writing a meta page. It's not strictly needed;
 // we could just do a normal write and then immediately perform a flush.
@@ -235,7 +235,7 @@ enum
             free((fname).mn_val);                                                                                      \
     } while (0)
 
-#if defined(_WIN32)
+#if defined(FDS_WINDOWS)
 
 // Convert src to new wchar_t[] string with room for xtra extra chars
 static auto ESECT utf8_to_utf16(const char* src, FDS_name* dst, int xtra) -> int
@@ -265,7 +265,7 @@ static auto ESECT utf8_to_utf16(const char* src, FDS_name* dst, int xtra) -> int
         return FDS_SUCCESS;
     }
 }
-#endif  // defined(_WIN32)
+#endif  // defined(FDS_WINDOWS)
 
 // Set up filename + scratch area for filename suffix, for opening files.
 // It should be freed with #fds_fname_destroy().
@@ -278,7 +278,7 @@ static auto ESECT fds_fname_init(const char* path, unsigned envflags, FDS_name* 
 {
     int no_suffix = F_ISSET(envflags, FDS_NOSUBDIR | FDS_NOLOCK);
     fname->mn_alloced = 0;
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     return utf8_to_utf16(path, fname, (no_suffix != 0) ? 0 : FDS_SUFFLEN);
 #else
     fname->mn_len = strlen(path);
@@ -298,7 +298,7 @@ static auto ESECT fds_fname_init(const char* path, unsigned envflags, FDS_name* 
 // File type, access mode etc. for #fds_fopen()
 enum fds_fopen_type
 {
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     FDS_O_RDONLY,
     FDS_O_RDWR,
     FDS_O_OVERLAPPED,
@@ -332,7 +332,7 @@ fds_fopen(const FDS_env* env, FDS_name* fname, enum fds_fopen_type which, fds_mo
 {
     int rc = FDS_SUCCESS;
     HANDLE fd;
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     DWORD acc;
     DWORD share;
     DWORD disp;
@@ -343,13 +343,13 @@ fds_fopen(const FDS_env* env, FDS_name* fname, enum fds_fopen_type which, fds_mo
 
     if (fname->mn_alloced != 0)  // modifiable copy
     {
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
 #pragma warning(push)
 #pragma warning(disable : 4996)  // Suppress deprecation warning for wcscpy
 #endif
         fds_name_cpy(fname->mn_val + fname->mn_len,
                      fds_suffixes[which == FDS_O_LOCKS][F_ISSET(env->me_flags, FDS_NOSUBDIR)]);
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
 #pragma warning(pop)
 #endif
     }
@@ -367,7 +367,7 @@ fds_fopen(const FDS_env* env, FDS_name* fname, enum fds_fopen_type which, fds_mo
     // and close himself, which he may need after fork().  I.e. all but
     // me_fd, which programs do use via fds_env_get_fd().
 
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     acc = GENERIC_READ | GENERIC_WRITE;
     share = FILE_SHARE_READ | FILE_SHARE_WRITE;
     disp = OPEN_ALWAYS;
@@ -404,7 +404,7 @@ fds_fopen(const FDS_env* env, FDS_name* fname, enum fds_fopen_type which, fds_mo
 
     if (fd == INVALID_HANDLE_VALUE)
         rc = ErrCode();
-#ifndef _WIN32
+#ifndef FDS_WINDOWS
     else
     {
         if (which != FDS_O_RDONLY && which != FDS_O_RDWR)
@@ -427,7 +427,7 @@ fds_fopen(const FDS_env* env, FDS_name* fname, enum fds_fopen_type which, fds_mo
 #endif
         }
     }
-#endif  // !_WIN32
+#endif  // !FDS_WINDOWS
 
     *res = fd;
     return rc;
@@ -439,7 +439,7 @@ auto fds_env_sync0(FDS_env* env, int force, pgno_t numpgs) -> int
     if ((env->me_flags & FDS_RDONLY) != 0U)
         return EACCES;
     if (force != 0
-#ifndef _WIN32  // Sync is normally achieved in Windows by doing WRITE_THROUGH writes
+#ifndef FDS_WINDOWS  // Sync is normally achieved in Windows by doing WRITE_THROUGH writes
         || !(env->me_flags & FDS_NOSYNC)
 #endif
     )
@@ -448,7 +448,7 @@ auto fds_env_sync0(FDS_env* env, int force, pgno_t numpgs) -> int
         {
             int flags = (((env->me_flags & FDS_MAPASYNC) != 0U) && (force == 0)) ? MS_ASYNC : MS_SYNC;
             if (FDS_MSYNC(env->me_map, env->me_psize * numpgs, flags)
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(FDS_WINDOWS) || defined(__APPLE__)
                 || (flags == MS_SYNC && FDS_FDATASYNC(env->me_fd))
 #endif
             )
@@ -508,7 +508,7 @@ auto ESECT fds_env_read_header(FDS_env* env, int prev, FDS_meta* meta) -> int
 
     for (i = off = 0; i < NUM_METAS; i++, off += meta->mm_psize)
     {
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
         DWORD len;
         OVERLAPPED ov;
         memset(&ov, 0, sizeof(ov));
@@ -578,7 +578,7 @@ auto ESECT fds_env_init_meta(FDS_env* env, FDS_meta* meta) -> int
     FDS_page* q;
     int rc;
     unsigned int psize;
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     DWORD len;
     OVERLAPPED ov;
     memset(&ov, 0, sizeof(ov));
@@ -630,7 +630,7 @@ auto ESECT fds_env_init_meta(FDS_env* env, FDS_meta* meta) -> int
 // Update the environment info to commit a transaction.
 // txn the transaction that's being committed
 // Return 0 on success, non-zero on failure.
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
 auto fds_env_write_meta(FDS_txn* txn) -> int
 {
     int toggle{static_cast<int>(txn->mt_txnid & 1)};
@@ -844,7 +844,7 @@ auto ESECT fds_env_create(FDS_env** env) -> int
     return FDS_SUCCESS;
 }
 
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
 // Map a result from an NTAPI call to WIN32.
 static auto fds_nt2win32(NTSTATUS st) -> DWORD
 {
@@ -860,7 +860,7 @@ auto ESECT fds_env_map(FDS_env* env, void* addr) -> int
 {
     FDS_page* p;
     unsigned int flags = env->me_flags;
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     int rc;
     int access = SECTION_MAP_READ;
     HANDLE mh;
@@ -939,7 +939,7 @@ auto ESECT fds_env_map(FDS_env* env, void* addr) -> int
 #endif  // POSIX_MADV_RANDOM
 #endif  // MADV_RANDOM
     }
-#endif  // _WIN32
+#endif  // FDS_WINDOWS
 
     // Can happen because the address argument to mmap() is just a
     // hint.  mmap() can pick another, e.g. if the range is in use.
@@ -1026,7 +1026,7 @@ auto ESECT fds_env_open2(FDS_env* env, int prev) -> int
     int rc;
     FDS_meta meta;
 
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     // See if we should use QueryLimited
     // Use GetVersionEx instead of deprecated GetVersion
     OSVERSIONINFO osvi;
@@ -1057,7 +1057,7 @@ auto ESECT fds_env_open2(FDS_env* env, int prev) -> int
             return FDS_PROBLEM;
     }
     env->ovs = 0;
-#endif  // _WIN32
+#endif  // FDS_WINDOWS
 
     i = fds_env_read_header(env, prev, &meta);
     if (i != 0)
@@ -1101,7 +1101,7 @@ auto ESECT fds_env_open2(FDS_env* env, int prev) -> int
             return rc;
         newenv = 0;
     }
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     // For FIXEDMAP, make sure the file is non-empty before we attempt to map it
     if (newenv != 0)
     {
@@ -1165,7 +1165,7 @@ static void fds_env_reader_dest(void* ptr)
 {
     auto* reader = (FDS_reader*)ptr;
 
-#ifndef _WIN32
+#ifndef FDS_WINDOWS
     if (reader->mr_pid == getpid())  // catch pthread_exit() in child process
 #endif
         // We omit the mutex, so do this atomically (i.e. skip mr_txnid)
@@ -1180,7 +1180,7 @@ auto ESECT fds_env_share_locks(FDS_env* env, int* excl) -> int
 
     env->me_txns->mti_txnid = meta->mm_txnid;
 
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     {
         OVERLAPPED ov;
         // First acquire a shared lock. The Unlock will
@@ -1219,7 +1219,7 @@ auto ESECT fds_env_share_locks(FDS_env* env, int* excl) -> int
 auto ESECT fds_env_excl_lock(FDS_env* env, int* excl) -> int
 {
     int rc = 0;
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     if (LockFile(env->me_lfd, 0, 0, 1, 0) != 0)
     {
         *excl = 1;
@@ -1265,7 +1265,7 @@ auto ESECT fds_env_excl_lock(FDS_env* env, int* excl) -> int
     return rc;
 }
 
-#if defined(_WIN32) || defined(FDS_USE_POSIX_SEM)
+#if defined(FDS_WINDOWS) || defined(FDS_USE_POSIX_SEM)
 
 // Init #FDS_env.me_mutexname[] except the char which #MUTEXNAME() will set.
 // Changes to this code must be reflected in #FDS_LOCK_FORMAT.
@@ -1292,7 +1292,7 @@ void ESECT fds_env_mname_init(FDS_env* env)
 // Return 0 on success, non-zero on failure.
 auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* excl) -> int
 {
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
 #define FDS_ERRCODE_ROFS ERROR_WRITE_PROTECT
 #else
 #define FDS_ERRCODE_ROFS EROFS
@@ -1322,7 +1322,7 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
         if (rc != 0)
             goto fail;
         env->me_flags |= FDS_ENV_TXKEY;
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
         // Windows TLS callbacks need help finding their TLS info.
         if (fds_tls_nkeys >= MAX_TLS_KEYS)
         {
@@ -1339,7 +1339,7 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
     if (rc != 0)
         goto fail;
 
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     size = GetFileSize(env->me_lfd, nullptr);
 #else
     size = lseek(env->me_lfd, 0, SEEK_END);
@@ -1349,7 +1349,7 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
     rsize = (env->me_maxreaders - 1) * sizeof(FDS_reader) + sizeof(FDS_txninfo);
     if (size < rsize && *excl > 0)
     {
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
         if (SetFilePointer(env->me_lfd, rsize, nullptr, FILE_BEGIN) != (DWORD)rsize || (SetEndOfFile(env->me_lfd) == 0))
             goto fail_errno;
 #else
@@ -1364,7 +1364,7 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
         env->me_maxreaders = size / sizeof(FDS_reader) + 1;
     }
     {
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
         HANDLE mh;
         mh = CreateFileMapping(env->me_lfd, nullptr, PAGE_READWRITE, 0, 0, nullptr);
         if (mh == nullptr)
@@ -1382,7 +1382,7 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
     }
     if (*excl > 0)
     {
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
         BY_HANDLE_FILE_INFORMATION stbuf;
         struct
         {
@@ -1483,7 +1483,7 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
         pthread_mutexattr_destroy(&mattr);
         if (rc)
             goto fail;
-#endif  // _WIN32 || ...
+#endif  // FDS_WINDOWS || ...
 
         env->me_txns->mti_magic = FDS_MAGIC;
         env->me_txns->mti_format = FDS_LOCK_FORMAT;
@@ -1512,7 +1512,7 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
         {
             goto fail;
         }
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
         fds_env_mname_init(env);
         env->me_rmutex = OpenMutexA(SYNCHRONIZE, FALSE, MUTEXNAME(env, 'r'));
         if (env->me_rmutex == nullptr)
@@ -1629,7 +1629,7 @@ auto ESECT fds_env_open(FDS_env* env, const char* path, unsigned int flags, fds_
     rc = fds_fopen(env, &fname, ((flags & FDS_RDONLY) != 0U) ? FDS_O_RDONLY : FDS_O_RDWR, mode, &env->me_fd);
     if (rc != 0)
         goto leave;
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     rc = fds_fopen(env, &fname, FDS_O_OVERLAPPED, mode, &env->me_ovfd);
     if (rc != 0)
         goto leave;
@@ -1722,7 +1722,7 @@ void ESECT fds_env_close0(FDS_env* env, int excl)
     if ((env->me_flags & FDS_ENV_TXKEY) != 0U)
     {
         pthread_key_delete(env->me_txkey);
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
         // Delete our key from the global list
         for (i = 0; i < fds_tls_nkeys; i++)
             if (fds_tls_keys[i] == env->me_txkey)
@@ -1740,7 +1740,7 @@ void ESECT fds_env_close0(FDS_env* env, int excl)
     }
     if (env->me_mfd != INVALID_HANDLE_VALUE)
         (void)close(env->me_mfd);
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     if (env->ovs > 0)
     {
         for (i = 0; i < env->ovs; i++)
@@ -1766,7 +1766,7 @@ void ESECT fds_env_close0(FDS_env* env, int excl)
         for (i = env->me_close_readers; --i >= 0;)
             if (env->me_txns->mti_readers[i].mr_pid == pid)
                 env->me_txns->mti_readers[i].mr_pid = 0;
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
         if (env->me_rmutex != nullptr)
         {
             CloseHandle(env->me_rmutex);
@@ -1806,7 +1806,7 @@ void ESECT fds_env_close0(FDS_env* env, int excl)
     }
     if (env->me_lfd != INVALID_HANDLE_VALUE)
     {
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
         if (excl >= 0)
         {
             // Unlock the lockfile.  Windows would have unlocked it
@@ -1876,7 +1876,7 @@ auto ESECT CALL_CONV fds_env_copythr(void* arg) -> THREAD_RET
     int toggle = 0;
     int wsize;
     int rc;
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     DWORD len;
 #define DO_WRITE(rc, fd, ptr, w2, len) (rc) = WriteFile((fd), (ptr), (w2), &(len), NULL)
 #else
@@ -1910,7 +1910,7 @@ auto ESECT CALL_CONV fds_env_copythr(void* arg) -> THREAD_RET
             if (rc == 0)
             {
                 rc = ErrCode();
-#if defined(SIGPIPE) && !defined(_WIN32)
+#if defined(SIGPIPE) && !defined(FDS_WINDOWS)
                 if (rc == EPIPE)
                 {
                     // Collect the pending SIGPIPE, otherwise at least OS X
@@ -2170,7 +2170,7 @@ auto ESECT fds_env_copyfd1(FDS_env* env, HANDLE fd) -> int
     pgno_t new_root;
     int rc = FDS_SUCCESS;
 
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     my.mc_mutex = CreateMutex(nullptr, FALSE, nullptr);
     my.mc_cond = CreateEvent(nullptr, FALSE, FALSE, nullptr);
     if ((my.mc_mutex == nullptr) || (my.mc_cond == nullptr))
@@ -2282,7 +2282,7 @@ finish:
     fds_txn_abort_impl(txn);
 
 done:
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     if (my.mc_wbuf[0] != nullptr)
         _aligned_free(my.mc_wbuf[0]);
     if (my.mc_cond != nullptr)
@@ -2300,7 +2300,7 @@ done2:
 
 static auto ESECT fds_fsize(HANDLE fd, fds_size_t* size) -> int
 {
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     LARGE_INTEGER fsize;
 
     if (GetFileSizeEx(fd, &fsize) == 0)
@@ -2327,7 +2327,7 @@ auto ESECT fds_env_copyfd0(FDS_env* env, HANDLE fd) -> int
     fds_size_t wsize;
     fds_size_t w3;
     char* ptr;
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     DWORD len;
     DWORD w2;
 #define DO_WRITE(rc, fd, ptr, w2, len) (rc) = WriteFile((fd), (ptr), (w2), &(len), NULL)

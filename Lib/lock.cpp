@@ -5,7 +5,7 @@
 
 #include <utility>
 
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
 #define FDS_OWNERDEAD ((int)WAIT_ABANDONED)
 #elif defined FDS_USE_SYSV_SEM
 #define FDS_OWNERDEAD (FDS_LAST_ERRCODE + 11)
@@ -22,7 +22,7 @@
 // lock on the lockfile, set at an offset equal to the pid.
 auto fds_reader_pid(FDS_env* env, enum Pidlock_op op, FDS_PID_T pid) -> int
 {
-#if !(FDS_PIDLOCK) /* Currently the same as defined(_WIN32) */
+#if !(FDS_PIDLOCK) /* Currently the same as defined(FDS_WINDOWS) */
     if (op == Pidcheck)
     {
         HANDLE h{OpenProcess(env->me_pidquery, FALSE, pid)};
@@ -199,7 +199,7 @@ auto ESECT fds_mutex_failed(FDS_env* env, fds_mutexref_t mutex, int rc) -> int
         return cleanup_result;
     }
 
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     const int error_code = ErrCode();
     DPRINTF(("LOCK_MUTEX failed, %s", fds_strerror(error_code)));
     return error_code;
@@ -269,7 +269,7 @@ auto ESECT fds_reader_check0(FDS_env* env, int rlocked, int* dead) -> int
     return rc;
 }
 
-#ifndef _WIN32
+#ifndef FDS_WINDOWS
 
 #ifdef FDS_USE_POSIX_SEM
 

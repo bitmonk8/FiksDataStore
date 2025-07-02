@@ -22,7 +22,7 @@ enum Pidlock_op : int;
 
 using fds_hash_t = unsigned long long;
 
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
 
 #include <malloc.h>
 #include <wchar.h>
@@ -96,7 +96,7 @@ using ssize_t = SSIZE_T;
 #endif
 #endif
 
-#ifndef _WIN32
+#ifndef FDS_WINDOWS
 #include <pthread.h>
 #include <signal.h>
 #ifdef FDS_USE_POSIX_SEM
@@ -115,18 +115,14 @@ union semun
 #else
 #define FDS_USE_POSIX_MUTEX 1
 #endif  // FDS_USE_POSIX_SEM
-#endif  // !_WIN32
+#endif  // !FDS_WINDOWS
 
 #if defined(FDS_WINDOWS) + defined(FDS_LINUX) + defined(FDS_MACOS) != 1
 #error "Ambiguous target operating system"
 #endif
 
-#if defined(_WIN32) + defined(FDS_USE_POSIX_SEM) + defined(FDS_USE_SYSV_SEM) + defined(FDS_USE_POSIX_MUTEX) != 1
+#if defined(FDS_WINDOWS) + defined(FDS_USE_POSIX_SEM) + defined(FDS_USE_SYSV_SEM) + defined(FDS_USE_POSIX_MUTEX) != 1
 #error "Ambiguous shared-lock implementation"
-#endif
-
-#if defined(FDS_WINDOWS) && !defined(_WIN32)
-#error "_WIN32 must be defined for Windows"
 #endif
 
 #if defined(FDS_LINUX) && !defined(FDS_USE_POSIX_MUTEX)
@@ -208,7 +204,7 @@ enum
 #endif
 #endif
 
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
 #define CALL_CONV WINAPI
 #else
 #define CALL_CONV
@@ -227,6 +223,15 @@ enum
 #define GLIBC_VER ((__GLIBC__ << 16) | __GLIBC_MINOR__)
 #endif
 
+#ifdef _WIN32
+#define FDS_FMT_Z "I"
+#else
+#define FDS_FMT_Z "z"  // printf/scanf format modifier for size_t
+#endif
+
+// #fds_size_t printf formats, \b t = one of [diouxX] without quotes
+#define FDS_PRIy(t) FDS_FMT_Z #t
+
 #define Z FDS_FMT_Z     // printf/scanf format modifier for size_t
 #define Yu FDS_PRIy(u)  // printf format for fds_size_t
 #define Yd FDS_PRIy(d)  // printf format for 'signed fds_size_t'
@@ -240,7 +245,7 @@ enum
 #endif
 #endif  // FDS_USE_POSIX_MUTEX
 
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
 enum
 {
     FDS_PIDLOCK = 0
@@ -507,10 +512,10 @@ enum
 #define FDS_LOCK_FORMAT                                                                                                \
     ((uint32_t)(((FDS_LOCK_VERSION) % (1U << FDS_LOCK_VERSION_BITS)) + (FDS_lock_desc * (1U << FDS_LOCK_VERSION_BITS))))
 
-// Lock type and layout. Values 0-119. _WIN32 implies FDS_PIDLOCK.
+// Lock type and layout. Values 0-119. FDS_WINDOWS implies FDS_PIDLOCK.
 // Some low values are reserved for future tweaks.
 //
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
 #define FDS_LOCK_TYPE (0 + ALIGNOF2(fds_hash_t) / 8 % 2)
 #elif defined FDS_USE_POSIX_SEM
 #define FDS_LOCK_TYPE (4 + ALIGNOF2(fds_hash_t) / 8 % 2)

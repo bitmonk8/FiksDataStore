@@ -114,7 +114,7 @@ auto fds_page_flush(FDS_txn* txn, int keep) -> int
     const auto psize = env->me_psize;
     const int pagecount = dl[0].mid;
     int rc{};
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     auto* ov = env->ov;
     const HANDLE fd = ((env->me_flags & FDS_NOSYNC) != 0U) ? env->me_fd : env->me_ovfd;
 #else
@@ -125,7 +125,7 @@ auto fds_page_flush(FDS_txn* txn, int keep) -> int
     int page_write_index = initial_keep_count;
 
     if (((env->me_flags & FDS_WRITEMAP) != 0U)
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
         // In windows, we still do writes to the file (with write-through enabled in sync mode),
         // as this is faster than FlushViewOfFile/FlushFileBuffers
         && ((env->me_flags & FDS_NOSYNC) != 0U)
@@ -148,7 +148,7 @@ auto fds_page_flush(FDS_txn* txn, int keep) -> int
         goto done;
     }
 
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     if (pagecount - keep >= env->ovs)
     {
         // ran out of room in ov array, and re-malloc, copy handles and free previous
@@ -174,7 +174,7 @@ auto fds_page_flush(FDS_txn* txn, int keep) -> int
 
     // Write the pages
     {
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
         int async_i{0};
         FDS_page* wdp{nullptr};
 #else
@@ -213,7 +213,7 @@ auto fds_page_flush(FDS_txn* txn, int keep) -> int
             // Write up to FDS_COMMIT_PAGES dirty pages at a time.
             if (pos != next_pos || n == FDS_COMMIT_PAGES ||
                 wsize + size > MAX_WRITE
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
                 // If writemap is enabled, consecutive page positions infer
                 // contiguous (mapped) memory.
                 // Otherwise force write pages one at a time.
@@ -232,7 +232,7 @@ auto fds_page_flush(FDS_txn* txn, int keep) -> int
                 retry_write:
                     // Write previous page(s)
                     DPRINTF(("committing page %" Z "u", pgno));
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
                     OVERLAPPED* this_ov = &ov[async_i];
                     // Clear status, and keep hEvent, we reuse that
                     this_ov->Internal = 0;
@@ -291,28 +291,28 @@ auto fds_page_flush(FDS_txn* txn, int keep) -> int
                         }
                         return rc;
                     }
-#endif /* _WIN32 */
+#endif /* FDS_WINDOWS */
                     n = 0;
                 }
                 if (page_write_index > pagecount)
                     break;
                 wpos = pos;
                 wsize = 0;
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
                 wdp = dp;
             }
 #else
             }
             iov[n].iov_len = size;
             iov[n].iov_base = (char*)dp;
-#endif /* _WIN32 */
+#endif /* FDS_WINDOWS */
             DPRINTF(("committing page %" Yu, pgno));
             next_pos = pos + size;
             wsize += size;
             n++;
         }
 
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
         if (!F_ISSET(env->me_flags, FDS_NOSYNC))
         {
             // Now wait for all the asynchronous/overlapped sync/write-through writes to complete.
@@ -337,7 +337,7 @@ auto fds_page_flush(FDS_txn* txn, int keep) -> int
                 return rc;
             }
         }
-#endif  // _WIN32
+#endif  // FDS_WINDOWS
     }
 
     if ((env->me_flags & FDS_WRITEMAP) == 0U)
@@ -587,7 +587,7 @@ auto fds_page_spill(FDS_cursor* m0, FDS_val* key, FDS_val* data) -> int
 // Add a page to the txn's dirty list
 void fds_page_dirty(FDS_txn* txn, FDS_page* mp)
 {
-#ifdef _WIN32  // With Windows we always write dirty pages with WriteFile, so we always want them ordered
+#ifdef FDS_WINDOWS  // With Windows we always write dirty pages with WriteFile, so we always want them ordered
     const auto insert = fds_mid2l_insert;
 #else  // but otherwise with writemaps, we just use msync, we don't need the ordering and just append
     const auto insert = (txn->mt_flags & FDS_TXN_WRITEMAP) ? fds_mid2l_append : fds_mid2l_insert;
@@ -853,7 +853,7 @@ search_complete:
         }
         final_pgno = new_pgno;
 
-#if defined(_WIN32)
+#if defined(FDS_WINDOWS)
         if ((env->me_flags & FDS_RDONLY) == 0U)
         {
             void* p = VirtualAlloc(env->me_map + (env->me_psize * new_pgno),

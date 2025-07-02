@@ -26,7 +26,7 @@
 #include <cstdlib>
 #include <ctime>
 
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
 #include <direct.h>
 #define mkdir(dir, mode) _mkdir(dir)
 #endif

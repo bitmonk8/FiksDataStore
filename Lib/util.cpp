@@ -4,7 +4,7 @@
 
 #include <cstring>
 
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
 #include <windows.h>
 #endif
 
@@ -48,7 +48,7 @@ static const char* const fds_errstr[] = {
 
 auto fds_strerror(int err) -> const char*
 {
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     // HACK: pad 4KB on stack over the buf. Return system msgs in buf.
     // This works as long as no function between the call to fds_strerror
     // and the actual use of the message uses more than 4K of stack.
@@ -65,7 +65,7 @@ auto fds_strerror(int err) -> const char*
         return fds_errstr[err - FDS_KEYEXIST];
     }
 
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     // These are the C-runtime error codes we use. The comment indicates
     // their numeric value, and the Win32 error they would correspond to
     // if the error actually came from a Win32 API. A major mess, we should

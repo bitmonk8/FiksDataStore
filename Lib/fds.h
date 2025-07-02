@@ -181,38 +181,18 @@ using fds_mode_t = int;
 typedef mode_t fds_mode_t;
 #endif
 
-#ifdef _WIN32
-#define FDS_FMT_Z "I"
-#else
-#define FDS_FMT_Z "z"  // printf/scanf format modifier for size_t
-#endif
-
 // Unsigned type used for mapsize, entry counts and page/transaction IDs.
 // It size_t, hence the name.
 using fds_size_t = size_t;
 
 #define FDS_SIZE_MAX SIZE_MAX  // max #fds_size_t
 
-// #fds_size_t printf formats, \b t = one of [diouxX] without quotes
-#define FDS_PRIy(t) FDS_FMT_Z #t
-// #fds_size_t scanf formats, \b t = one of [dioux] without quotes
-#define FDS_SCNy(t) FDS_FMT_Z #t
-
 // An abstraction for a file handle.
-// On POSIX systems file handles are small integers. On Windows
-// they're opaque pointers.
 #ifdef _WIN32
 using fds_filehandle_t = void*;
 #else
-typedef int fds_filehandle_t;
+using fds_filehandle_t = int;
 #endif
-
-// @defgroup mdb FiksDataStore API
-// @{
-// @brief FiksDataStore Memory-Mapped Database Manager
-
-// @defgroup Version Version Macros
-// @{
 
 // Library major version
 enum
@@ -240,8 +220,6 @@ enum
 
 // The full library version as a C string
 #define FDS_VERSION_STRING FDS_VERFOO(FDS_VERSION_MAJOR, FDS_VERSION_MINOR, FDS_VERSION_PATCH, FDS_VERSION_DATE)
-
-// @}
 
 // @brief Opaque structure for a database environment.
 // A DB environment supports multiple databases, all residing in the same

@@ -2,7 +2,7 @@
 
 #include "internal.h"
 
-#if !(FDS_PIDLOCK)  // Currently the same as defined(_WIN32)
+#if !(FDS_PIDLOCK)  // Currently the same as defined(FDS_WINDOWS)
 enum Pidlock_op : int
 {
     Pidset,

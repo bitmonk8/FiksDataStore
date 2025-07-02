@@ -6,7 +6,7 @@
 
 // Initial part of FDS_env.me_mutexname[].
 // Changes to this code must be reflected in FDS_LOCK_FORMAT.
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
 #define MUTEXNAME_PREFIX "Global\\MDB"
 #elif defined FDS_USE_POSIX_SEM
 #define MUTEXNAME_PREFIX "/MDB"
@@ -69,7 +69,7 @@ struct FDS_txbody
     // This always records the maximum count, it is not decremented
     // when readers release their slots.
     volatile unsigned mtb_numreaders;
-#if defined(_WIN32) || defined(FDS_USE_POSIX_SEM)
+#if defined(FDS_WINDOWS) || defined(FDS_USE_POSIX_SEM)
     // Binary form of names of the reader/writer locks
     fds_hash_t mtb_mutexid;
 #elif defined(FDS_USE_SYSV_SEM)
@@ -100,7 +100,7 @@ struct FDS_txninfo
 #endif
         char pad[(sizeof(FDS_txbody) + CACHELINE - 1) & ~(CACHELINE - 1)];
     } mt1;
-#if !(defined(_WIN32) || defined(FDS_USE_POSIX_SEM))
+#if !(defined(FDS_WINDOWS) || defined(FDS_USE_POSIX_SEM))
     union
     {
 #ifdef FDS_USE_SYSV_SEM
@@ -122,9 +122,9 @@ struct FDS_env
     HANDLE me_fd;   // The main data file
     HANDLE me_lfd;  // The lock file
     HANDLE me_mfd;  // For writing and syncing the meta pages
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     HANDLE me_ovfd;  // Overlapped/async with write-through file handle
-#endif               /* _WIN32 */
+#endif               /* FDS_WINDOWS */
                      // Failed to update the meta page. Probably an I/O error.
 #define FDS_FATAL_ERROR 0x80000000U
     // Some fields are initialized.
@@ -173,7 +173,7 @@ struct FDS_env
     unsigned int me_maxkey;  // max size of a key
 #endif
     int me_live_reader;  // have liveness lock in reader table
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
     int me_pidquery;  // Used in OpenProcess
     OVERLAPPED* ov;   // Used for for overlapping I/O requests
     int ovs;          // Count of OVERLAPPEDs
@@ -184,7 +184,7 @@ struct FDS_env
 #else
     fds_mutex_t me_rmutex;
     fds_mutex_t me_wmutex;
-#if defined(_WIN32) || defined(FDS_USE_POSIX_SEM)
+#if defined(FDS_WINDOWS) || defined(FDS_USE_POSIX_SEM)
     // Half-initialized name of mutexes, to be completed by MUTEXNAME()
     char me_mutexname[sizeof(MUTEXNAME_PREFIX) + 11];
 #endif

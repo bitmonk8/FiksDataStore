@@ -36,7 +36,7 @@
 #endif
 
 // Platform-specific string duplication function
-#ifdef _WIN32
+#ifdef FDS_WINDOWS
 #define fds_strdup _strdup
 #else
 #define fds_strdup strdup
