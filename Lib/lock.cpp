@@ -9,7 +9,7 @@
 #define FDS_OWNERDEAD ((int)WAIT_ABANDONED)
 #elif defined FDS_USE_SYSV_SEM
 #define FDS_OWNERDEAD (FDS_LAST_ERRCODE + 11)
-#elif defined(FDS_USE_POSIX_MUTEX)
+#elif defined(FDS_LINUX)
 #define FDS_OWNERDEAD EOWNERDEAD /* LOCK_MUTEX0() result if dead owner */
 #endif
 

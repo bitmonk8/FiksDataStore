@@ -176,7 +176,7 @@ struct FDS_env
     OVERLAPPED* ov;   // Used for for overlapping I/O requests
     int ovs;          // Count of OVERLAPPEDs
 #endif
-#ifdef FDS_USE_POSIX_MUTEX             /* Posix mutexes reside in shared mem */
+#ifdef FDS_LINUX             /* Posix mutexes reside in shared mem */
 #define me_rmutex me_txns->mti_rmutex  // Shared reader lock
 #define me_wmutex me_txns->mti_wmutex  // Shared writer lock
 #else

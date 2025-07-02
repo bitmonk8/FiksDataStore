@@ -89,9 +89,9 @@ using ssize_t = SSIZE_T;
 #endif
 
 #if defined(__FreeBSD__) && defined(__FreeBSD_version) && __FreeBSD_version >= 1100110
-#define FDS_USE_POSIX_MUTEX 1
+#define FDS_LINUX 1
 #elif defined(__APPLE__) || defined(BSD) || defined(__FreeBSD_kernel__)
-#if !(defined(FDS_USE_POSIX_MUTEX))
+#if !(defined(FDS_LINUX))
 #define FDS_USE_SYSV_SEM 1
 #endif
 #endif
@@ -111,7 +111,7 @@ union semun
 };
 #endif  // _SEM_SEMUN_UNDEFINED
 #else
-#define FDS_USE_POSIX_MUTEX 1
+#define FDS_LINUX 1
 #endif
 #endif  // !FDS_WINDOWS
 
@@ -119,12 +119,8 @@ union semun
 #error "Ambiguous target operating system"
 #endif
 
-#if defined(FDS_WINDOWS) + defined(FDS_USE_SYSV_SEM) + defined(FDS_USE_POSIX_MUTEX) != 1
+#if defined(FDS_WINDOWS) + defined(FDS_USE_SYSV_SEM) + defined(FDS_LINUX) != 1
 #error "Ambiguous shared-lock implementation"
-#endif
-
-#if defined(FDS_LINUX) && !defined(FDS_USE_POSIX_MUTEX)
-#error "FDS_USE_POSIX_MUTEX must be enabled for Linux"
 #endif
 
 #if defined(FDS_MACOS) && !defined(FDS_USE_SYSV_SEM)
@@ -230,14 +226,14 @@ enum
 #define Yu FDS_PRIy(u)  // printf format for fds_size_t
 #define Yd FDS_PRIy(d)  // printf format for 'signed fds_size_t'
 
-#if defined(FDS_USE_POSIX_MUTEX)
+#if defined(FDS_LINUX)
 // glibc < 2.12 only provided _np API
 #if (defined(__GLIBC__) && GLIBC_VER < 0x02000c) || (defined(PTHREAD_MUTEX_ROBUST_NP) && !defined(PTHREAD_MUTEX_ROBUST))
 #define PTHREAD_MUTEX_ROBUST PTHREAD_MUTEX_ROBUST_NP
 #define pthread_mutexattr_setrobust(attr, flag) pthread_mutexattr_setrobust_np(attr, flag)
 #define pthread_mutex_consistent(mutex) pthread_mutex_consistent_np(mutex)
 #endif
-#endif  // FDS_USE_POSIX_MUTEX
+#endif  // FDS_LINUX
 
 #ifdef FDS_WINDOWS
 enum
@@ -319,7 +315,7 @@ int fds_sem_wait(fds_mutexref_t sem);
 
 #define fds_mutex_consistent(mutex) 0
 
-#else  // FDS_USE_POSIX_MUTEX:
+#else  // FDS_LINUX:
 // Shared mutex/semaphore as the original is stored.
 //
 // Not for copies. Instead it can be assigned to an fds_mutexref_t.
@@ -505,7 +501,7 @@ enum
 #define FDS_LOCK_TYPE (0 + ALIGNOF2(fds_hash_t) / 8 % 2)
 #elif defined FDS_USE_SYSV_SEM
 #define FDS_LOCK_TYPE (8)
-#elif defined FDS_USE_POSIX_MUTEX
+#elif defined FDS_LINUX
 // We do not know the inside of a POSIX mutex and how to check if mutexes
 // used by two executables are compatible. Just check alignment and size.
 //

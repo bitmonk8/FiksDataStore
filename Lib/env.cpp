@@ -1248,8 +1248,8 @@ auto ESECT fds_env_excl_lock(FDS_env* env, int* excl) -> int
         *excl = 1;
     }
     else
-#ifndef FDS_USE_POSIX_MUTEX
-        if (*excl < 0)  // always true when FDS_USE_POSIX_MUTEX
+#ifndef FDS_LINUX
+        if (*excl < 0)  // always true when FDS_LINUX
 #endif
     {
         lock_info.l_type = F_RDLCK;
@@ -1424,7 +1424,7 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
         env->me_txns->mti_semid = semid;
         env->me_txns->mti_rlocked = 0;
         env->me_txns->mti_wlocked = 0;
-#else   // FDS_USE_POSIX_MUTEX:
+#else   // FDS_LINUX:
         pthread_mutexattr_t mattr;
 
         // Solaris needs this before initing a robust mutex.  Otherwise
