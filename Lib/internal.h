@@ -121,6 +121,22 @@ union semun
 #error "Ambiguous shared-lock implementation"
 #endif
 
+#if defined(_WIN32)
+#error "_WIN32"
+#endif
+
+#if defined(FDS_USE_POSIX_SEM)
+#error "FDS_USE_POSIX_SEM"
+#endif
+
+#if defined(FDS_USE_SYSV_SEM)
+#error "FDS_USE_SYSV_SEM"
+#endif
+
+#if defined(FDS_USE_POSIX_MUTEX)
+#error "FDS_USE_POSIX_MUTEX"
+#endif
+
 #ifdef USE_VALGRIND
 #include <valgrind/memcheck.h>
 #define VGMEMP_CREATE(h, r, z) VALGRIND_CREATE_MEMPOOL(h, r, z)
