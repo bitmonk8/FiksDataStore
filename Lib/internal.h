@@ -234,9 +234,6 @@ using fds_mutexref_t = HANDLE;
     } while (0)
 #define THREAD_CREATE(thr, start, arg) (((thr) = CreateThread(NULL, 0, start, arg, 0, NULL)) ? 0 : ErrCode())
 #define THREAD_FINISH(thr) (WaitForSingleObject(thr, INFINITE) ? ErrCode() : 0)
-#define LOCK_MUTEX0(mutex) WaitForSingleObject(mutex, INFINITE)
-#define UNLOCK_MUTEX(mutex) ReleaseMutex(mutex)
-#define fds_mutex_consistent(mutex) 0
 #define getpid() GetCurrentProcessId()
 #define ErrCode() GetLastError()
 #define GET_PAGESIZE(x)                                                                                                \
@@ -269,20 +266,6 @@ struct fds_mutex
 typedef fds_mutex fds_mutex_t[1];
 typedef fds_mutex* fds_mutexref_t;
 
-#define LOCK_MUTEX0(mutex) fds_sem_wait(mutex)
-#define UNLOCK_MUTEX(mutex)                                                                                            \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        struct sembuf sb = {0, 1, SEM_UNDO};                                                                           \
-        sb.sem_num = (mutex)->semnum;                                                                                  \
-        *(mutex)->locked = 0;                                                                                          \
-        semop((mutex)->semid, &sb, 1);                                                                                 \
-    } while (0)
-
-int fds_sem_wait(fds_mutexref_t sem);
-
-#define fds_mutex_consistent(mutex) 0
-
 #else  // FDS_LINUX:
 // Shared mutex/semaphore as the original is stored.
 //
@@ -292,16 +275,7 @@ int fds_sem_wait(fds_mutexref_t sem);
 typedef pthread_mutex_t fds_mutex_t[1];
 // Reference to an fds_mutex_t
 typedef pthread_mutex_t* fds_mutexref_t;
-// Lock the reader or writer mutex.
-// Returns 0 or a code to give fds_mutex_failed(), as in LOCK_MUTEX().
-//
-#define LOCK_MUTEX0(mutex) pthread_mutex_lock(mutex)
-// Unlock the reader or writer mutex.
-//
-#define UNLOCK_MUTEX(mutex) pthread_mutex_unlock(mutex)
-// Mark mutex-protected data as repaired, after death of previous owner.
-//
-#define fds_mutex_consistent(mutex) pthread_mutex_consistent(mutex)
+
 #endif  // FDS_MACOS
 
 // Get the error code for the last failed system function.

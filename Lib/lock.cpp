@@ -269,9 +269,7 @@ auto ESECT fds_reader_check0(FDS_env* env, int rlocked, int* dead) -> int
     return rc;
 }
 
-#ifndef FDS_WINDOWS
-
-#if defined FDS_MACOS
+#if defined(FDS_MACOS)
 
 int fds_sem_wait(fds_mutexref_t sem)
 {
@@ -290,7 +288,5 @@ int fds_sem_wait(fds_mutexref_t sem)
     } while ((rc = errno) == EINTR);
     return rc;
 }
-
-#endif
 
 #endif

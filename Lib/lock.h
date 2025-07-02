@@ -53,6 +53,51 @@ struct FDS_reader
     } mru;
 };
 
+
+#if defined(FDS_WINDOWS)
+
+#define LOCK_MUTEX0(mutex) WaitForSingleObject(mutex, INFINITE)
+
+#define UNLOCK_MUTEX(mutex) ReleaseMutex(mutex)
+
+#define fds_mutex_consistent(mutex) 0
+
+#elif defined(FDS_MACOS)
+
+int fds_sem_wait(fds_mutexref_t sem);
+
+#define LOCK_MUTEX0(mutex) fds_sem_wait(mutex)
+
+#define UNLOCK_MUTEX(mutex)                                                                                            \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        struct sembuf sb = {0, 1, SEM_UNDO};                                                                           \
+        sb.sem_num = (mutex)->semnum;                                                                                  \
+        *(mutex)->locked = 0;                                                                                          \
+        semop((mutex)->semid, &sb, 1);                                                                                 \
+    } while (0)
+
+#define fds_mutex_consistent(mutex) 0
+
+#elif defined(FDS_LINUX)
+
+// Lock the reader or writer mutex.
+// Returns 0 or a code to give fds_mutex_failed(), as in LOCK_MUTEX().
+#define LOCK_MUTEX0(mutex) pthread_mutex_lock(mutex)
+
+// Unlock the reader or writer mutex.
+#define UNLOCK_MUTEX(mutex) pthread_mutex_unlock(mutex)
+
+// Mark mutex-protected data as repaired, after death of previous owner.
+#define fds_mutex_consistent(mutex) pthread_mutex_consistent(mutex)
+
+#else
+
+#error "Unknown platform for mutex locking"
+
+#endif
+
+
 // Lock mutex, handle any error, set rc = result.
 // Return 0 on success, nonzero (not rc) on error.
 #define LOCK_MUTEX(rc, env, mutex) (((rc) = LOCK_MUTEX0(mutex)) && ((rc) = fds_mutex_failed(env, mutex, rc)))
