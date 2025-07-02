@@ -117,12 +117,10 @@ union semun
 #endif  // FDS_USE_POSIX_SEM
 #endif  // !_WIN32
 
+// FDS_USE_POSIX_MUTEX defined on Linux
+
 #if defined(_WIN32) + defined(FDS_USE_POSIX_SEM) + defined(FDS_USE_SYSV_SEM) + defined(FDS_USE_POSIX_MUTEX) != 1
 #error "Ambiguous shared-lock implementation"
-#endif
-
-#if defined(_WIN32)
-#error "_WIN32"
 #endif
 
 #if defined(FDS_USE_POSIX_SEM)
@@ -131,10 +129,6 @@ union semun
 
 #if defined(FDS_USE_SYSV_SEM)
 #error "FDS_USE_SYSV_SEM"
-#endif
-
-#if defined(FDS_USE_POSIX_MUTEX)
-#error "FDS_USE_POSIX_MUTEX"
 #endif
 
 #ifdef USE_VALGRIND
