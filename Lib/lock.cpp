@@ -271,17 +271,7 @@ auto ESECT fds_reader_check0(FDS_env* env, int rlocked, int* dead) -> int
 
 #ifndef FDS_WINDOWS
 
-#ifdef FDS_USE_POSIX_SEM
-
-int fds_sem_wait(sem_t* sem)
-{
-    int rc;
-    while ((rc = sem_wait(sem)) && (rc = errno) == EINTR)
-        ;
-    return rc;
-}
-
-#elif defined FDS_USE_SYSV_SEM
+#if defined FDS_USE_SYSV_SEM
 
 int fds_sem_wait(fds_mutexref_t sem)
 {

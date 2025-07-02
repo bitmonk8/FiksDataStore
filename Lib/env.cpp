@@ -829,10 +829,7 @@ auto ESECT fds_env_create(FDS_env** env) -> int
     e->me_fd = INVALID_HANDLE_VALUE;
     e->me_lfd = INVALID_HANDLE_VALUE;
     e->me_mfd = INVALID_HANDLE_VALUE;
-#ifdef FDS_USE_POSIX_SEM
-    e->me_rmutex = SEM_FAILED;
-    e->me_wmutex = SEM_FAILED;
-#elif defined FDS_USE_SYSV_SEM
+#if defined FDS_USE_SYSV_SEM
     e->me_rmutex->semid = -1;
     e->me_wmutex->semid = -1;
 #endif
@@ -1265,7 +1262,7 @@ auto ESECT fds_env_excl_lock(FDS_env* env, int* excl) -> int
     return rc;
 }
 
-#if defined(FDS_WINDOWS) || defined(FDS_USE_POSIX_SEM)
+#if defined(FDS_WINDOWS)
 
 // Init #FDS_env.me_mutexname[] except the char which #MUTEXNAME() will set.
 // Changes to this code must be reflected in #FDS_LOCK_FORMAT.
@@ -1413,41 +1410,6 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
         env->me_wmutex = CreateMutexA(&fds_all_sa, FALSE, MUTEXNAME(env, 'w'));
         if (env->me_wmutex == nullptr)
             goto fail_errno;
-#elif defined(FDS_USE_POSIX_SEM)
-        struct stat stbuf;
-        struct
-        {
-            dev_t dev;
-            ino_t ino;
-        } idbuf;
-
-#if defined(__NetBSD__)
-#define FDS_SHORT_SEMNAMES 1  // limited to 14 chars
-#endif
-        if (fstat(env->me_lfd, &stbuf))
-            goto fail_errno;
-        memset(&idbuf, 0, sizeof(idbuf));
-        idbuf.dev = stbuf.st_dev;
-        idbuf.ino = stbuf.st_ino;
-        env->me_txns->mti_mutexid = fds_hash(&idbuf, sizeof(idbuf))
-#ifdef FDS_SHORT_SEMNAMES
-                                    /* Max 9 base85-digits.  We truncate here instead of in
-                                     * fds_env_mname_init() to keep the latter portable.
-                                     */
-                                    % ((fds_hash_t)85 * 85 * 85 * 85 * 85 * 85 * 85 * 85 * 85)
-#endif
-            ;
-        fds_env_mname_init(env);
-        // Clean up after a previous run, if needed:  Try to
-        // remove both semaphores before doing anything else.
-        sem_unlink(MUTEXNAME(env, 'r'));
-        sem_unlink(MUTEXNAME(env, 'w'));
-        env->me_rmutex = sem_open(MUTEXNAME(env, 'r'), O_CREAT | O_EXCL, mode, 1);
-        if (env->me_rmutex == SEM_FAILED)
-            goto fail_errno;
-        env->me_wmutex = sem_open(MUTEXNAME(env, 'w'), O_CREAT | O_EXCL, mode, 1);
-        if (env->me_wmutex == SEM_FAILED)
-            goto fail_errno;
 #elif defined(FDS_USE_SYSV_SEM)
         unsigned short vals[2] = {1, 1};
         key_t key = ftok(fname->mn_val, 'M');  // fname is lockfile path now
@@ -1519,14 +1481,6 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
             goto fail_errno;
         env->me_wmutex = OpenMutexA(SYNCHRONIZE, FALSE, MUTEXNAME(env, 'w'));
         if (env->me_wmutex == nullptr)
-            goto fail_errno;
-#elif defined(FDS_USE_POSIX_SEM)
-        fds_env_mname_init(env);
-        env->me_rmutex = sem_open(MUTEXNAME(env, 'r'), 0);
-        if (env->me_rmutex == SEM_FAILED)
-            goto fail_errno;
-        env->me_wmutex = sem_open(MUTEXNAME(env, 'w'), 0);
-        if (env->me_wmutex == SEM_FAILED)
             goto fail_errno;
 #elif defined(FDS_USE_SYSV_SEM)
         semid = env->me_txns->mti_semid;
@@ -1775,22 +1729,6 @@ void ESECT fds_env_close0(FDS_env* env, int excl)
         }
         // Windows automatically destroys the mutexes when
         // the last handle closes.
-#elif defined(FDS_USE_POSIX_SEM)
-        if (env->me_rmutex != SEM_FAILED)
-        {
-            sem_close(env->me_rmutex);
-            if (env->me_wmutex != SEM_FAILED)
-                sem_close(env->me_wmutex);
-            // If we have the filelock:  If we are the
-            // only remaining user, clean up semaphores.
-            if (excl == 0)
-                fds_env_excl_lock(env, &excl);
-            if (excl > 0)
-            {
-                sem_unlink(MUTEXNAME(env, 'r'));
-                sem_unlink(MUTEXNAME(env, 'w'));
-            }
-        }
 #elif defined(FDS_USE_SYSV_SEM)
         if (env->me_rmutex->semid != -1)
         {

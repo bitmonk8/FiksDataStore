@@ -91,7 +91,7 @@ using ssize_t = SSIZE_T;
 #if defined(__FreeBSD__) && defined(__FreeBSD_version) && __FreeBSD_version >= 1100110
 #define FDS_USE_POSIX_MUTEX 1
 #elif defined(__APPLE__) || defined(BSD) || defined(__FreeBSD_kernel__)
-#if !(defined(FDS_USE_POSIX_MUTEX) || defined(FDS_USE_POSIX_SEM))
+#if !(defined(FDS_USE_POSIX_MUTEX))
 #define FDS_USE_SYSV_SEM 1
 #endif
 #endif
@@ -99,9 +99,7 @@ using ssize_t = SSIZE_T;
 #ifndef FDS_WINDOWS
 #include <pthread.h>
 #include <signal.h>
-#ifdef FDS_USE_POSIX_SEM
-#include <semaphore.h>
-#elif defined(FDS_USE_SYSV_SEM)
+#if defined(FDS_USE_SYSV_SEM)
 #include <sys/ipc.h>
 #include <sys/sem.h>
 #ifdef _SEM_SEMUN_UNDEFINED
@@ -114,14 +112,14 @@ union semun
 #endif  // _SEM_SEMUN_UNDEFINED
 #else
 #define FDS_USE_POSIX_MUTEX 1
-#endif  // FDS_USE_POSIX_SEM
+#endif
 #endif  // !FDS_WINDOWS
 
 #if defined(FDS_WINDOWS) + defined(FDS_LINUX) + defined(FDS_MACOS) != 1
 #error "Ambiguous target operating system"
 #endif
 
-#if defined(FDS_WINDOWS) + defined(FDS_USE_POSIX_SEM) + defined(FDS_USE_SYSV_SEM) + defined(FDS_USE_POSIX_MUTEX) != 1
+#if defined(FDS_WINDOWS) + defined(FDS_USE_SYSV_SEM) + defined(FDS_USE_POSIX_MUTEX) != 1
 #error "Ambiguous shared-lock implementation"
 #endif
 
@@ -131,10 +129,6 @@ union semun
 
 #if defined(FDS_MACOS) && !defined(FDS_USE_SYSV_SEM)
 #error "FDS_USE_SYSV_SEM must be enabled for macOS"
-#endif
-
-#if defined(FDS_USE_POSIX_SEM)
-#error "FDS_USE_POSIX_SEM"
 #endif
 
 #ifdef USE_VALGRIND
@@ -299,15 +293,7 @@ using fds_mutexref_t = HANDLE;
 // For FDS_LOCK_FORMAT: True if readers take a pid lock in the lockfile
 #define FDS_PIDLOCK 1
 
-#ifdef FDS_USE_POSIX_SEM
-
-typedef sem_t *fds_mutex_t, *fds_mutexref_t;
-#define LOCK_MUTEX0(mutex) fds_sem_wait(mutex)
-#define UNLOCK_MUTEX(mutex) sem_post(mutex)
-
-int fds_sem_wait(sem_t* sem);
-
-#elif defined FDS_USE_SYSV_SEM
+#if defined FDS_USE_SYSV_SEM
 
 struct fds_mutex
 {
@@ -352,7 +338,7 @@ typedef pthread_mutex_t* fds_mutexref_t;
 // Mark mutex-protected data as repaired, after death of previous owner.
 //
 #define fds_mutex_consistent(mutex) pthread_mutex_consistent(mutex)
-#endif  // FDS_USE_POSIX_SEM || FDS_USE_SYSV_SEM
+#endif  // FDS_USE_SYSV_SEM
 
 // Get the error code for the last failed system function.
 //
@@ -517,8 +503,6 @@ enum
 //
 #ifdef FDS_WINDOWS
 #define FDS_LOCK_TYPE (0 + ALIGNOF2(fds_hash_t) / 8 % 2)
-#elif defined FDS_USE_POSIX_SEM
-#define FDS_LOCK_TYPE (4 + ALIGNOF2(fds_hash_t) / 8 % 2)
 #elif defined FDS_USE_SYSV_SEM
 #define FDS_LOCK_TYPE (8)
 #elif defined FDS_USE_POSIX_MUTEX

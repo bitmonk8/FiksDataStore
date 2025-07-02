@@ -65,8 +65,7 @@
 // Otherwise just make all programs using the database close it;
 // the lockfile is always reset on first open of the environment.
 
-// - On BSD systems or others configured with FDS_USE_SYSV_SEM or
-// FDS_USE_POSIX_SEM,
+// - On BSD systems or others configured with FDS_USE_SYSV_SEM,
 // startup can fail due to semaphores owned by another userid.
 
 // Fix: Open and close the database as the user which owns the
@@ -76,7 +75,7 @@
 // Restrictions/caveats (in addition to those listed for some functions):
 
 // - Only the database owner should normally use the database on
-// BSD systems or when otherwise configured with FDS_USE_POSIX_SEM.
+// BSD systems.
 // Multiple users can cause startup to fail later, as noted above.
 
 // - There is normally no pure read-only mode, since readers need write

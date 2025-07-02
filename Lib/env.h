@@ -8,8 +8,6 @@
 // Changes to this code must be reflected in FDS_LOCK_FORMAT.
 #ifdef FDS_WINDOWS
 #define MUTEXNAME_PREFIX "Global\\MDB"
-#elif defined FDS_USE_POSIX_SEM
-#define MUTEXNAME_PREFIX "/MDB"
 #endif
 
 // Meta page content.
@@ -69,7 +67,7 @@ struct FDS_txbody
     // This always records the maximum count, it is not decremented
     // when readers release their slots.
     volatile unsigned mtb_numreaders;
-#if defined(FDS_WINDOWS) || defined(FDS_USE_POSIX_SEM)
+#if defined(FDS_WINDOWS)
     // Binary form of names of the reader/writer locks
     fds_hash_t mtb_mutexid;
 #elif defined(FDS_USE_SYSV_SEM)
@@ -100,7 +98,7 @@ struct FDS_txninfo
 #endif
         char pad[(sizeof(FDS_txbody) + CACHELINE - 1) & ~(CACHELINE - 1)];
     } mt1;
-#if !(defined(FDS_WINDOWS) || defined(FDS_USE_POSIX_SEM))
+#if !(defined(FDS_WINDOWS))
     union
     {
 #ifdef FDS_USE_SYSV_SEM
@@ -184,7 +182,7 @@ struct FDS_env
 #else
     fds_mutex_t me_rmutex;
     fds_mutex_t me_wmutex;
-#if defined(FDS_WINDOWS) || defined(FDS_USE_POSIX_SEM)
+#if defined(FDS_WINDOWS)
     // Half-initialized name of mutexes, to be completed by MUTEXNAME()
     char me_mutexname[sizeof(MUTEXNAME_PREFIX) + 11];
 #endif
