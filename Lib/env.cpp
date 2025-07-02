@@ -9,6 +9,10 @@
 #include "lock.h"
 #include "txn.h"
 
+// Lockfile format signature: version, features and field layout
+#define FDS_LOCK_FORMAT                                                                                                \
+    ((uint32_t)(((FDS_LOCK_VERSION) % (1U << FDS_LOCK_VERSION_BITS)) + (FDS_lock_desc * (1U << FDS_LOCK_VERSION_BITS))))
+
 // The maximum size of a database page.
 //
 // It is 32k or 64k, since value-PAGEBASE must fit in
@@ -1279,6 +1283,17 @@ void ESECT fds_env_mname_init(FDS_env* env)
 // Return env->me_mutexname after filling in ch ('r'/'w') for convenience
 #define MUTEXNAME(env, ch) ((void)((env)->me_mutexname[sizeof(MUTEXNAME_PREFIX) - 1] = (ch)), (env)->me_mutexname)
 
+#endif
+
+#if defined(FDS_MACOS)
+#ifdef _SEM_SEMUN_UNDEFINED
+union semun
+{
+    int val;
+    struct semid_ds* buf;
+    unsigned short* array;
+};
+#endif  // _SEM_SEMUN_UNDEFINED
 #endif
 
 // Open and/or initialize the lock region for the environment.

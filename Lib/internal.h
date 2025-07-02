@@ -100,14 +100,6 @@ using ssize_t = SSIZE_T;
 #if defined(FDS_MACOS)
 #include <sys/ipc.h>
 #include <sys/sem.h>
-#ifdef _SEM_SEMUN_UNDEFINED
-union semun
-{
-    int val;
-    struct semid_ds* buf;
-    unsigned short* array;
-};
-#endif  // _SEM_SEMUN_UNDEFINED
 #endif
 
 #ifdef USE_VALGRIND
@@ -219,10 +211,6 @@ enum
 #endif  // FDS_LINUX
 
 #ifdef FDS_WINDOWS
-enum
-{
-    FDS_PIDLOCK = 0
-};
 #define THREAD_RET DWORD
 #define pthread_t HANDLE
 #define pthread_mutex_t HANDLE
@@ -268,9 +256,6 @@ using fds_mutexref_t = HANDLE;
 #define THREAD_RET void*
 #define THREAD_CREATE(thr, start, arg) pthread_create(&thr, NULL, start, arg)
 #define THREAD_FINISH(thr) pthread_join(thr, NULL)
-
-// For FDS_LOCK_FORMAT: True if readers take a pid lock in the lockfile
-#define FDS_PIDLOCK 1
 
 #if defined FDS_MACOS
 
@@ -473,11 +458,7 @@ enum
     CURSOR_STACK = 32
 };
 
-// Lockfile format signature: version, features and field layout
-#define FDS_LOCK_FORMAT                                                                                                \
-    ((uint32_t)(((FDS_LOCK_VERSION) % (1U << FDS_LOCK_VERSION_BITS)) + (FDS_lock_desc * (1U << FDS_LOCK_VERSION_BITS))))
-
-// Lock type and layout. Values 0-119. FDS_WINDOWS implies FDS_PIDLOCK.
+// Lock type and layout. Values 0-119.
 // Some low values are reserved for future tweaks.
 //
 #ifdef FDS_WINDOWS

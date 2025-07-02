@@ -22,7 +22,7 @@
 // lock on the lockfile, set at an offset equal to the pid.
 auto fds_reader_pid(FDS_env* env, enum Pidlock_op op, FDS_PID_T pid) -> int
 {
-#if !(FDS_PIDLOCK) /* Currently the same as defined(FDS_WINDOWS) */
+#if defined(FDS_WINDOWS)
     if (op == Pidcheck)
     {
         HANDLE h{OpenProcess(env->me_pidquery, FALSE, pid)};
