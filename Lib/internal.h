@@ -117,18 +117,28 @@ union semun
 #endif  // FDS_USE_POSIX_SEM
 #endif  // !_WIN32
 
-// FDS_USE_POSIX_MUTEX defined on Linux
+#if defined(FDS_WINDOWS) + defined(FDS_LINUX) + defined(FDS_MACOS) != 1
+#error "Ambiguous target operating system"
+#endif
 
 #if defined(_WIN32) + defined(FDS_USE_POSIX_SEM) + defined(FDS_USE_SYSV_SEM) + defined(FDS_USE_POSIX_MUTEX) != 1
 #error "Ambiguous shared-lock implementation"
 #endif
 
-#if defined(FDS_USE_POSIX_SEM)
-#error "FDS_USE_POSIX_SEM"
+#if defined(FDS_WINDOWS) && !defined(_WIN32)
+#error "_WIN32 must be defined for Windows"
 #endif
 
-#if defined(FDS_USE_SYSV_SEM)
-#error "FDS_USE_SYSV_SEM"
+#if defined(FDS_LINUX) && !defined(FDS_USE_POSIX_MUTEX)
+#error "FDS_USE_POSIX_MUTEX must be enabled for Linux"
+#endif
+
+#if defined(FDS_MACOS) && !defined(FDS_USE_SYSV_SEM)
+#error "FDS_USE_SYSV_SEM must be enabled for macOS"
+#endif
+
+#if defined(FDS_USE_POSIX_SEM)
+#error "FDS_USE_POSIX_SEM"
 #endif
 
 #ifdef USE_VALGRIND

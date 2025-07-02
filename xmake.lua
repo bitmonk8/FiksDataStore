@@ -20,6 +20,11 @@ add_defines("FDS_DEBUG=1")
 function apply_common_flags()
     if is_plat("windows") then
         add_cxxflags("/wd4146")
+        add_defines("FDS_WINDOWS=1")
+    elseif is_plat("linux") then
+        add_defines("FDS_LINUX=1")
+    elseif is_plat("macosx") then
+        add_defines("FDS_MACOS=1")
     end
 end
 
