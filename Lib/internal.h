@@ -307,17 +307,6 @@ typedef pthread_mutex_t* fds_mutexref_t;
 #define MNAME_LEN (sizeof(pthread_mutex_t))
 #endif
 
-//
-// The version number for a database's lockfile format.
-enum
-{
-    FDS_LOCK_VERSION = 2,
-    // Number of bits representing FDS_LOCK_VERSION in FDS_LOCK_FORMAT.
-    // The remaining bits must leave room for FDS_lock_desc.
-    //
-    FDS_LOCK_VERSION_BITS = 12
-};
-
 // The max size of a key we can write, or 0 for computed max.
 //
 // This macro should normally be left alone or set to 0.

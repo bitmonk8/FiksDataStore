@@ -9,6 +9,16 @@
 #include "lock.h"
 #include "txn.h"
 
+// The version number for a database's lockfile format.
+enum
+{
+    FDS_LOCK_VERSION = 2,
+    // Number of bits representing FDS_LOCK_VERSION in FDS_LOCK_FORMAT.
+    // The remaining bits must leave room for FDS_lock_desc.
+    //
+    FDS_LOCK_VERSION_BITS = 12
+};
+
 // Lockfile format signature: version, features and field layout
 #define FDS_LOCK_FORMAT                                                                                                \
     ((uint32_t)(((FDS_LOCK_VERSION) % (1U << FDS_LOCK_VERSION_BITS)) + (FDS_lock_desc * (1U << FDS_LOCK_VERSION_BITS))))
