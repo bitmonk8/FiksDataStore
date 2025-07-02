@@ -3,6 +3,10 @@
 #include "fds.h"
 #include "midl.h"
 
+#if defined(FDS_WINDOWS) + defined(FDS_LINUX) + defined(FDS_MACOS) != 1
+#error "Ambiguous target operating system"
+#endif
+
 // Forward declarations of types defined in Lib/*.h files
 struct FDS_cursor;
 struct FDS_db;
@@ -92,14 +96,14 @@ using ssize_t = SSIZE_T;
 #define FDS_LINUX 1
 #elif defined(__APPLE__) || defined(BSD) || defined(__FreeBSD_kernel__)
 #if !(defined(FDS_LINUX))
-#define FDS_USE_SYSV_SEM 1
+#define FDS_MACOS 1
 #endif
 #endif
 
 #ifndef FDS_WINDOWS
 #include <pthread.h>
 #include <signal.h>
-#if defined(FDS_USE_SYSV_SEM)
+#if defined(FDS_MACOS)
 #include <sys/ipc.h>
 #include <sys/sem.h>
 #ifdef _SEM_SEMUN_UNDEFINED
@@ -114,18 +118,6 @@ union semun
 #define FDS_LINUX 1
 #endif
 #endif  // !FDS_WINDOWS
-
-#if defined(FDS_WINDOWS) + defined(FDS_LINUX) + defined(FDS_MACOS) != 1
-#error "Ambiguous target operating system"
-#endif
-
-#if defined(FDS_WINDOWS) + defined(FDS_USE_SYSV_SEM) + defined(FDS_LINUX) != 1
-#error "Ambiguous shared-lock implementation"
-#endif
-
-#if defined(FDS_MACOS) && !defined(FDS_USE_SYSV_SEM)
-#error "FDS_USE_SYSV_SEM must be enabled for macOS"
-#endif
 
 #ifdef USE_VALGRIND
 #include <valgrind/memcheck.h>
@@ -289,7 +281,7 @@ using fds_mutexref_t = HANDLE;
 // For FDS_LOCK_FORMAT: True if readers take a pid lock in the lockfile
 #define FDS_PIDLOCK 1
 
-#if defined FDS_USE_SYSV_SEM
+#if defined FDS_MACOS
 
 struct fds_mutex
 {
@@ -334,7 +326,7 @@ typedef pthread_mutex_t* fds_mutexref_t;
 // Mark mutex-protected data as repaired, after death of previous owner.
 //
 #define fds_mutex_consistent(mutex) pthread_mutex_consistent(mutex)
-#endif  // FDS_USE_SYSV_SEM
+#endif  // FDS_MACOS
 
 // Get the error code for the last failed system function.
 //
@@ -359,7 +351,7 @@ typedef pthread_mutex_t* fds_mutexref_t;
 #define GET_PAGESIZE(x) ((x) = sysconf(_SC_PAGE_SIZE))
 #endif
 
-#ifdef FDS_USE_SYSV_SEM
+#ifdef FDS_MACOS
 #define MNAME_LEN (sizeof(int))
 #else
 #define MNAME_LEN (sizeof(pthread_mutex_t))
@@ -499,7 +491,7 @@ enum
 //
 #ifdef FDS_WINDOWS
 #define FDS_LOCK_TYPE (0 + ALIGNOF2(fds_hash_t) / 8 % 2)
-#elif defined FDS_USE_SYSV_SEM
+#elif defined FDS_MACOS
 #define FDS_LOCK_TYPE (8)
 #elif defined FDS_LINUX
 // We do not know the inside of a POSIX mutex and how to check if mutexes

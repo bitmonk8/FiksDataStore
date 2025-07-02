@@ -7,7 +7,7 @@
 
 #ifdef FDS_WINDOWS
 #define FDS_OWNERDEAD ((int)WAIT_ABANDONED)
-#elif defined FDS_USE_SYSV_SEM
+#elif defined FDS_MACOS
 #define FDS_OWNERDEAD (FDS_LAST_ERRCODE + 11)
 #elif defined(FDS_LINUX)
 #define FDS_OWNERDEAD EOWNERDEAD /* LOCK_MUTEX0() result if dead owner */
@@ -271,7 +271,7 @@ auto ESECT fds_reader_check0(FDS_env* env, int rlocked, int* dead) -> int
 
 #ifndef FDS_WINDOWS
 
-#if defined FDS_USE_SYSV_SEM
+#if defined FDS_MACOS
 
 int fds_sem_wait(fds_mutexref_t sem)
 {

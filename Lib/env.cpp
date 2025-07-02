@@ -829,7 +829,7 @@ auto ESECT fds_env_create(FDS_env** env) -> int
     e->me_fd = INVALID_HANDLE_VALUE;
     e->me_lfd = INVALID_HANDLE_VALUE;
     e->me_mfd = INVALID_HANDLE_VALUE;
-#if defined FDS_USE_SYSV_SEM
+#if defined FDS_MACOS
     e->me_rmutex->semid = -1;
     e->me_wmutex->semid = -1;
 #endif
@@ -1294,7 +1294,7 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
 #else
 #define FDS_ERRCODE_ROFS EROFS
 #endif
-#ifdef FDS_USE_SYSV_SEM
+#ifdef FDS_MACOS
     int semid{};
     union semun semu{};
 #endif
@@ -1410,7 +1410,7 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
         env->me_wmutex = CreateMutexA(&fds_all_sa, FALSE, MUTEXNAME(env, 'w'));
         if (env->me_wmutex == nullptr)
             goto fail_errno;
-#elif defined(FDS_USE_SYSV_SEM)
+#elif defined(FDS_MACOS)
         unsigned short vals[2] = {1, 1};
         key_t key = ftok(fname->mn_val, 'M');  // fname is lockfile path now
         if (key == -1)
@@ -1454,7 +1454,7 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
     }
     else
     {
-#ifdef FDS_USE_SYSV_SEM
+#ifdef FDS_MACOS
         struct semid_ds buf;
 #endif
         if (env->me_txns->mti_magic != FDS_MAGIC)
@@ -1482,7 +1482,7 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
         env->me_wmutex = OpenMutexA(SYNCHRONIZE, FALSE, MUTEXNAME(env, 'w'));
         if (env->me_wmutex == nullptr)
             goto fail_errno;
-#elif defined(FDS_USE_SYSV_SEM)
+#elif defined(FDS_MACOS)
         semid = env->me_txns->mti_semid;
         semu.buf = &buf;
         // check for read access
@@ -1493,7 +1493,7 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
             goto fail_errno;
 #endif
     }
-#ifdef FDS_USE_SYSV_SEM
+#ifdef FDS_MACOS
     env->me_rmutex->semid = semid;
     env->me_wmutex->semid = semid;
     env->me_rmutex->semnum = 0;
@@ -1729,7 +1729,7 @@ void ESECT fds_env_close0(FDS_env* env, int excl)
         }
         // Windows automatically destroys the mutexes when
         // the last handle closes.
-#elif defined(FDS_USE_SYSV_SEM)
+#elif defined(FDS_MACOS)
         if (env->me_rmutex->semid != -1)
         {
             // If we have the filelock:  If we are the

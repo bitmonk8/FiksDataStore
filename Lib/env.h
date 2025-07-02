@@ -70,7 +70,7 @@ struct FDS_txbody
 #if defined(FDS_WINDOWS)
     // Binary form of names of the reader/writer locks
     fds_hash_t mtb_mutexid;
-#elif defined(FDS_USE_SYSV_SEM)
+#elif defined(FDS_MACOS)
     int mtb_semid;
     int mtb_rlocked;
 #else
@@ -92,7 +92,7 @@ struct FDS_txninfo
 #define mti_txnid mt1.mtb.mtb_txnid
 #define mti_numreaders mt1.mtb.mtb_numreaders
 #define mti_mutexid mt1.mtb.mtb_mutexid
-#ifdef FDS_USE_SYSV_SEM
+#ifdef FDS_MACOS
 #define mti_semid mt1.mtb.mtb_semid
 #define mti_rlocked mt1.mtb.mtb_rlocked
 #endif
@@ -101,7 +101,7 @@ struct FDS_txninfo
 #if !(defined(FDS_WINDOWS))
     union
     {
-#ifdef FDS_USE_SYSV_SEM
+#ifdef FDS_MACOS
         int mt2_wlocked;
 #define mti_wlocked mt2.mt2_wlocked
 #else
