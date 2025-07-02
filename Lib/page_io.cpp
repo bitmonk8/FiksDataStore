@@ -103,6 +103,13 @@ void fds_dpage_free(FDS_env* env, FDS_page* dp)
     }
 }
 
+// max bytes to write in one call
+static_assert(sizeof(ssize_t) == 8);  // MAX_WRITE depends on 64 bit architecture
+enum
+{
+    MAX_WRITE = 0x40000000U
+};
+
 // Flush (some) dirty pages to the map, after clearing their dirty flag.
 // txn the transaction that's being committed
 // keep number of initial pages in dirty_list to keep dirty.

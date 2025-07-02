@@ -488,13 +488,6 @@ using txnid_t = FDS_ID;
 //
 using indx_t = uint16_t;
 
-// max bytes to write in one call
-static_assert(sizeof(ssize_t) == 8);  // MAX_WRITE depends on 64 bit architecture
-enum
-{
-    MAX_WRITE = 0x40000000U
-};
-
 // A page number in the database.
 // Note that 64 bit page numbers are overkill, since pages themselves
 // already represent 12-13 bits of addressable memory, and the OS will
