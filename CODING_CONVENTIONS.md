@@ -213,7 +213,7 @@ int fds_cursor_count(FDS_cursor *cursor)
 // ❌ Incorrect - Variable repurposed for different meanings
 int fds_bad_example(FDS_env *env)
 {
-    int result = fds_env_open(env, "/tmp/db", 0, 0644);  // result = status code
+    int result = fds_env_open(env, "/tmp/db");  // result = status code
     if (result != FDS_SUCCESS)
         return result;
     
@@ -231,7 +231,7 @@ int fds_bad_example(FDS_env *env)
 // ✅ Correct - Separate variables for different purposes
 int fds_good_example(FDS_env *env)
 {
-    const int open_status = fds_env_open(env, "/tmp/db", 0, 0644);
+    const int open_status = fds_env_open(env, "/tmp/db", 0);
     if (open_status != FDS_SUCCESS)
         return open_status;
     

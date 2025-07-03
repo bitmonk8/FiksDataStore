@@ -66,7 +66,7 @@ auto main(int argc, char* argv[]) -> int
     E(fds_env_create(&env));
     E(fds_env_set_mapsize(env, 10485760));
     E(fds_env_set_maxdbs(env, 4));
-    E(fds_env_open(env, "testdb", FDS_NOSYNC, 0664));
+    E(fds_env_open(env, "testdb", FDS_NOSYNC));
 
     E(fds_txn_begin(env, nullptr, 0, &txn));
     E(fds_dbi_open(txn, "id6", FDS_CREATE, &dbi));

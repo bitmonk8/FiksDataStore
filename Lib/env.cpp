@@ -334,6 +334,13 @@ enum fds_fopen_type
 #endif
 };
 
+// Unix permissions for creating files, or dummy definition for Windows
+#ifdef _MSC_VER
+using fds_mode_t = int;
+#else
+typedef mode_t fds_mode_t;
+#endif
+
 // Open an FiksDataStore file.
 // env	The FiksDataStore environment.
 // fname	Path from from #fds_fname_init().  A suffix is
@@ -342,8 +349,7 @@ enum fds_fopen_type
 // mode	The Unix permissions for the file, if we create it.
 // res	Resulting file handle.
 // Return 0 on success, non-zero on failure.
-static auto ESECT
-fds_fopen(const FDS_env* env, FDS_name* fname, enum fds_fopen_type which, fds_mode_t mode, HANDLE* res) -> int
+static auto ESECT fds_fopen(const FDS_env* env, FDS_name* fname, enum fds_fopen_type which, fds_mode_t mode, HANDLE* res) -> int
 {
     int rc = FDS_SUCCESS;
     HANDLE fd;
@@ -1575,8 +1581,10 @@ fail:
 #define CHANGELESS                                                                                                     \
     (FDS_NOSUBDIR | FDS_RDONLY | FDS_WRITEMAP | FDS_NOTLS | FDS_NOLOCK | FDS_NORDAHEAD | FDS_PREVSNAPSHOT)
 
-auto ESECT fds_env_open(FDS_env* env, const char* path, unsigned int flags, fds_mode_t mode) -> int
+auto ESECT fds_env_open(FDS_env* env, const char* path, unsigned int flags) -> int
 {
+    const fds_mode_t mode = 0664;
+
     int rc;
     int excl = -1;
     FDS_name fname;

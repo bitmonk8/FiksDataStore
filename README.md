@@ -126,7 +126,7 @@ FDS_txn *txn;
 
 // Create environment
 fds_env_create(&env);
-fds_env_open(env, "./testdb", 0, 0664);
+fds_env_open(env, "./testdb", 0);
 
 // Open database
 fds_txn_begin(env, NULL, 0, &txn);

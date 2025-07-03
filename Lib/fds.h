@@ -173,13 +173,6 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-// Unix permissions for creating files, or dummy definition for Windows
-#ifdef _MSC_VER
-using fds_mode_t = int;
-#else
-typedef mode_t fds_mode_t;
-#endif
-
 // Unsigned type used for mapsize, entry counts and page/transaction IDs.
 // It size_t, hence the name.
 using fds_size_t = size_t;
@@ -530,8 +523,6 @@ auto fds_env_create(FDS_env** env) -> int;
 // only process using the environment. This flag is automatically reset
 // after a write transaction is successfully committed.
 //
-// @param[in] mode The UNIX permissions to set on created files and semaphores.
-// This parameter is ignored on Windows.
 // @return A non-zero error value on failure and 0 on success. Some possible
 // errors are:
 //
@@ -541,7 +532,7 @@ auto fds_env_create(FDS_env** env) -> int;
 // ENOENT - the directory specified by the path parameter doesn't exist.
 // EACCES - the user didn't have permission to access the environment files.
 // EAGAIN - the environment was locked by another process.
-auto fds_env_open(FDS_env* env, const char* path, unsigned int flags, fds_mode_t mode) -> int;
+auto fds_env_open(FDS_env* env, const char* path, unsigned int flags) -> int;
 
 // @brief Return statistics about the FiksDataStore environment.
 // @param[in] env An environment handle returned by #fds_env_create()
