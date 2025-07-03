@@ -44,6 +44,7 @@ auto fds_midl_search(const FDS_IDL ids, FDS_ID id) -> unsigned
 
     while (0 < n)
     {
+// CODING_CONVENTION_VIOLATION: Variables should have one purpose. Use `const` where possible.
         unsigned pivot{n >> 1};
         cursor = base + pivot + 1;
         val = CMP(ids[cursor], id);

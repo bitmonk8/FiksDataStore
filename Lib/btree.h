@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cursor.h"
+// DESIGN_VIOLATION: `Lib/*.h` files must include `internal.h` first.
 #include "internal.h"
 #include "page.h"
 #include "page_io.h"

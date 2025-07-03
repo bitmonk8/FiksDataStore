@@ -6,9 +6,13 @@
 #include "util.h"
 
 // Forward declarations to avoid circular dependencies.
+// DESIGN_VIOLATION: Forward-declarable types from `Lib/*.h` must be declared in `internal.h`, not defined there.
 struct FDS_cursor;
+// DESIGN_VIOLATION: Forward-declarable types from `Lib/*.h` must be declared in `internal.h`, not defined there.
 struct FDS_txn;
+// DESIGN_VIOLATION: Forward-declarable types from `Lib/*.h` must be declared in `internal.h`, not defined there.
 struct FDS_env;
+// DESIGN_VIOLATION: Forward-declarable types from `Lib/*.h` must be declared in `internal.h`, not defined there.
 struct FDS_val;
 
 // @defgroup fds_page_io Page I/O and Memory Management

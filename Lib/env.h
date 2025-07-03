@@ -1,6 +1,7 @@
 #pragma once
 
 #include "db.h"
+// DESIGN_VIOLATION: `Lib/*.h` files must include `internal.h` first.
 #include "internal.h"
 #include "lock.h"
 

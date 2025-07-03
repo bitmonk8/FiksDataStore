@@ -42,6 +42,7 @@ auto fds_cmp_memnr(const FDS_val* a, const FDS_val* b) -> int
 
     while (p1 > p1_lim)
     {
+// CODING_CONVENTION_VIOLATION: Variables should have one purpose. Use `const` where possible.
         int diff{*--p1 - *--p2};
         if (diff != 0)
             return diff;

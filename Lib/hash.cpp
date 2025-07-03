@@ -21,6 +21,7 @@
 //
 // Share and Enjoy!	:-)
 
+// CODING_CONVENTION_VIOLATION: Use `//` for documentation.
 /*
  * Perform a 64-bit Fowler/Noll/Vo FNV-1a hash on a buffer.
  *
@@ -45,6 +46,7 @@ auto fds_hash(const void* val, size_t len) -> fds_hash_t
 /* The ASCII-85 character set for encoding 64-bit integers */
 static const char fds_a85[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~";
 
+// CODING_CONVENTION_VIOLATION: Use `//` for documentation.
 /*
  * Pack a 64-bit integer into an ASCII-85 string.
  * This is a custom implementation, not fully compliant with Z85.

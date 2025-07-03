@@ -115,6 +115,7 @@ void NTAPI fds_tls_callback(PVOID module, DWORD reason, PVOID ptr)
     case DLL_THREAD_DETACH:
         for (i = 0; i < fds_tls_nkeys; i++)
         {
+// CODING_CONVENTION_VIOLATION: Variables should have one purpose. Use `const` where possible.
             auto* r = (FDS_reader*)(pthread_getspecific(fds_tls_keys[i]));
             if (r != nullptr)
             {
