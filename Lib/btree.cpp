@@ -70,10 +70,7 @@ static auto fds_page_loose(FDS_cursor* mc, FDS_page* mp) -> int
 
 void fds_page_copy(FDS_page* dst, FDS_page* src, unsigned int psize)
 {
-    enum
-    {
-        Align = sizeof(pgno_t)
-    };
+    constexpr size_t Align = sizeof(pgno_t);
     indx_t upper = src->mp_upper;
     indx_t lower = src->mp_lower;
     indx_t unused = upper - lower;

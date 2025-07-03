@@ -716,15 +716,12 @@ auto fds_cursor_touch(FDS_cursor* mc) -> int
     return rc;
 }
 
-enum
-{
-    // Do not spill pages to disk if txn is getting full, may fail instead
-    FDS_NOSPILL = 0x8000,
+// Do not spill pages to disk if txn is getting full, may fail instead
+constexpr int FDS_NOSPILL = 0x8000;
 
-    // The maximum size of a data item.
-    // We only store a 32 bit value for node sizes.
-    MAXDATASIZE = 0xffffffffUL
-};
+// The maximum size of a data item.
+// We only store a 32 bit value for node sizes.
+constexpr unsigned long MAXDATASIZE = 0xffffffffUL;
 
 // Internal error codes, not exposed outside FiksDataStore
 #define FDS_NO_ROOT (FDS_LAST_ERRCODE + 10)

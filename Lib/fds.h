@@ -174,14 +174,11 @@
 #include <sys/types.h>
 
 // Library major version
-enum
-{
-    FDS_VERSION_MAJOR = 0,
-    // Library minor version
-    FDS_VERSION_MINOR = 9,
-    // Library patch version
-    FDS_VERSION_PATCH = 70
-};
+constexpr int FDS_VERSION_MAJOR = 0;
+// Library minor version
+constexpr int FDS_VERSION_MINOR = 9;
+// Library patch version
+constexpr int FDS_VERSION_PATCH = 70;
 
 // Combine args a,b,c into a single integer for easy version comparisons
 #define FDS_VERINT(a, b, c) (((a) << 24) | ((b) << 16) | (c))
@@ -236,59 +233,50 @@ using FDS_cmp_func = int (*)(const FDS_val* a, const FDS_val* b);
 // @{
 
 // no environment directory
-enum
-{
-    FDS_NOSUBDIR = 0x4000,
-    // don't fsync after commit
-    FDS_NOSYNC = 0x10000,
-    // read only
-    FDS_RDONLY = 0x20000,
-    // don't fsync metapage after commit
-    FDS_NOMETASYNC = 0x40000,
-    // use writable mmap
-    FDS_WRITEMAP = 0x80000,
-    // use asynchronous msync when #FDS_WRITEMAP is used
-    FDS_MAPASYNC = 0x100000,
-    // tie reader locktable slots to #FDS_txn objects instead of to threads
-    FDS_NOTLS = 0x200000,
-    // don't do any locking, caller must manage their own locks
-    FDS_NOLOCK = 0x400000,
-    // don't do readahead (no effect on Windows)
-    FDS_NORDAHEAD = 0x800000,
-    // don't initialize malloc'd memory before writing to datafile
-    FDS_NOMEMINIT = 0x1000000,
-    // use the previous snapshot rather than the latest one
-    FDS_PREVSNAPSHOT = 0x2000000
-};
+constexpr int FDS_NOSUBDIR = 0x4000;
+// don't fsync after commit
+constexpr int FDS_NOSYNC = 0x10000;
+// read only
+constexpr int FDS_RDONLY = 0x20000;
+// don't fsync metapage after commit
+constexpr int FDS_NOMETASYNC = 0x40000;
+// use writable mmap
+constexpr int FDS_WRITEMAP = 0x80000;
+// use asynchronous msync when #FDS_WRITEMAP is used
+constexpr int FDS_MAPASYNC = 0x100000;
+// tie reader locktable slots to #FDS_txn objects instead of to threads
+constexpr int FDS_NOTLS = 0x200000;
+// don't do any locking, caller must manage their own locks
+constexpr int FDS_NOLOCK = 0x400000;
+// don't do readahead (no effect on Windows)
+constexpr int FDS_NORDAHEAD = 0x800000;
+// don't initialize malloc'd memory before writing to datafile
+constexpr int FDS_NOMEMINIT = 0x1000000;
+// use the previous snapshot rather than the latest one
+constexpr int FDS_PREVSNAPSHOT = 0x2000000;
 // @}
 
 // @defgroup fds_dbi_open Database Flags
 // @{
 
 // use reverse string keys
-enum
-{
-    FDS_REVERSEKEY = 0x02,
-    // create DB if not already existing
-    FDS_CREATE = 0x40000
-};
+constexpr int FDS_REVERSEKEY = 0x02;
+// create DB if not already existing
+constexpr int FDS_CREATE = 0x40000;
 // @}
 
 // @defgroup fds_put Write Flags
 // @{
 
 // For put: Don't write if the key already exists.
-enum
-{
-    FDS_NOOVERWRITE = 0x10,
-    // For fds_cursor_put: overwrite the current key/data pair
-    FDS_CURRENT = 0x40,
-    // For put: Just reserve space for data, don't copy it. Return a
-    // pointer to the reserved space.
-    FDS_RESERVE = 0x10000,
-    // Data is being appended, don't split full pages.
-    FDS_APPEND = 0x20000
-};
+constexpr int FDS_NOOVERWRITE = 0x10;
+// For fds_cursor_put: overwrite the current key/data pair
+constexpr int FDS_CURRENT = 0x40;
+// For put: Just reserve space for data, don't copy it. Return a
+// pointer to the reserved space.
+constexpr int FDS_RESERVE = 0x10000;
+// Data is being appended, don't split full pages.
+constexpr int FDS_APPEND = 0x20000;
 // @}
 
 // @brief Cursor Get operations.
@@ -310,54 +298,51 @@ using FDS_cursor_op = enum FDS_cursor_op {
 // @{
 
 // Successful result
-enum
-{
-    FDS_SUCCESS = 0,
-    // key/data pair already exists
-    FDS_KEYEXIST = (-30799),
-    // key/data pair not found (EOF)
-    FDS_NOTFOUND = (-30798),
-    // Requested page not found - this usually indicates corruption
-    FDS_PAGE_NOTFOUND = (-30797),
-    // Located page was wrong type
-    FDS_CORRUPTED = (-30796),
-    // Update of meta page failed or environment had fatal error
-    FDS_PANIC = (-30795),
-    // Environment version mismatch
-    FDS_VERSION_MISMATCH = (-30794),
-    // File is not a valid FiksDataStore file
-    FDS_INVALID = (-30793),
-    // Environment mapsize reached
-    FDS_MAP_FULL = (-30792),
-    // Environment maxdbs reached
-    FDS_DBS_FULL = (-30791),
-    // Environment maxreaders reached
-    FDS_READERS_FULL = (-30790),
-    // Too many TLS keys in use - Windows only
-    FDS_TLS_FULL = (-30789),
-    // Txn has too many dirty pages
-    FDS_TXN_FULL = (-30788),
-    // Cursor stack too deep - internal error
-    FDS_CURSOR_FULL = (-30787),
-    // Page has not enough space - internal error
-    FDS_PAGE_FULL = (-30786),
-    // Database contents grew beyond environment mapsize
-    FDS_MAP_RESIZED = (-30785),
-    // Operation and DB incompatible, or DB type changed. This can mean:
-    // Accessing a data record as a database, or vice versa.
-    // The database was dropped and recreated with different flags.
-    FDS_INCOMPATIBLE = (-30784),
-    // Invalid reuse of reader locktable slot
-    FDS_BAD_RSLOT = (-30783),
-    // Transaction must abort, has a child, or is invalid
-    FDS_BAD_TXN = (-30782),
-    // Unsupported size of key/DB name/data
-    FDS_BAD_VALSIZE = (-30781),
-    // The specified DBI was changed unexpectedly
-    FDS_BAD_DBI = (-30780),
-    // Unexpected problem - txn should abort
-    FDS_PROBLEM = (-30779)
-};
+constexpr int FDS_SUCCESS = 0;
+// key/data pair already exists
+constexpr int FDS_KEYEXIST = (-30799);
+// key/data pair not found (EOF)
+constexpr int FDS_NOTFOUND = (-30798);
+// Requested page not found - this usually indicates corruption
+constexpr int FDS_PAGE_NOTFOUND = (-30797);
+// Located page was wrong type
+constexpr int FDS_CORRUPTED = (-30796);
+// Update of meta page failed or environment had fatal error
+constexpr int FDS_PANIC = (-30795);
+// Environment version mismatch
+constexpr int FDS_VERSION_MISMATCH = (-30794);
+// File is not a valid FiksDataStore file
+constexpr int FDS_INVALID = (-30793);
+// Environment mapsize reached
+constexpr int FDS_MAP_FULL = (-30792);
+// Environment maxdbs reached
+constexpr int FDS_DBS_FULL = (-30791);
+// Environment maxreaders reached
+constexpr int FDS_READERS_FULL = (-30790);
+// Too many TLS keys in use - Windows only
+constexpr int FDS_TLS_FULL = (-30789);
+// Txn has too many dirty pages
+constexpr int FDS_TXN_FULL = (-30788);
+// Cursor stack too deep - internal error
+constexpr int FDS_CURSOR_FULL = (-30787);
+// Page has not enough space - internal error
+constexpr int FDS_PAGE_FULL = (-30786);
+// Database contents grew beyond environment mapsize
+constexpr int FDS_MAP_RESIZED = (-30785);
+// Operation and DB incompatible, or DB type changed. This can mean:
+// Accessing a data record as a database, or vice versa.
+// The database was dropped and recreated with different flags.
+constexpr int FDS_INCOMPATIBLE = (-30784);
+// Invalid reuse of reader locktable slot
+constexpr int FDS_BAD_RSLOT = (-30783);
+// Transaction must abort, has a child, or is invalid
+constexpr int FDS_BAD_TXN = (-30782);
+// Unsupported size of key/DB name/data
+constexpr int FDS_BAD_VALSIZE = (-30781);
+// The specified DBI was changed unexpectedly
+constexpr int FDS_BAD_DBI = (-30780);
+// Unexpected problem - txn should abort
+constexpr int FDS_PROBLEM = (-30779);
 // The last defined error code
 #define FDS_LAST_ERRCODE FDS_PROBLEM
 // @}

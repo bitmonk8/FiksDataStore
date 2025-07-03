@@ -9,21 +9,15 @@
 #include "lock.h"
 #include "txn.h"
 
-enum
-{
-    // Magic number for lockfile layout and features.
-    FDS_lock_desc = 42
-};
+// Magic number for lockfile layout and features.
+constexpr int FDS_lock_desc = 42;
 
 // The version number for a database's lockfile format.
-enum
-{
-    FDS_LOCK_VERSION = 2,
-    // Number of bits representing FDS_LOCK_VERSION in FDS_LOCK_FORMAT.
-    // The remaining bits must leave room for FDS_lock_desc.
-    //
-    FDS_LOCK_VERSION_BITS = 12
-};
+constexpr int FDS_LOCK_VERSION = 2;
+// Number of bits representing FDS_LOCK_VERSION in FDS_LOCK_FORMAT.
+// The remaining bits must leave room for FDS_lock_desc.
+//
+constexpr int FDS_LOCK_VERSION_BITS = 12;
 
 // Lockfile format signature: version, features and field layout
 #define FDS_LOCK_FORMAT                                                                                                \
@@ -57,24 +51,16 @@ enum
 // 2 because then there would no longer be a tree structure. With this
 // value, items larger than 2KB will go into overflow pages, and on
 // average only 1KB will be wasted.
-enum
-{
-    FDS_MINKEYS = 2
-};
+constexpr int FDS_MINKEYS = 2;
 
 // A stamp that identifies a file as an FiksDataStore file.
 // There's nothing special about this value other than that it is easily
 // recognizable, and it will reflect any byte order mismatches.
-enum
-{
-    FDS_MAGIC = 0xFDFDC0DE
-};
+constexpr uint32_t FDS_MAGIC = 0xFDFDC0DE;
 
 // The version number for a database's datafile format.
-enum
-{
-    FDS_DATA_VERSION = 1
-};
+// The version number for a database's datafile format.
+constexpr int FDS_DATA_VERSION = 1;
 
 static void fds_env_reader_dest(void* ptr);
 
@@ -242,10 +228,8 @@ static const fds_nchar_t* const fds_suffixes[2][2] = {
     {FDS_NAME("/lock.mdb"), FDS_NAME("-lock")}
 };
 
-enum
-{
-    FDS_SUFFLEN = 9  // Max string length in #fds_suffixes[]
-};
+// Max string length in #fds_suffixes[]
+constexpr int FDS_SUFFLEN = 9;
 
 // Destroy fname from #fds_fname_init()
 #define fds_fname_destroy(fname)                                                                                       \
@@ -496,10 +480,7 @@ auto ESECT fds_env_read_header(FDS_env* env, int prev, FDS_meta* meta) -> int
     int i;
     int rc;
     int off;
-    enum
-    {
-        Size = sizeof(pbuf)
-    };
+    constexpr int Size = sizeof(pbuf);
 
     // We don't know the page size yet, so use a minimum value.
     // Read both meta pages so we can use the latest one.
@@ -814,52 +795,49 @@ auto fds_env_pick_meta(const FDS_env* env) -> FDS_meta*
     return metas[(metas[0]->mm_txnid < metas[1]->mm_txnid) ^ ((env->me_flags & FDS_PREVSNAPSHOT) != 0)];
 }
 
-enum
-{
-    // Reader Lock Table
-    // Readers don't acquire any locks for their data access. Instead, they
-    // simply record their transaction ID in the reader table. The reader
-    // mutex is needed just to find an empty slot in the reader table. The
-    // slot's address is saved in thread-specific data so that subsequent read
-    // transactions started by the same thread need no further locking to proceed.
-    //
-    // If FDS_NOTLS is set, the slot address is not saved in thread-specific data.
-    //
-    // No reader table is used if the database is on a read-only filesystem, or
-    // if FDS_NOLOCK is set.
-    //
-    // Since the database uses multi-version concurrency control, readers don't
-    // actually need any locking. This table is used to keep track of which
-    // readers are using data from which old transactions, so that we'll know
-    // when a particular old transaction is no longer in use. Old transactions
-    // that have discarded any data pages can then have those pages reclaimed
-    // for use by a later write transaction.
-    //
-    // The lock table is constructed such that reader slots are aligned with the
-    // processor's cache line size. Any slot is only ever used by one thread.
-    // This alignment guarantees that there will be no contention or cache
-    // thrashing as threads update their own slot info, and also eliminates
-    // any need for locking when accessing a slot.
-    //
-    // A writer thread will scan every slot in the table to determine the oldest
-    // outstanding reader transaction. Any freed pages older than this will be
-    // reclaimed by the writer. The writer doesn't use any locks when scanning
-    // this table. This means that there's no guarantee that the writer will
-    // see the most up-to-date reader info, but that's not required for correct
-    // operation - all we need is to know the upper bound on the oldest reader,
-    // we don't care at all about the newest reader. So the only consequence of
-    // reading stale information here is that old pages might hang around a
-    // while longer before being reclaimed. That's actually good anyway, because
-    // the longer we delay reclaiming old pages, the more likely it is that a
-    // string of contiguous pages can be found after coalescing old pages from
-    // many old transactions together.
-    //
-    // Number of slots in the reader table.
-    // This value was chosen somewhat arbitrarily. 126 readers plus a
-    // couple mutexes fit exactly into 8KB on my development machine.
-    // Applications should set the table size using fds_env_set_maxreaders().
-    DEFAULT_READERS = 126
-};
+// Reader Lock Table
+// Readers don't acquire any locks for their data access. Instead, they
+// simply record their transaction ID in the reader table. The reader
+// mutex is needed just to find an empty slot in the reader table. The
+// slot's address is saved in thread-specific data so that subsequent read
+// transactions started by the same thread need no further locking to proceed.
+//
+// If FDS_NOTLS is set, the slot address is not saved in thread-specific data.
+//
+// No reader table is used if the database is on a read-only filesystem, or
+// if FDS_NOLOCK is set.
+//
+// Since the database uses multi-version concurrency control, readers don't
+// actually need any locking. This table is used to keep track of which
+// readers are using data from which old transactions, so that we'll know
+// when a particular old transaction is no longer in use. Old transactions
+// that have discarded any data pages can then have those pages reclaimed
+// for use by a later write transaction.
+//
+// The lock table is constructed such that reader slots are aligned with the
+// processor's cache line size. Any slot is only ever used by one thread.
+// This alignment guarantees that there will be no contention or cache
+// thrashing as threads update their own slot info, and also eliminates
+// any need for locking when accessing a slot.
+//
+// A writer thread will scan every slot in the table to determine the oldest
+// outstanding reader transaction. Any freed pages older than this will be
+// reclaimed by the writer. The writer doesn't use any locks when scanning
+// this table. This means that there's no guarantee that the writer will
+// see the most up-to-date reader info, but that's not required for correct
+// operation - all we need is to know the upper bound on the oldest reader,
+// we don't care at all about the newest reader. So the only consequence of
+// reading stale information here is that old pages might hang around a
+// while longer before being reclaimed. That's actually good anyway, because
+// the longer we delay reclaiming old pages, the more likely it is that a
+// string of contiguous pages can be found after coalescing old pages from
+// many old transactions together.
+//
+// Number of slots in the reader table.
+// This value was chosen somewhat arbitrarily. 126 readers plus a
+// couple mutexes fit exactly into 8KB on my development machine.
+// Applications should set the table size using fds_env_set_maxreaders().
+constexpr int DEFAULT_READERS = 126;
 
 auto ESECT fds_env_create(FDS_env** env) -> int
 {
@@ -1059,13 +1037,10 @@ auto ESECT fds_env_get_maxreaders(FDS_env* env, unsigned int* readers) -> int
     return FDS_SUCCESS;
 }
 
-enum
-{
-    // Default size of memory map.
-    // This is certainly too small for any actual applications. Apps should always set
-    // the size explicitly using fds_env_set_mapsize().
-    DEFAULT_MAPSIZE = 1048576
-};
+// Default size of memory map.
+// This is certainly too small for any actual applications. Apps should always set
+// the size explicitly using fds_env_set_mapsize().
+constexpr int DEFAULT_MAPSIZE = 1048576;
 
 // Further setup required for opening an FiksDataStore environment
 auto ESECT fds_env_open2(FDS_env* env, int prev) -> int

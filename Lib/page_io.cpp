@@ -105,10 +105,7 @@ void fds_dpage_free(FDS_env* env, FDS_page* dp)
 
 // max bytes to write in one call
 static_assert(sizeof(ssize_t) == 8);  // MAX_WRITE depends on 64 bit architecture
-enum
-{
-    MAX_WRITE = 0x40000000U
-};
+constexpr unsigned int MAX_WRITE = 0x40000000U;
 
 // Flush (some) dirty pages to the map, after clearing their dirty flag.
 // txn the transaction that's being committed
@@ -378,10 +375,7 @@ done:
 // 0 on success, non-zero on failure.
 static auto fds_pages_xkeep(FDS_cursor* mc, unsigned pflags, int all) -> int
 {
-    enum
-    {
-        Mask = P_SUBP | P_DIRTY | P_LOOSE | P_KEEP
-    };
+    constexpr int Mask = P_SUBP | P_DIRTY | P_LOOSE | P_KEEP;
     const auto* const txn = mc->mc_txn;
     auto* const m0 = mc;  // Keep the starting cursor
 

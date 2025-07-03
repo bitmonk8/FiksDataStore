@@ -69,12 +69,9 @@ struct FDS_page2
 #define P_LOOSE 0x4000  // page was dirtied then freed, can be reused
 #define P_KEEP 0x8000   // leave this page alone during spill
 
-enum
-{
-    F_BIGDATA = 0x01,  // data put on overflow page
-    F_SUBDATA = 0x02,  // data is a sub-database
-    F_DUPDATA = 0x04
-};
+constexpr int F_BIGDATA = 0x01;  // data put on overflow page
+constexpr int F_SUBDATA = 0x02;  // data is a sub-database
+constexpr int F_DUPDATA = 0x04;
 
 // The amount of space remaining in the page
 #define SIZELEFT(p) (indx_t)(MP_UPPER(p) - MP_LOWER(p))
@@ -83,10 +80,7 @@ enum
 #define PAGEFILL(env, p) (1000.0L * ((env)->me_psize - PAGEHDRSZ - SIZELEFT(p)) / ((env)->me_psize - PAGEHDRSZ))
 // The minimum page fill factor, in tenths of a percent.
 // Pages emptier than this are candidates for merging.
-enum
-{
-    FILL_THRESHOLD = 250
-};
+constexpr int FILL_THRESHOLD = 250;
 
 // Test if a page is a leaf page
 #define IS_LEAF(p) F_ISSET(MP_FLAGS(p), P_LEAF)

@@ -140,10 +140,7 @@ using ssize_t = SSIZE_T;
 #endif
 
 #if defined(__i386) || defined(__x86_64) || defined(_M_IX86)
-enum
-{
-    MISALIGNED_OK = 1
-};
+constexpr int MISALIGNED_OK = 1;
 #endif
 
 #if (BYTE_ORDER == LITTLE_ENDIAN) == (BYTE_ORDER == BIG_ENDIAN)
@@ -360,27 +357,18 @@ typedef pthread_mutex_t* fds_mutexref_t;
 #define FDS_LOCK_TYPE (10 + LOG2_MOD(ALIGNOF2(pthread_mutex_t), 5) + sizeof(pthread_mutex_t) / 4U % 22 * 5)
 #endif
 
-enum
-{
-    FDS_VALID = 0x8000  // DB handle is valid, for me_dbflags
-};
+constexpr int FDS_VALID = 0x8000;  // DB handle is valid, for me_dbflags
 #define PERSISTENT_FLAGS (0xffff & ~(FDS_VALID))
 
 // Handle for the DB used to track free pages.
-enum
-{
-    FREE_DBI = 0,
-    // Handle for the default DB.
-    MAIN_DBI = 1,
-    // Number of DBs in metapage (free and main) - also hardcoded elsewhere
-    CORE_DBS = 2
-};
+constexpr int FREE_DBI = 0;
+// Handle for the default DB.
+constexpr int MAIN_DBI = 1;
+// Number of DBs in metapage (free and main) - also hardcoded elsewhere
+constexpr int CORE_DBS = 2;
 
 // Number of meta pages - also hardcoded elsewhere
-enum
-{
-    NUM_METAS = 2
-};
+constexpr int NUM_METAS = 2;
 
 // A transaction ID.
 // See struct FDS_txn.mt_txnid for details.

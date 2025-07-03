@@ -23,11 +23,8 @@ void ESECT fds_assert_fail(FDS_env* env, const char* expr_txt, const char* func,
 #define FDS_DEBUG 0
 #endif
 
-enum
-{
-    FDS_DBG_INFO = 1,
-    FDS_DBG_TRACE = 2
-};
+constexpr int FDS_DBG_INFO = 1;
+constexpr int FDS_DBG_TRACE = 2;
 
 #if FDS_DEBUG
 extern int fds_debug;

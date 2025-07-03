@@ -6,19 +6,13 @@
 #include "page_io.h"
 
 // Page search flags
-enum
-{
-    FDS_PS_MODIFY = 1,
-    FDS_PS_ROOTONLY = 2,
-    FDS_PS_FIRST = 4,
-    FDS_PS_LAST = 8
-};
+constexpr int FDS_PS_MODIFY = 1;
+constexpr int FDS_PS_ROOTONLY = 2;
+constexpr int FDS_PS_FIRST = 4;
+constexpr int FDS_PS_LAST = 8;
 
 // Split flags
-enum
-{
-    FDS_SPLIT_REPLACE = 0x01
-};
+constexpr int FDS_SPLIT_REPLACE = 0x01;
 
 #define NODE_ADD_FLAGS                                                                                                 \
     (static_cast<unsigned>(F_SUBDATA) | static_cast<unsigned>(FDS_RESERVE) | static_cast<unsigned>(FDS_APPEND))

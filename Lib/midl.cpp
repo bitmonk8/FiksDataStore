@@ -204,11 +204,8 @@ void fds_midl_xmerge(FDS_IDL idl, const FDS_IDL merge)
 }
 
 /* Quicksort + Insertion sort for small arrays */
+constexpr int SMALL = 8;
 
-enum
-{
-    SMALL = 8
-};
 #define MIDL_SWAP(a, b)                                                                                                \
     {                                                                                                                  \
         itmp = (a);                                                                                                    \

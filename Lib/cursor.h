@@ -6,13 +6,10 @@
 
 #include <array>
 
-enum
-{
-    // Enough space for 2^32 nodes with minimum of 2 keys per node. I.e., plenty.
-    // At 4 keys per node, enough for 2^64 nodes, so there's probably no need to
-    // raise this on a 64 bit machine.
-    CURSOR_STACK = 32
-};
+// Enough space for 2^32 nodes with minimum of 2 keys per node. I.e., plenty.
+// At 4 keys per node, enough for 2^64 nodes, so there's probably no need to
+// raise this on a 64 bit machine.
+constexpr int CURSOR_STACK = 32;
 
 /* for FDS_cursor */
 enum MCursorFlags : unsigned int

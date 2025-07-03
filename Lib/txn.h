@@ -85,23 +85,17 @@ struct FDS_txn
     unsigned int mt_dirty_room;
 };
 
-enum
-{
-    // fds_txn_end operation number, for logging
-    FDS_END_COMMITTED,
-    FDS_END_EMPTY_COMMIT,
-    FDS_END_ABORT,
-    FDS_END_RESET,
-    FDS_END_RESET_TMP,
-    FDS_END_FAIL_BEGIN,
-    FDS_END_FAIL_BEGINCHILD
-};
-enum
-{
-    FDS_END_OPMASK = 0x0F,  // mask for fds_txn_end() operation number
-    FDS_END_UPDATE = 0x10,  // update env state (DBIs)
-    FDS_END_FREE = 0x20     // free txn unless it is FDS_env.me_txn0
-};
+// fds_txn_end operation number, for logging
+constexpr int FDS_END_COMMITTED       = 0;
+constexpr int FDS_END_EMPTY_COMMIT    = 1;
+constexpr int FDS_END_ABORT           = 2;
+constexpr int FDS_END_RESET           = 3;
+constexpr int FDS_END_RESET_TMP       = 4;
+constexpr int FDS_END_FAIL_BEGIN      = 5;
+constexpr int FDS_END_FAIL_BEGINCHILD = 6;
+constexpr unsigned FDS_END_OPMASK = 0x0F;  // mask for fds_txn_end() operation number
+constexpr unsigned FDS_END_UPDATE = 0x10;  // update env state (DBIs)
+constexpr unsigned FDS_END_FREE   = 0x20;  // free txn unless it is FDS_env.me_txn0
 #define FDS_END_SLOT FDS_NOTLS  // release any reader slot if FDS_NOTLS
 void fds_txn_end(FDS_txn* txn, unsigned mode);
 
