@@ -186,13 +186,6 @@ using fds_size_t = size_t;
 
 #define FDS_SIZE_MAX SIZE_MAX  // max #fds_size_t
 
-// An abstraction for a file handle.
-#ifdef _WIN32
-using fds_filehandle_t = void*;
-#else
-using fds_filehandle_t = int;
-#endif
-
 // Library major version
 enum
 {
@@ -620,18 +613,6 @@ auto fds_env_get_flags(FDS_env* env, unsigned int* flags) -> int;
 //
 // EINVAL - an invalid parameter was specified.
 auto fds_env_get_path(FDS_env* env, const char** path) -> int;
-
-// @brief Return the filedescriptor for the given environment.
-// This function may be called after fork(), so the descriptor can be
-// closed before exec*(). Other FiksDataStore file descriptors have FD_CLOEXEC.
-//
-// @param[in] env An environment handle returned by #fds_env_create()
-// @param[out] fd Address of a fds_filehandle_t to contain the descriptor.
-// @return A non-zero error value on failure and 0 on success. Some possible
-// errors are:
-//
-// EINVAL - an invalid parameter was specified.
-auto fds_env_get_fd(FDS_env* env, fds_filehandle_t* fd) -> int;
 
 // @brief Set the size of the memory map to use for this environment.
 // The size should be a multiple of the OS page size. The default is

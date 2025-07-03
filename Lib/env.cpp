@@ -376,8 +376,7 @@ fds_fopen(const FDS_env* env, FDS_name* fname, enum fds_fopen_type which, fds_mo
     // The lockfile needs FD_CLOEXEC (close file descriptor on exec*())
     // to avoid the flock() issues noted under Caveats in fds.h.
     // Also set it for other filehandles which the user cannot get at
-    // and close himself, which he may need after fork().  I.e. all but
-    // me_fd, which programs do use via fds_env_get_fd().
+    // and close himself, which he may need after fork().
 
 #ifdef FDS_WINDOWS
     acc = GENERIC_READ | GENERIC_WRITE;
@@ -1906,15 +1905,6 @@ auto ESECT fds_env_get_path(FDS_env* env, const char** path) -> int
         return EINVAL;
 
     *path = env->me_path;
-    return FDS_SUCCESS;
-}
-
-auto ESECT fds_env_get_fd(FDS_env* env, fds_filehandle_t* fd) -> int
-{
-    if ((env == nullptr) || (fd == nullptr))
-        return EINVAL;
-
-    *fd = env->me_fd;
     return FDS_SUCCESS;
 }
 
