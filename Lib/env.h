@@ -1,8 +1,7 @@
 #pragma once
 
-#include "db.h"
-// DESIGN_VIOLATION: `Lib/*.h` files must include `internal.h` first.
 #include "internal.h"
+#include "db.h"
 #include "lock.h"
 
 // Initial part of FDS_env.me_mutexname[].

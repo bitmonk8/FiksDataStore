@@ -22,6 +22,7 @@ struct FDS_rxbody;
 struct FDS_txbody;
 struct FDS_txn;
 struct FDS_txninfo;
+struct FDS_val;
 enum Pidlock_op : int;
 
 using fds_hash_t = unsigned long long;
