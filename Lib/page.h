@@ -181,7 +181,7 @@ struct FDS_node
 #undef MP_PGNO
 #define MP_PGNO(p) ((p)->mp_pgno)
 #else
-#if FDS_SIZE_MAX > 0xffffffffU
+#if SIZE_MAX > 0xffffffffU
 #define COPY_PGNO(dst, src)                                                                                            \
     do                                                                                                                 \
     {                                                                                                                  \

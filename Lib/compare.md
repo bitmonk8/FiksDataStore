@@ -47,7 +47,7 @@ These functions perform byte-wise comparison of data.
 
 These functions are optimized for comparing keys that are integer types. They are generally faster than lexicographical comparison for numeric data because they avoid byte-by-byte loops.
 
-*   **`fds_cmp_long(const FDS_val* a, const FDS_val* b)`**: Compares keys that are `fds_size_t`. It assumes the `mv_data` pointers are correctly aligned.
+*   **`fds_cmp_long(const FDS_val* a, const FDS_val* b)`**: Compares keys that are `size_t`. It assumes the `mv_data` pointers are correctly aligned.
 
 ### Dispatch and Helper Macros
 

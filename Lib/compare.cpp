@@ -3,12 +3,12 @@
 #include "db.h"
 #include "txn.h"
 
-// Compare two items pointing at aligned fds_size_t's
+// Compare two items pointing at aligned size_t's
 auto fds_cmp_long(const FDS_val* a, const FDS_val* b) -> int
 {
-    return (*(fds_size_t*)a->mv_data < *(fds_size_t*)b->mv_data)
+    return (*(size_t*)a->mv_data < *(size_t*)b->mv_data)
                ? -1
-               : static_cast<int>(*(fds_size_t*)a->mv_data > *(fds_size_t*)b->mv_data);
+               : static_cast<int>(*(size_t*)a->mv_data > *(size_t*)b->mv_data);
 }
 
 // Compare two items lexically

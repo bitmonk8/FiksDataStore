@@ -20,7 +20,7 @@ struct FDS_meta
     uint32_t mm_magic;
     // Version number of this file. Must be set to FDS_DATA_VERSION.
     uint32_t mm_version;
-    fds_size_t mm_mapsize;    // size of mmap region
+    size_t mm_mapsize;    // size of mmap region
     FDS_db mm_dbs[CORE_DBS];  // first is free space, 2nd is main db
                               // The size of pages used in this DB
 #define mm_psize mm_dbs[FREE_DBI].md_pad
@@ -147,7 +147,7 @@ struct FDS_env
     void* me_pbuf;                  // scratch area for put operations
     FDS_txn* me_txn;                // current write transaction
     FDS_txn* me_txn0;               // prealloc'd write transaction
-    fds_size_t me_mapsize;          // size of the data memory map
+    size_t me_mapsize;          // size of the data memory map
     FDS_OFF_T me_size;              // current file size
     pgno_t me_maxpg;                // me_mapsize / me_psize
     FDS_dbx* me_dbxs;               // array of static DB info

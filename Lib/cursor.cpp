@@ -1216,7 +1216,7 @@ auto fds_cursor_renew(FDS_txn* txn, FDS_cursor* cursor) -> int
 }
 
 // Return the count of duplicate data items for the current key
-auto fds_cursor_count(FDS_cursor* mc, fds_size_t* countp) -> int
+auto fds_cursor_count(FDS_cursor* mc, size_t* countp) -> int
 {
     if (mc == nullptr || countp == nullptr)
         return EINVAL;

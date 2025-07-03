@@ -20,7 +20,7 @@ This structure represents the persistent, on-disk metadata for a single database
 -   [`pgno_t md_branch_pages`](Lib/db.h:11): The total number of branch (internal) pages in the tree.
 -   [`pgno_t md_leaf_pages`](Lib/db.h:12): The total number of leaf pages in the tree.
 -   [`pgno_t md_overflow_pages`](Lib/db.h:13): The total number of overflow pages used for large data items.
--   [`fds_size_t md_entries`](Lib/db.h:14): The total number of key-value pairs stored in the database.
+-   [`size_t md_entries`](Lib/db.h:14): The total number of key-value pairs stored in the database.
 -   [`pgno_t md_root`](Lib/db.h:15): The page number of the B+ tree's root page. A value of `P_INVALID` indicates an empty database.
 
 ### 2.2. `struct FDS_dbx`

@@ -637,7 +637,7 @@ auto fds_env_write_meta(FDS_txn* txn) -> int
     FDS_env* env{txn->mt_env};
     unsigned flags{txn->mt_flags | env->me_flags};
     FDS_meta* mp{env->me_metas[toggle]};
-    fds_size_t mapsize{env->me_metas[toggle ^ 1]->mm_mapsize};
+    size_t mapsize{env->me_metas[toggle ^ 1]->mm_mapsize};
     // Persist any increases of mapsize config
     if (mapsize < env->me_mapsize)
         mapsize = env->me_mapsize;
@@ -706,7 +706,7 @@ int fds_env_write_meta(FDS_txn* txn)
     FDS_env* env{txn->mt_env};
     unsigned flags{txn->mt_flags | env->me_flags};
     FDS_meta* mp{env->me_metas[toggle]};
-    fds_size_t mapsize{env->me_metas[toggle ^ 1]->mm_mapsize};
+    size_t mapsize{env->me_metas[toggle ^ 1]->mm_mapsize};
     // Persist any increases of mapsize config
     if (mapsize < env->me_mapsize)
         mapsize = env->me_mapsize;
@@ -997,7 +997,7 @@ auto ESECT fds_env_map(FDS_env* env, void* addr) -> int
     return FDS_SUCCESS;
 }
 
-auto ESECT fds_env_set_mapsize(FDS_env* env, fds_size_t size) -> int
+auto ESECT fds_env_set_mapsize(FDS_env* env, size_t size) -> int
 {
     // If env is already open, caller is responsible for making
     // sure there are no active txns.
@@ -1014,7 +1014,7 @@ auto ESECT fds_env_set_mapsize(FDS_env* env, fds_size_t size) -> int
             size = meta->mm_mapsize;
         {
             // Silently round up to minimum if the size is too small
-            fds_size_t minsize = (meta->mm_last_pg + 1) * env->me_psize;
+            size_t minsize = (meta->mm_last_pg + 1) * env->me_psize;
             if (size < minsize)
                 size = minsize;
         }
@@ -1136,7 +1136,7 @@ auto ESECT fds_env_open2(FDS_env* env, int prev) -> int
     {
         // Make sure mapsize >= committed data size.  Even when using
         // mm_mapsize, which could be broken in old files (ITS#7789).
-        fds_size_t minsize = (meta.mm_last_pg + 1) * meta.mm_psize;
+        size_t minsize = (meta.mm_last_pg + 1) * meta.mm_psize;
         if (env->me_mapsize < minsize)
             env->me_mapsize = minsize;
     }
@@ -1844,7 +1844,7 @@ void ESECT fds_env_close(FDS_env* env)
 #define FDS_WBUF (1024 * 1024)
 #endif
 
-static auto ESECT fds_fsize(HANDLE fd, fds_size_t* size) -> int
+static auto ESECT fds_fsize(HANDLE fd, size_t* size) -> int
 {
 #ifdef FDS_WINDOWS
     LARGE_INTEGER fsize;

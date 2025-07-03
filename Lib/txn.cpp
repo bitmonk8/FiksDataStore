@@ -376,7 +376,7 @@ auto fds_txn_env(FDS_txn* txn) -> FDS_env*
     return txn->mt_env;
 }
 
-auto fds_txn_id(FDS_txn* txn) -> fds_size_t
+auto fds_txn_id(FDS_txn* txn) -> size_t
 {
     if (txn == nullptr)
         return 0;

@@ -148,7 +148,7 @@ enum
 
 #if (BYTE_ORDER == LITTLE_ENDIAN) == (BYTE_ORDER == BIG_ENDIAN)
 #error "Unknown or unsupported endianness (BYTE_ORDER)"
-#elif (-6 & 5) || CHAR_BIT != 8 || UINT_MAX != 0xffffffff || FDS_SIZE_MAX % UINT_MAX
+#elif (-6 & 5) || CHAR_BIT != 8 || UINT_MAX != 0xffffffff || SIZE_MAX % UINT_MAX
 #error "Two's complement, reasonably sized integer types, please"
 #endif
 
@@ -194,12 +194,12 @@ enum
 #define FDS_FMT_Z "z"  // printf/scanf format modifier for size_t
 #endif
 
-// #fds_size_t printf formats, \b t = one of [diouxX] without quotes
+// #size_t printf formats, \b t = one of [diouxX] without quotes
 #define FDS_PRIy(t) FDS_FMT_Z #t
 
 #define Z FDS_FMT_Z     // printf/scanf format modifier for size_t
-#define Yu FDS_PRIy(u)  // printf format for fds_size_t
-#define Yd FDS_PRIy(d)  // printf format for 'signed fds_size_t'
+#define Yu FDS_PRIy(u)  // printf format for size_t
+#define Yd FDS_PRIy(d)  // printf format for 'signed size_t'
 
 #if defined(FDS_LINUX)
 // glibc < 2.12 only provided _np API

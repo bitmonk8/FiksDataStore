@@ -11,7 +11,7 @@ struct FDS_db
     pgno_t md_branch_pages;    // number of internal pages
     pgno_t md_leaf_pages;      // number of leaf pages
     pgno_t md_overflow_pages;  // number of overflow pages
-    fds_size_t md_entries;     // number of data items
+    size_t md_entries;     // number of data items
     pgno_t md_root;            // the root page of this tree
 };
 

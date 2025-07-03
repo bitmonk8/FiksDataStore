@@ -12,7 +12,7 @@ MIDL defines two main data structures for managing lists of IDs: `FDS_IDL` for s
 
 ### 2.1. `FDS_IDL`: The ID List
 
-An `FDS_IDL` is a sorted array of `FDS_ID`s (which is an alias for `fds_size_t`). It is the fundamental structure for managing lists of numerical identifiers.
+An `FDS_IDL` is a sorted array of `FDS_ID`s (which is an alias for `size_t`). It is the fundamental structure for managing lists of numerical identifiers.
 
 #### Memory Layout
 

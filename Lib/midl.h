@@ -52,7 +52,7 @@
 // ID List Management
 // A generic unsigned ID number. These were entryIDs in back-bdb.
 // Preferably it should have the same size as a pointer.
-using FDS_ID = fds_size_t;
+using FDS_ID = size_t;
 
 // An IDL is an ID List, a sorted array of IDs. The first
 // element of the array is a counter for how many actual

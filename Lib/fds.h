@@ -173,12 +173,6 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-// Unsigned type used for mapsize, entry counts and page/transaction IDs.
-// It size_t, hence the name.
-using fds_size_t = size_t;
-
-#define FDS_SIZE_MAX SIZE_MAX  // max #fds_size_t
-
 // Library major version
 enum
 {
@@ -374,18 +368,18 @@ struct FDS_stat
     unsigned int ms_psize;  // Size of a database page.
     // This is currently the same for all databases.
     unsigned int ms_depth;         // Depth (height) of the B-tree
-    fds_size_t ms_branch_pages;    // Number of internal (non-leaf) pages
-    fds_size_t ms_leaf_pages;      // Number of leaf pages
-    fds_size_t ms_overflow_pages;  // Number of overflow pages
-    fds_size_t ms_entries;         // Number of data items
+    size_t ms_branch_pages;    // Number of internal (non-leaf) pages
+    size_t ms_leaf_pages;      // Number of leaf pages
+    size_t ms_overflow_pages;  // Number of overflow pages
+    size_t ms_entries;         // Number of data items
 };
 
 // @brief Information about the environment
 struct FDS_envinfo
 {
-    fds_size_t me_mapsize;       // Size of the data memory map
-    fds_size_t me_last_pgno;     // ID of the last used page
-    fds_size_t me_last_txnid;    // ID of the last committed transaction
+    size_t me_mapsize;       // Size of the data memory map
+    size_t me_last_pgno;     // ID of the last used page
+    size_t me_last_txnid;    // ID of the last committed transaction
     unsigned int me_maxreaders;  // max reader slots in the environment
     unsigned int me_numreaders;  // max reader slots used in the environment
 };
@@ -634,7 +628,7 @@ auto fds_env_get_path(FDS_env* env, const char** path) -> int;
 //
 // EINVAL - an invalid parameter was specified, or the environment has
 // an active write transaction.
-auto fds_env_set_mapsize(FDS_env* env, fds_size_t size) -> int;
+auto fds_env_set_mapsize(FDS_env* env, size_t size) -> int;
 
 // @brief Set the maximum number of threads/reader slots for the environment.
 // This defines the number of slots in the lock table that is used to track readers in the
@@ -759,7 +753,7 @@ auto fds_txn_env(FDS_txn* txn) -> FDS_env*;
 //
 // @param[in] txn A transaction handle returned by #fds_txn_begin()
 // @return A transaction ID, valid if input is an active transaction.
-auto fds_txn_id(FDS_txn* txn) -> fds_size_t;
+auto fds_txn_id(FDS_txn* txn) -> size_t;
 
 // @brief Commit all the operations of a transaction into the database.
 // The transaction handle is freed. It and its cursors must not be used
