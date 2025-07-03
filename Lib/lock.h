@@ -43,14 +43,9 @@ struct FDS_reader
 {
     union
     {
-        FDS_rxbody mrx;
-        // shorthand for mrb_txnid
-#define mr_txnid mru.mrx.mrb_txnid
-#define mr_pid mru.mrx.mrb_pid
-#define mr_tid mru.mrx.mrb_tid
-        // cache line alignment
-        char pad[(sizeof(FDS_rxbody) + CACHELINE - 1) & ~(CACHELINE - 1)];
-    } mru;
+        FDS_rxbody mrx;       
+        char pad[(sizeof(FDS_rxbody) + CACHELINE - 1) & ~(CACHELINE - 1)]; // cache line alignment
+    };
 };
 
 

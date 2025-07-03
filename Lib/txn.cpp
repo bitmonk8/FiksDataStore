@@ -45,7 +45,7 @@ auto fds_txn_renew0(FDS_txn* txn) -> int
                                                                         : pthread_getspecific(env->me_txkey));
             if (r != nullptr)
             {
-                if ((r->mr_pid != env->me_pid) || (r->mr_txnid != -1))
+                if ((r->mrx.mrb_pid != env->me_pid) || (r->mrx.mrb_txnid != -1))
                 {
                     return FDS_BAD_RSLOT;
                 }
@@ -67,9 +67,9 @@ auto fds_txn_renew0(FDS_txn* txn) -> int
                 LOCK_MUTEX(rc, env, rmutex);
                 if (rc != 0)
                     return rc;
-                nr = ti->mti_numreaders;
+                nr = ti->mtb.mtb_numreaders;
                 for (i = 0; i < nr; i++)
-                    if (ti->mti_readers[i].mr_pid == 0)
+                    if (ti->mti_readers[i].mrx.mrb_pid == 0)
                         break;
                 if (i == env->me_maxreaders)
                 {
@@ -79,16 +79,16 @@ auto fds_txn_renew0(FDS_txn* txn) -> int
                 r = &ti->mti_readers[i];
                 // Claim the reader slot, carefully since other code
                 // uses the reader table un-mutexed: First reset the
-                // slot, next publish it in mti_numreaders.  After
+                // slot, next publish it in mtb.mtb_numreaders.  After
                 // that, it is safe for fds_env_close() to touch it.
                 // When it will be closed, we can finally claim it.
-                r->mr_pid = 0;
-                r->mr_txnid = (txnid_t)-1;
-                r->mr_tid = tid;
+                r->mrx.mrb_pid = 0;
+                r->mrx.mrb_txnid = (txnid_t)-1;
+                r->mrx.mrb_tid = tid;
                 if (i == nr)
-                    ti->mti_numreaders = ++nr;
+                    ti->mtb.mtb_numreaders = ++nr;
                 env->me_close_readers = nr;
-                r->mr_pid = pid;
+                r->mrx.mrb_pid = pid;
                 UNLOCK_MUTEX(rmutex);
 
                 new_notls = (env->me_flags & FDS_NOTLS);
@@ -97,24 +97,24 @@ auto fds_txn_renew0(FDS_txn* txn) -> int
                     rc = pthread_setspecific(env->me_txkey, r);
                     if (rc != 0)
                     {
-                        r->mr_pid = 0;
+                        r->mrx.mrb_pid = 0;
                         return rc;
                     }
                 }
             }
             do /* LY: Retry on a race, ITS#7970. */
-                r->mr_txnid = ti->mti_txnid;
-            while (r->mr_txnid != ti->mti_txnid);
-            if ((r->mr_txnid == 0U) && ((env->me_flags & FDS_RDONLY) != 0U))
+                r->mrx.mrb_txnid = ti->mtb.mtb_txnid;
+            while (r->mrx.mrb_txnid != ti->mtb.mtb_txnid);
+            if ((r->mrx.mrb_txnid == 0U) && ((env->me_flags & FDS_RDONLY) != 0U))
             {
                 meta = fds_env_pick_meta(env);
-                r->mr_txnid = meta->mm_txnid;
+                r->mrx.mrb_txnid = meta->mm_txnid;
             }
             else
             {
-                meta = env->me_metas[r->mr_txnid & 1];
+                meta = env->me_metas[r->mrx.mrb_txnid & 1];
             }
-            txn->mt_txnid = r->mr_txnid;
+            txn->mt_txnid = r->mrx.mrb_txnid;
             txn->mt_u.reader = r;
         }
     }
@@ -126,7 +126,7 @@ auto fds_txn_renew0(FDS_txn* txn) -> int
             LOCK_MUTEX(rc, env, env->me_wmutex);
             if (rc != 0)
                 return rc;
-            txn->mt_txnid = ti->mti_txnid;
+            txn->mt_txnid = ti->mtb.mtb_txnid;
             meta = env->me_metas[txn->mt_txnid & 1];
         }
         else
@@ -325,13 +325,13 @@ auto fds_txn_begin(FDS_env* env, FDS_txn* parent, unsigned int flags, FDS_txn** 
             new_txn->mt_dbflags[i] = parent->mt_dbflags[i] & ~DB_NEW;
         rc = 0;
         ntxn = (FDS_ntxn*)new_txn;
-        ntxn->mnt_pgstate = env->me_pgstate;  // save parent me_pghead & co
-        if (env->me_pghead != nullptr)
+        ntxn->mnt_pgstate = env->me_pgstate;  // save parent me_pgstate.mf_pghead & co
+        if (env->me_pgstate.mf_pghead != nullptr)
         {
-            size = FDS_IDL_SIZEOF(env->me_pghead);
-            env->me_pghead = fds_midl_alloc(env->me_pghead[0]);
-            if (env->me_pghead != nullptr)
-                memcpy(env->me_pghead, ntxn->mnt_pgstate.mf_pghead, size);
+            size = FDS_IDL_SIZEOF(env->me_pgstate.mf_pghead);
+            env->me_pgstate.mf_pghead = fds_midl_alloc(env->me_pgstate.mf_pghead[0]);
+            if (env->me_pgstate.mf_pghead != nullptr)
+                memcpy(env->me_pgstate.mf_pghead, ntxn->mnt_pgstate.mf_pghead, size);
             else
                 rc = ENOMEM;
         }
@@ -505,14 +505,14 @@ void fds_txn_end(FDS_txn* txn, unsigned mode)
     {
         if (txn->mt_u.reader != nullptr)
         {
-            txn->mt_u.reader->mr_txnid = (txnid_t)-1;
+            txn->mt_u.reader->mrx.mrb_txnid = (txnid_t)-1;
             if ((env->me_flags & FDS_NOTLS) == 0U)
             {
                 txn->mt_u.reader = nullptr; /* txn does not own reader */
             }
             else if ((mode & FDS_END_SLOT) != 0U)
             {
-                txn->mt_u.reader->mr_pid = 0;
+                txn->mt_u.reader->mrx.mrb_pid = 0;
                 txn->mt_u.reader = nullptr;
             } /* else txn owns the slot until it does FDS_END_SLOT */
         }
@@ -521,7 +521,7 @@ void fds_txn_end(FDS_txn* txn, unsigned mode)
     }
     else if (!F_ISSET(txn->mt_flags, FDS_TXN_FINISHED))
     {
-        pgno_t* pghead = env->me_pghead;
+        pgno_t* pghead = env->me_pgstate.mf_pghead;
 
         if ((mode & FDS_END_UPDATE) == 0U)  // !(already closed cursors)
             fds_cursors_close(txn, 0);
@@ -538,8 +538,8 @@ void fds_txn_end(FDS_txn* txn, unsigned mode)
             fds_midl_shrink(&txn->mt_free_pgs);
             env->me_free_pgs = txn->mt_free_pgs;
             // me_pgstate:
-            env->me_pghead = nullptr;
-            env->me_pglast = 0;
+            env->me_pgstate.mf_pghead = nullptr;
+            env->me_pgstate.mf_pglast = 0;
 
             env->me_txn = nullptr;
             mode = 0;  // txn == env->me_txn0, do not free() it
@@ -599,8 +599,8 @@ void fds_txn_abort(FDS_txn* txn)
 // This changes the freelist. Keep trying until it stabilizes.
 auto fds_freelist_save(FDS_txn* txn) -> int
 {
-    // env->me_pghead[] can grow and shrink during this call.
-    // env->me_pglast and txn->mt_free_pgs[] can only grow.
+    // env->me_pgstate.mf_pghead[] can grow and shrink during this call.
+    // env->me_pgstate.mf_pglast and txn->mt_free_pgs[] can only grow.
     // Page numbers cannot disappear from txn->mt_free_pgs[].
     FDS_cursor mc{};
     FDS_env* env = txn->mt_env;
@@ -619,7 +619,7 @@ auto fds_freelist_save(FDS_txn* txn) -> int
 
     fds_cursor_init(&mc, txn, FREE_DBI);
 
-    if (env->me_pghead != nullptr)
+    if (env->me_pgstate.mf_pghead != nullptr)
     {
         // Make sure first page of freeDB is touched and on freelist
         rc = fds_page_search(&mc, nullptr, FDS_PS_FIRST | FDS_PS_MODIFY);
@@ -627,10 +627,10 @@ auto fds_freelist_save(FDS_txn* txn) -> int
             return rc;
     }
 
-    if ((env->me_pghead == nullptr) && (txn->mt_loose_pgs != nullptr))
+    if ((env->me_pgstate.mf_pghead == nullptr) && (txn->mt_loose_pgs != nullptr))
     {
         // Put loose page numbers in mt_free_pgs, since
-        // we may be unable to return them to me_pghead.
+        // we may be unable to return them to me_pgstate.mf_pghead.
         FDS_page* mp = txn->mt_loose_pgs;
         FDS_ID2* dl = txn->mt_u.dirty_list;
         unsigned x;
@@ -695,15 +695,15 @@ auto fds_freelist_save(FDS_txn* txn) -> int
         ssize_t j{};
 
         // If using records from freeDB which we have not yet
-        // deleted, delete them and any we reserved for me_pghead.
-        while (pglast < env->me_pglast)
+        // deleted, delete them and any we reserved for me_pgstate.mf_pghead.
+        while (pglast < env->me_pgstate.mf_pglast)
         {
             rc = fds_cursor_first(&mc, &key, nullptr);
             if (rc != 0)
                 return rc;
             pglast = head_id = *(txnid_t*)key.mv_data;
             total_room = head_room = 0;
-            fds_tassert(txn, pglast <= env->me_pglast);
+            fds_tassert(txn, pglast <= env->me_pgstate.mf_pglast);
             rc = fds_cursor_del_impl(&mc, 0);
             if (rc != 0)
                 return rc;
@@ -746,12 +746,12 @@ auto fds_freelist_save(FDS_txn* txn) -> int
             continue;
         }
 
-        mop = env->me_pghead;
+        mop = env->me_pgstate.mf_pghead;
         mop_len = ((mop != nullptr) ? mop[0] : 0) + txn->mt_loose_count;
 
-        // Reserve records for me_pghead[]. Split it if multi-page,
+        // Reserve records for me_pgstate.mf_pghead[]. Split it if multi-page,
         // to avoid searching freeDB for a page range. Use keys in
-        // range [1,me_pglast]: Smaller than txnid of oldest reader.
+        // range [1,me_pgstate.mf_pglast]: Smaller than txnid of oldest reader.
         if (total_room >= mop_len)
         {
             if (total_room == mop_len || --more < 0)
@@ -768,7 +768,7 @@ auto fds_freelist_save(FDS_txn* txn) -> int
         head_room = mop_len - total_room;
         if (head_room > maxfree_1pg && head_id > 1)
         {
-            // Overflow multi-page for part of me_pghead
+            // Overflow multi-page for part of me_pgstate.mf_pghead
             head_room /= head_id;  // amortize page sizes
             head_room += maxfree_1pg - head_room % (maxfree_1pg + 1);
         }
@@ -793,7 +793,7 @@ auto fds_freelist_save(FDS_txn* txn) -> int
         total_room += head_room;
     }
 
-    // Return loose page numbers to me_pghead, though usually none are
+    // Return loose page numbers to me_pgstate.mf_pghead, though usually none are
     // left at this point.  The pages themselves remain in dirty_list.
     if (txn->mt_loose_pgs != nullptr)
     {
@@ -801,10 +801,10 @@ auto fds_freelist_save(FDS_txn* txn) -> int
         unsigned count = txn->mt_loose_count;
         FDS_IDL loose;
         // Room for loose pages + temp IDL with same
-        rc = fds_midl_need(&env->me_pghead, (2 * count) + 1);
+        rc = fds_midl_need(&env->me_pgstate.mf_pghead, (2 * count) + 1);
         if (rc != 0)
             return rc;
-        mop = env->me_pghead;
+        mop = env->me_pgstate.mf_pghead;
         loose = mop + FDS_IDL_ALLOCLEN(mop) - count;
         for (count = 0; mp != nullptr; mp = NEXT_LOOSE_PAGE(mp))
             loose[++count] = mp->mp_pgno;
@@ -816,7 +816,7 @@ auto fds_freelist_save(FDS_txn* txn) -> int
         mop_len = mop[0];
     }
 
-    // Fill in the reserved me_pghead records
+    // Fill in the reserved me_pgstate.mf_pghead records
     rc = FDS_SUCCESS;
     if (mop_len != 0)
     {
@@ -831,7 +831,7 @@ auto fds_freelist_save(FDS_txn* txn) -> int
             ssize_t len = (ssize_t)(data.mv_size / sizeof(FDS_ID)) - 1;
             FDS_ID save;
 
-            fds_tassert(txn, len >= 0 && id <= env->me_pglast);
+            fds_tassert(txn, len >= 0 && id <= env->me_pgstate.mf_pglast);
             key.mv_data = &id;
             if (len > mop_len)
             {
@@ -1098,8 +1098,8 @@ auto fds_txn_commit_impl(FDS_txn* txn) -> int
     if (rc != 0)
         goto fail;
 
-    fds_midl_free(env->me_pghead);
-    env->me_pghead = nullptr;
+    fds_midl_free(env->me_pgstate.mf_pghead);
+    env->me_pgstate.mf_pghead = nullptr;
     fds_midl_shrink(&txn->mt_free_pgs);
 
 #if (FDS_DEBUG) > 2

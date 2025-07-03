@@ -15,21 +15,25 @@
 // Pages 0-1 are meta pages. Transaction N writes meta page #(N % 2).
 struct FDS_meta
 {
-    // Stamp identifying this as an FiksDataStore file. It must be set
-    // to FDS_MAGIC.
+    // Stamp identifying this as an FiksDataStore file. It must be set to FDS_MAGIC.
     uint32_t mm_magic;
+
     // Version number of this file. Must be set to FDS_DATA_VERSION.
     uint32_t mm_version;
-    size_t mm_mapsize;    // size of mmap region
-    FDS_db mm_dbs[CORE_DBS];  // first is free space, 2nd is main db
-                              // The size of pages used in this DB
-#define mm_psize mm_dbs[FREE_DBI].md_pad
-    // Any persistent environment flags.
-#define mm_flags mm_dbs[FREE_DBI].md_flags
+
+    // size of mmap region
+    size_t mm_mapsize;
+
+    // first is free space, 2nd is main db
+    // The size of pages used in this DB
+    FDS_db mm_dbs[CORE_DBS];
+
     // Last used page in the datafile.
     // Actually the file may be shorter if the freeDB lists the final pages.
     pgno_t mm_last_pg;
-    volatile txnid_t mm_txnid;  // txnid that committed this page
+
+    // txnid that committed this page
+    volatile txnid_t mm_txnid;
 };
 
 // State of FreeDB old pages, stored in the FDS_env
@@ -86,31 +90,21 @@ struct FDS_txninfo
     union
     {
         FDS_txbody mtb;
-#define mti_magic mt1.mtb.mtb_magic
-#define mti_format mt1.mtb.mtb_format
-#define mti_rmutex mt1.mtb.mtb_rmutex
-#define mti_txnid mt1.mtb.mtb_txnid
-#define mti_numreaders mt1.mtb.mtb_numreaders
-#define mti_mutexid mt1.mtb.mtb_mutexid
-#ifdef FDS_MACOS
-#define mti_semid mt1.mtb.mtb_semid
-#define mti_rlocked mt1.mtb.mtb_rlocked
-#endif
         char pad[(sizeof(FDS_txbody) + CACHELINE - 1) & ~(CACHELINE - 1)];
-    } mt1;
+    };
+
 #if !(defined(FDS_WINDOWS))
     union
     {
 #ifdef FDS_MACOS
         int mt2_wlocked;
-#define mti_wlocked mt2.mt2_wlocked
 #else
         fds_mutex_t mt2_wmutex;
-#define mti_wmutex mt2.mt2_wmutex
 #endif
         char pad[(MNAME_LEN + CACHELINE - 1) & ~(CACHELINE - 1)];
-    } mt2;
+    };
 #endif
+
     FDS_reader mti_readers[1];
 };
 
@@ -135,7 +129,7 @@ struct FDS_env
     unsigned int me_psize;       // DB page size, inited from me_os_psize
     unsigned int me_os_psize;    // OS page size, from GET_PAGESIZE
     unsigned int me_maxreaders;  // size of the reader table
-    // Max FDS_txninfo.mti_numreaders of interest to fds_env_close()
+    // Max FDS_txninfo.mtb.mtb_numreaders of interest to fds_env_close()
     volatile int me_close_readers;
     FDS_dbi me_numdbs;              // number of DBs opened
     FDS_dbi me_maxdbs;              // size of the DB table
@@ -156,8 +150,6 @@ struct FDS_env
     pthread_key_t me_txkey;         // thread-key for readers
     txnid_t me_pgoldest;            // ID of oldest reader last time we looked
     FDS_pgstate me_pgstate;         // state of old pages from freeDB
-#define me_pglast me_pgstate.mf_pglast
-#define me_pghead me_pgstate.mf_pghead
     FDS_page* me_dpages;  // list of malloc'd blocks for re-use
     // IDL of pages that became unused in a write txn
     FDS_IDL me_free_pgs;
@@ -177,8 +169,8 @@ struct FDS_env
     int ovs;          // Count of OVERLAPPEDs
 #endif
 #ifdef FDS_LINUX             /* Posix mutexes reside in shared mem */
-#define me_rmutex me_txns->mti_rmutex  // Shared reader lock
-#define me_wmutex me_txns->mti_wmutex  // Shared writer lock
+#define me_rmutex me_txns->mtb.mtb_rmutex  // Shared reader lock
+#define me_wmutex me_txns->mt2_wmutex  // Shared writer lock
 #else
     fds_mutex_t me_rmutex;
     fds_mutex_t me_wmutex;

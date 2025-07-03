@@ -44,7 +44,7 @@ This structure is used for nested transactions. It embeds an `FDS_txn` and adds 
 | Field | Description |
 | :--- | :--- |
 | `mnt_txn` | The embedded `FDS_txn` structure for the child transaction. |
-| `mnt_pgstate` | Saves the parent transaction's page state (`me_pghead`, etc.) before the child transaction begins. This allows the parent's state to be restored if the child aborts. |
+| `mnt_pgstate` | Saves the parent transaction's page state (`me_pgstate.mf_pghead`, etc.) before the child transaction begins. This allows the parent's state to be restored if the child aborts. |
 
 ## 3. Transaction Lifecycle Functions
 
@@ -107,4 +107,4 @@ When a nested transaction begins, it needs its own set of cursors that can be mo
 
 ### Freelist Saving (`fds_freelist_save`)
 
-This is a critical and complex part of the commit process. It saves the transaction's accumulated freelist (`mt_free_pgs`) and the environment's reclaimed freelist (`env->me_pghead`) into the `FREE_DBI`. This ensures that if the application crashes, the freelist can be recovered on the next startup, preventing space leaks. The process is iterative to handle cases where saving the freelist itself consumes pages, which in turn modifies the freelist.
+This is a critical and complex part of the commit process. It saves the transaction's accumulated freelist (`mt_free_pgs`) and the environment's reclaimed freelist (`env->me_pgstate.mf_pghead`) into the `FREE_DBI`. This ensures that if the application crashes, the freelist can be recovered on the next startup, preventing space leaks. The process is iterative to handle cases where saving the freelist itself consumes pages, which in turn modifies the freelist.

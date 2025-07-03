@@ -67,22 +67,22 @@ auto ESECT fds_reader_list(FDS_env* env, FDS_msg_func func, void* ctx) -> int
         return func("(no reader locks)\n", ctx);
     }
 
-    unsigned int rdrs{env->me_txns->mti_numreaders};
+    unsigned int rdrs{env->me_txns->mtb.mtb_numreaders};
     FDS_reader* mr{env->me_txns->mti_readers};
     int rc{0};
     int first{1};
 
     for (unsigned int i{0}; i < rdrs; i++)
     {
-        if (mr[i].mr_pid != 0)
+        if (mr[i].mrx.mrb_pid != 0)
         {
-            txnid_t txnid{mr[i].mr_txnid};
+            txnid_t txnid{mr[i].mrx.mrb_txnid};
             char buf[64]{};
             snprintf(buf,
                      sizeof(buf),
                      (txnid == -1) ? "%10d %" Z "x -\n" : "%10d %" Z "x %" Yu "\n",
-                     (int)mr[i].mr_pid,
-                     (size_t)mr[i].mr_tid,
+                     (int)mr[i].mrx.mrb_pid,
+                     (size_t)mr[i].mrx.mrb_tid,
                      txnid);
             if (first != 0)
             {
@@ -170,10 +170,10 @@ auto ESECT fds_mutex_failed(FDS_env* env, fds_mutexref_t mutex, int rc) -> int
         const int rlocked{static_cast<int>(mutex == env->me_rmutex)};
         if (rlocked == 0)
         {
-            // Keep mti_txnid updated, otherwise next writer can
+            // Keep mtb.mtb_txnid updated, otherwise next writer can
             // overwrite data which latest meta page refers to.
             FDS_meta* meta{fds_env_pick_meta(env)};
-            env->me_txns->mti_txnid = meta->mm_txnid;
+            env->me_txns->mtb.mtb_txnid = meta->mm_txnid;
             // env is hosed if the dead thread was ours
             if (env->me_txn != nullptr)
             {
@@ -213,7 +213,7 @@ auto ESECT fds_mutex_failed(FDS_env* env, fds_mutexref_t mutex, int rc) -> int
 auto ESECT fds_reader_check0(FDS_env* env, int rlocked, int* dead) -> int
 {
     fds_mutexref_t rmutex{(rlocked != 0) ? nullptr : env->me_rmutex};
-    unsigned int rdrs{env->me_txns->mti_numreaders};
+    unsigned int rdrs{env->me_txns->mtb.mtb_numreaders};
     FDS_PID_T* pids{(FDS_PID_T*)malloc((rdrs + 1) * sizeof(FDS_PID_T))};
     if (pids == nullptr)
         return ENOMEM;
@@ -224,7 +224,7 @@ auto ESECT fds_reader_check0(FDS_env* env, int rlocked, int* dead) -> int
 
     for (unsigned int i{0}; i < rdrs; i++)
     {
-        FDS_PID_T pid{mr[i].mr_pid};
+        FDS_PID_T pid{mr[i].mrx.mrb_pid};
         if ((pid != 0) && pid != env->me_pid)
         {
             if (fds_pid_insert(pids, pid) == 0)
@@ -251,10 +251,10 @@ auto ESECT fds_reader_check0(FDS_env* env, int rlocked, int* dead) -> int
                         }
                     }
                     for (; j < rdrs; j++)
-                        if (mr[j].mr_pid == pid)
+                        if (mr[j].mrx.mrb_pid == pid)
                         {
-                            DPRINTF(("clear stale reader pid %u txn %" Yd, (unsigned)pid, mr[j].mr_txnid));
-                            mr[j].mr_pid = 0;
+                            DPRINTF(("clear stale reader pid %u txn %" Yd, (unsigned)pid, mr[j].mrx.mrb_txnid));
+                            mr[j].mrx.mrb_pid = 0;
                             count++;
                         }
                     if (rmutex != nullptr)

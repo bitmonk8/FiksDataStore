@@ -609,11 +609,11 @@ static auto fds_find_oldest(FDS_txn* txn) -> txnid_t
     if (txn->mt_env->me_txns != nullptr)
     {
         const auto* const r = txn->mt_env->me_txns->mti_readers;
-        for (int i = txn->mt_env->me_txns->mti_numreaders; --i >= 0;)
+        for (int i = txn->mt_env->me_txns->mtb.mtb_numreaders; --i >= 0;)
         {
-            if (r[i].mr_pid != 0)
+            if (r[i].mrx.mrb_pid != 0)
             {
-                const auto mr = r[i].mr_txnid;
+                const auto mr = r[i].mrx.mrb_txnid;
                 if (oldest > mr)
                     oldest = mr;
             }
@@ -622,13 +622,13 @@ static auto fds_find_oldest(FDS_txn* txn) -> txnid_t
     return oldest;
 }
 
-// Allocate page numbers and memory for writing.  Maintain me_pglast,
-// me_pghead and mt_next_pgno.  Set #FDS_TXN_ERROR on failure.int
+// Allocate page numbers and memory for writing.  Maintain me_pgstate.mf_pglast,
+// me_pgstate.mf_pghead and mt_next_pgno.  Set #FDS_TXN_ERROR on failure.int
 // If there are free pages available from older transactions, they
 // are re-used first. Otherwise allocate a new page at mt_next_pgno.
-// Do not modify the freedB, just merge freeDB records into me_pghead[]
-// and move me_pglast to say which records were consumed.  Only this
-// function can create me_pghead and move me_pglast/mt_next_pgno.
+// Do not modify the freedB, just merge freeDB records into me_pgstate.mf_pghead[]
+// and move me_pgstate.mf_pglast to say which records were consumed.  Only this
+// function can create me_pgstate.mf_pghead and move me_pgstate.mf_pglast/mt_next_pgno.
 // mc cursor A cursor handle identifying the transaction and
 // database for which we are allocating.
 // num the number of pages to allocate.
@@ -671,7 +671,7 @@ auto fds_page_alloc(FDS_cursor* mc, int num, FDS_page** mp) -> int
 
     //
     // The main allocation logic:
-    // 1. Try to find a contiguous block of pages in the in-memory freelist (me_pghead).
+    // 1. Try to find a contiguous block of pages in the in-memory freelist (me_pgstate.mf_pghead).
     // 2. If not found, fetch records from the on-disk freeDB, merge them into the
     //    in-memory freelist, and retry step 1.
     // 3. This continues until a block is found, retries are exhausted, or no more
@@ -690,7 +690,7 @@ auto fds_page_alloc(FDS_cursor* mc, int num, FDS_page** mp) -> int
 
         while (true)
         {
-            pgno_t* current_mop = env->me_pghead;
+            pgno_t* current_mop = env->me_pgstate.mf_pghead;
             const unsigned current_mop_len = (current_mop != nullptr) ? current_mop[0] : 0;
             const unsigned contiguous_pages_needed = num - 1;
 
@@ -716,7 +716,7 @@ auto fds_page_alloc(FDS_cursor* mc, int num, FDS_page** mp) -> int
             // --- Logic to fetch more pages from the freeDB ---
             if (!free_db_cursor_inited)
             {
-                last_freed_txn_id = env->me_pglast;
+                last_freed_txn_id = env->me_pgstate.mf_pglast;
                 oldest_reader_txn_id = env->me_pgoldest;
                 fds_cursor_init(&m2, txn, FREE_DBI);
                 if (last_freed_txn_id != 0U)
@@ -788,22 +788,22 @@ auto fds_page_alloc(FDS_cursor* mc, int num, FDS_page** mp) -> int
             const unsigned idl_count = idl[0];
 
             // Ensure the in-memory freelist (mop) has enough space.
-            if (env->me_pghead == nullptr)
+            if (env->me_pgstate.mf_pghead == nullptr)
             {
                 auto* new_mop = fds_midl_alloc(idl_count);
                 if (new_mop == nullptr)
                     return set_error_and_return(ENOMEM);
-                env->me_pghead = new_mop;
+                env->me_pgstate.mf_pghead = new_mop;
             }
             else
             {
-                const int midl_need_rc = fds_midl_need(&env->me_pghead, idl_count);
+                const int midl_need_rc = fds_midl_need(&env->me_pgstate.mf_pghead, idl_count);
                 if (midl_need_rc != 0)
                     return set_error_and_return(midl_need_rc);
             }
 
-            env->me_pglast = txn_id_from_key;
-            fds_midl_xmerge(env->me_pghead, idl);
+            env->me_pgstate.mf_pglast = txn_id_from_key;
+            fds_midl_xmerge(env->me_pgstate.mf_pghead, idl);
         }
     }
 search_complete:
@@ -828,7 +828,7 @@ search_complete:
         }
 
         // Remove the allocated pages from the in-memory freelist.
-        pgno_t* mop = env->me_pghead;
+        pgno_t* mop = env->me_pgstate.mf_pghead;
         const unsigned old_mop_len = mop[0];
         const unsigned new_mop_len = old_mop_len - num;
 
@@ -1026,7 +1026,7 @@ auto fds_ovpage_free(FDS_cursor* mc, FDS_page* mp) -> int
     // so we should give it back to our current free list, if any.
     // Otherwise put it onto the list of pages we freed in this txn.
     //
-    // Won't create me_pghead: me_pglast must be inited along with it.
+    // Won't create me_pgstate.mf_pghead: me_pgstate.mf_pglast must be inited along with it.
     // Unsupported in nested txns: They would need to hide the page
     // range in ancestor txns' dirty and spilled lists.
     const auto sl = txn->mt_spill_pgs;
@@ -1040,9 +1040,9 @@ auto fds_ovpage_free(FDS_cursor* mc, FDS_page* mp) -> int
     }
 
     const bool is_dirty = (mp->mp_flags & P_DIRTY) != 0;
-    if ((env->me_pghead != nullptr) && (txn->mt_parent == nullptr) && (is_dirty || is_spilled))
+    if ((env->me_pgstate.mf_pghead != nullptr) && (txn->mt_parent == nullptr) && (is_dirty || is_spilled))
     {
-        if (const int rc = fds_midl_need(&env->me_pghead, ovpages); rc != 0)
+        if (const int rc = fds_midl_need(&env->me_pgstate.mf_pghead, ovpages); rc != 0)
             return rc;
 
         if (is_dirty)
@@ -1082,8 +1082,8 @@ auto fds_ovpage_free(FDS_cursor* mc, FDS_page* mp) -> int
                 sl[spill_idx] |= 1;
         }
 
-        // Insert in me_pghead
-        const auto mop = env->me_pghead;
+        // Insert in me_pgstate.mf_pghead
+        const auto mop = env->me_pgstate.mf_pghead;
         const unsigned new_count = mop[0] + ovpages;
         unsigned write_pos = new_count;
         unsigned read_pos;

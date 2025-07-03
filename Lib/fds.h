@@ -793,11 +793,6 @@ void fds_txn_reset(FDS_txn* txn);
 // EINVAL - an invalid parameter was specified.
 auto fds_txn_renew(FDS_txn* txn) -> int;
 
-// Compat with version <= 0.9.4, avoid clash with libmdb from MDB Tools project
-#define fds_open(txn, name, flags, dbi) fds_dbi_open(txn, name, flags, dbi)
-// Compat with version <= 0.9.4, avoid clash with libmdb from MDB Tools project
-#define fds_close(env, dbi) fds_dbi_close(env, dbi)
-
 // @brief Open a database in the environment.
 // A database handle denotes the name and parameters of a database,
 // independently of whether such a database exists.

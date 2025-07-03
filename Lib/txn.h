@@ -86,17 +86,18 @@ struct FDS_txn
 };
 
 // fds_txn_end operation number, for logging
-constexpr int FDS_END_COMMITTED       = 0;
-constexpr int FDS_END_EMPTY_COMMIT    = 1;
-constexpr int FDS_END_ABORT           = 2;
-constexpr int FDS_END_RESET           = 3;
-constexpr int FDS_END_RESET_TMP       = 4;
-constexpr int FDS_END_FAIL_BEGIN      = 5;
-constexpr int FDS_END_FAIL_BEGINCHILD = 6;
-constexpr unsigned FDS_END_OPMASK = 0x0F;  // mask for fds_txn_end() operation number
-constexpr unsigned FDS_END_UPDATE = 0x10;  // update env state (DBIs)
-constexpr unsigned FDS_END_FREE   = 0x20;  // free txn unless it is FDS_env.me_txn0
-#define FDS_END_SLOT FDS_NOTLS  // release any reader slot if FDS_NOTLS
+constexpr int FDS_END_COMMITTED         = 0;
+constexpr int FDS_END_EMPTY_COMMIT      = 1;
+constexpr int FDS_END_ABORT             = 2;
+constexpr int FDS_END_RESET             = 3;
+constexpr int FDS_END_RESET_TMP         = 4;
+constexpr int FDS_END_FAIL_BEGIN        = 5;
+constexpr int FDS_END_FAIL_BEGINCHILD   = 6;
+constexpr unsigned FDS_END_OPMASK       = 0x0F;  // mask for fds_txn_end() operation number
+constexpr unsigned FDS_END_UPDATE       = 0x10;  // update env state (DBIs)
+constexpr unsigned FDS_END_FREE         = 0x20;  // free txn unless it is FDS_env.me_txn0
+constexpr unsigned FDS_END_SLOT         = FDS_NOTLS;  // release any reader slot if FDS_NOTLS
+
 void fds_txn_end(FDS_txn* txn, unsigned mode);
 
 auto fds_txn_renew0(FDS_txn* txn) -> int;

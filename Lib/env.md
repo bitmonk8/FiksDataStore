@@ -85,7 +85,7 @@ This function, defined in [`Lib/env.cpp:631`](Lib/env.cpp:631), is the final ste
 1.  **Toggle Meta Page:** It determines which meta page to write to based on the new transaction ID (`txn->mt_txnid & 1`).
 2.  **Construct New Meta:** It builds a new `FDS_meta` structure containing the updated state from the committed transaction, including the new root page of the main B-tree, the new root of the free-pages B-tree, and the new last-allocated page number.
 3.  **Atomic Write:** It writes the new meta information to the inactive meta page. This operation is the atomic switch that makes the transaction's changes visible to all subsequent read transactions.
-4.  **Update Lock File:** It updates the `mti_txnid` in the shared lock file memory to signal the new latest version to all processes.
+4.  **Update Lock File:** It updates the `mtb.mtb_txnid` in the shared lock file memory to signal the new latest version to all processes.
 
 ### 3.3. Concurrency Control (MVCC)
 

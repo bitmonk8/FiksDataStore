@@ -14,8 +14,10 @@ Defined in [`Lib/fds_lock.h:43`](Lib/fds_lock.h:43), this is the fundamental str
 
 ```cpp
 struct FDS_reader {
-    union {
-        struct FDS_rxbody {
+    union 
+    {
+        struct FDS_rxbody 
+        {
             volatile txnid_t mrb_txnid; // The transaction ID when the read started
             volatile FDS_PID_T mrb_pid; // The process ID of the reader
             volatile FDS_THR_T mrb_tid; // The thread ID of the reader
@@ -39,12 +41,12 @@ The main function for this is [`fds_reader_check0()`](Lib/lock.cpp:213). It is c
 
 **Algorithm:**
 
-1.  **Collect Unique PIDs**: The function iterates through the entire reader table. For every active reader slot (`mr_pid != 0`) belonging to a process other than the current one, it adds the process ID (`PID`) to a temporary list. A helper function, [`fds_pid_insert()`](Lib/fds_lock.cpp:108), uses a binary search to efficiently build a sorted list of unique PIDs.
+1.  **Collect Unique PIDs**: The function iterates through the entire reader table. For every active reader slot (`mrx.mrb_pid != 0`) belonging to a process other than the current one, it adds the process ID (`PID`) to a temporary list. A helper function, [`fds_pid_insert()`](Lib/fds_lock.cpp:108), uses a binary search to efficiently build a sorted list of unique PIDs.
 2.  **Check Liveness**: It then iterates through this list of unique PIDs. For each PID, it calls [`fds_reader_pid()`](Lib/lock.cpp:23) to determine if the process is still alive.
 3.  **Clear Stale Entries**: If [`fds_reader_pid()`](Lib/lock.cpp:23) reports that a process is dead, the function must clear its entries from the reader table.
     -   It acquires the reader mutex (`me_rmutex`) to prevent race conditions with other processes that might be checking or modifying the table.
     -   As a safeguard, it re-checks the process liveness after acquiring the lock, in case a new process has reused the PID in the interim.
-    -   If the process is still confirmed to be dead, it performs a final scan of the reader table and clears any slot where `mr_pid` matches the dead PID by setting it to 0.
+    -   If the process is still confirmed to be dead, it performs a final scan of the reader table and clears any slot where `mrx.mrb_pid` matches the dead PID by setting it to 0.
 
 ### 3.2. Process Liveness Check (`fds_reader_pid`)
 
@@ -62,7 +64,7 @@ This function ([`Lib/lock.cpp:164`](Lib/lock.cpp:164)) handles the critical scen
 -   When a mutex lock attempt returns `FDS_OWNERDEAD` (or a platform-specific equivalent like `EOWNERDEAD`), it means the caller has been granted ownership of the mutex, but the previous owner terminated abnormally.
 -   The database is now in a potentially inconsistent state. The `fds_mutex_failed` function's job is to perform recovery.
 -   Its primary action is to call [`fds_reader_check0()`](Lib/lock.cpp:213) to clean up any stale reader locks left by the dead process (or any other dead processes).
--   If the dead process was a writer, it also updates the shared transaction ID (`mti_txnid`) to the latest meta page, ensuring the next writer starts from a consistent state.
+-   If the dead process was a writer, it also updates the shared transaction ID (`mtb.mtb_txnid`) to the latest meta page, ensuring the next writer starts from a consistent state.
 -   If the dead thread belonged to the *current* process, the environment is considered irrecoverably corrupted (`FDS_FATAL_ERROR`), and a `FDS_PANIC` error is returned.
 
 ## 4. Usage by Developers

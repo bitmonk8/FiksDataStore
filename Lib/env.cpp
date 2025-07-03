@@ -485,7 +485,7 @@ auto ESECT fds_env_read_header(FDS_env* env, int prev, FDS_meta* meta) -> int
     // We don't know the page size yet, so use a minimum value.
     // Read both meta pages so we can use the latest one.
 
-    for (i = off = 0; i < NUM_METAS; i++, off += meta->mm_psize)
+    for (i = off = 0; i < NUM_METAS; i++, off += meta->mm_dbs[FREE_DBI].md_pad)
     {
 #ifdef FDS_WINDOWS
         DWORD len;
@@ -540,9 +540,9 @@ void ESECT fds_env_init_meta0(FDS_env* env, FDS_meta* meta)
     meta->mm_magic = FDS_MAGIC;
     meta->mm_version = FDS_DATA_VERSION;
     meta->mm_mapsize = env->me_mapsize;
-    meta->mm_psize = env->me_psize;
+    meta->mm_dbs[FREE_DBI].md_pad = env->me_psize;
     meta->mm_last_pg = NUM_METAS - 1;
-    meta->mm_flags = env->me_flags & 0xffff;
+    meta->mm_dbs[FREE_DBI].md_flags = env->me_flags & 0xffff;
     meta->mm_dbs[FREE_DBI].md_root = P_INVALID;
     meta->mm_dbs[MAIN_DBI].md_root = P_INVALID;
 }
@@ -674,7 +674,7 @@ auto fds_env_write_meta(FDS_txn* txn) -> int
     // readers will get consistent data regardless of how fresh or
     // how stale their view of these values is.
     if (env->me_txns != nullptr)
-        env->me_txns->mti_txnid = txn->mt_txnid;
+        env->me_txns->mtb.mtb_txnid = txn->mt_txnid;
 
     return FDS_SUCCESS;
 }
@@ -727,7 +727,7 @@ int fds_env_write_meta(FDS_txn* txn)
         // readers will get consistent data regardless of how fresh or
         // how stale their view of these values is.
         if (env->me_txns)
-            env->me_txns->mti_txnid = txn->mt_txnid;
+            env->me_txns->mtb.mtb_txnid = txn->mt_txnid;
 
         return FDS_SUCCESS;
     }
@@ -780,7 +780,7 @@ int fds_env_write_meta(FDS_txn* txn)
     // readers will get consistent data regardless of how fresh or
     // how stale their view of these values is.
     if (env->me_txns)
-        env->me_txns->mti_txnid = txn->mt_txnid;
+        env->me_txns->mtb.mtb_txnid = txn->mt_txnid;
 
     return FDS_SUCCESS;
 }
@@ -1100,7 +1100,7 @@ auto ESECT fds_env_open2(FDS_env* env, int prev) -> int
     }
     else
     {
-        env->me_psize = meta.mm_psize;
+        env->me_psize = meta.mm_dbs[FREE_DBI].md_pad;
     }
 
     // Was a mapsize configured?
@@ -1111,7 +1111,7 @@ auto ESECT fds_env_open2(FDS_env* env, int prev) -> int
     {
         // Make sure mapsize >= committed data size.  Even when using
         // mm_mapsize, which could be broken in old files (ITS#7789).
-        size_t minsize = (meta.mm_last_pg + 1) * meta.mm_psize;
+        size_t minsize = (meta.mm_last_pg + 1) * meta.mm_dbs[FREE_DBI].md_pad;
         if (env->me_mapsize < minsize)
             env->me_mapsize = minsize;
     }
@@ -1162,7 +1162,7 @@ auto ESECT fds_env_open2(FDS_env* env, int prev) -> int
     env->me_maxpg = env->me_mapsize / env->me_psize;
 
     if ((prev != 0) && (env->me_txns != nullptr))
-        env->me_txns->mti_txnid = meta.mm_txnid;
+        env->me_txns->mtb.mtb_txnid = meta.mm_txnid;
 
 #if FDS_DEBUG
     {
@@ -1191,10 +1191,10 @@ static void fds_env_reader_dest(void* ptr)
     auto* reader = (FDS_reader*)ptr;
 
 #ifndef FDS_WINDOWS
-    if (reader->mr_pid == getpid())  // catch pthread_exit() in child process
+    if (reader->mrx.mrb_pid == getpid())  // catch pthread_exit() in child process
 #endif
-        // We omit the mutex, so do this atomically (i.e. skip mr_txnid)
-        reader->mr_pid = 0;
+        // We omit the mutex, so do this atomically (i.e. skip mrx.mrb_txnid)
+        reader->mrx.mrb_pid = 0;
 }
 
 // Downgrade the exclusive lock on the region back to shared
@@ -1203,7 +1203,7 @@ auto ESECT fds_env_share_locks(FDS_env* env, int* excl) -> int
     int rc = 0;
     FDS_meta* meta = fds_env_pick_meta(env);
 
-    env->me_txns->mti_txnid = meta->mm_txnid;
+    env->me_txns->mtb.mtb_txnid = meta->mm_txnid;
 
 #ifdef FDS_WINDOWS
     {
@@ -1301,7 +1301,7 @@ void ESECT fds_env_mname_init(FDS_env* env)
 #pragma warning(disable : 4996)  // Suppress deprecation warning for strcpy
     strcpy(nm, MUTEXNAME_PREFIX);
 #pragma warning(pop)
-    fds_pack85(env->me_txns->mti_mutexid, nm + sizeof(MUTEXNAME_PREFIX));
+    fds_pack85(env->me_txns->mtb.mtb_mutexid, nm + sizeof(MUTEXNAME_PREFIX));
 }
 
 // Return env->me_mutexname after filling in ch ('r'/'w') for convenience
@@ -1441,7 +1441,7 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
         idbuf.volume = stbuf.dwVolumeSerialNumber;
         idbuf.nhigh = stbuf.nFileIndexHigh;
         idbuf.nlow = stbuf.nFileIndexLow;
-        env->me_txns->mti_mutexid = fds_hash(&idbuf, sizeof(idbuf));
+        env->me_txns->mtb.mtb_mutexid = fds_hash(&idbuf, sizeof(idbuf));
         fds_env_mname_init(env);
         env->me_rmutex = CreateMutexA(&fds_all_sa, FALSE, MUTEXNAME(env, 'r'));
         if (env->me_rmutex == nullptr)
@@ -1460,17 +1460,17 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
         semu.array = vals;
         if (semctl(semid, 0, SETALL, semu) < 0)
             goto fail_errno;
-        env->me_txns->mti_semid = semid;
-        env->me_txns->mti_rlocked = 0;
-        env->me_txns->mti_wlocked = 0;
+        env->me_txns->mtb.mtb_semid = semid;
+        env->me_txns->mtb.mtb_rlocked = 0;
+        env->me_txns->mt2_wlocked = 0;
 #else   // FDS_LINUX:
         pthread_mutexattr_t mattr;
 
         // Solaris needs this before initing a robust mutex.  Otherwise
         // it may skip the init and return EBUSY "seems someone already
         // inited" or EINVAL "it was inited differently".
-        memset(env->me_txns->mti_rmutex, 0, sizeof(*env->me_txns->mti_rmutex));
-        memset(env->me_txns->mti_wmutex, 0, sizeof(*env->me_txns->mti_wmutex));
+        memset(env->me_txns->mtb.mtb_rmutex, 0, sizeof(*env->me_txns->mtb.mtb_rmutex));
+        memset(env->me_txns->mt2_wmutex, 0, sizeof(*env->me_txns->mt2_wmutex));
 
         if ((rc = pthread_mutexattr_init(&mattr)) != 0)
             goto fail;
@@ -1478,33 +1478,33 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
         if (!rc)
             rc = pthread_mutexattr_setrobust(&mattr, PTHREAD_MUTEX_ROBUST);
         if (!rc)
-            rc = pthread_mutex_init(env->me_txns->mti_rmutex, &mattr);
+            rc = pthread_mutex_init(env->me_txns->mtb.mtb_rmutex, &mattr);
         if (!rc)
-            rc = pthread_mutex_init(env->me_txns->mti_wmutex, &mattr);
+            rc = pthread_mutex_init(env->me_txns->mt2_wmutex, &mattr);
         pthread_mutexattr_destroy(&mattr);
         if (rc)
             goto fail;
 #endif  // FDS_WINDOWS || ...
 
-        env->me_txns->mti_magic = FDS_MAGIC;
-        env->me_txns->mti_format = FDS_LOCK_FORMAT;
-        env->me_txns->mti_txnid = 0;
-        env->me_txns->mti_numreaders = 0;
+        env->me_txns->mtb.mtb_magic = FDS_MAGIC;
+        env->me_txns->mtb.mtb_format = FDS_LOCK_FORMAT;
+        env->me_txns->mtb.mtb_txnid = 0;
+        env->me_txns->mtb.mtb_numreaders = 0;
     }
     else
     {
 #ifdef FDS_MACOS
         struct semid_ds buf;
 #endif
-        if (env->me_txns->mti_magic != FDS_MAGIC)
+        if (env->me_txns->mtb.mtb_magic != FDS_MAGIC)
         {
             DPUTS("lock region has invalid magic");
             rc = FDS_INVALID;
             goto fail;
         }
-        if (env->me_txns->mti_format != FDS_LOCK_FORMAT)
+        if (env->me_txns->mtb.mtb_format != FDS_LOCK_FORMAT)
         {
-            DPRINTF(("lock region has format+version 0x%x, expected 0x%x", env->me_txns->mti_format, FDS_LOCK_FORMAT));
+            DPRINTF(("lock region has format+version 0x%x, expected 0x%x", env->me_txns->mtb.mtb_format, FDS_LOCK_FORMAT));
             rc = FDS_VERSION_MISMATCH;
             goto fail;
         }
@@ -1522,7 +1522,7 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
         if (env->me_wmutex == nullptr)
             goto fail_errno;
 #elif defined(FDS_MACOS)
-        semid = env->me_txns->mti_semid;
+        semid = env->me_txns->mtb.mtb_semid;
         semu.buf = &buf;
         // check for read access
         if (semctl(semid, 0, IPC_STAT, semu) < 0)
@@ -1537,8 +1537,8 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
     env->me_wmutex->semid = semid;
     env->me_rmutex->semnum = 0;
     env->me_wmutex->semnum = 1;
-    env->me_rmutex->locked = &env->me_txns->mti_rlocked;
-    env->me_wmutex->locked = &env->me_txns->mti_wlocked;
+    env->me_rmutex->locked = &env->me_txns->mtb.mtb_rlocked;
+    env->me_wmutex->locked = &env->me_txns->mt2_wlocked;
 #endif
 
     return FDS_SUCCESS;
@@ -1755,8 +1755,8 @@ void ESECT fds_env_close0(FDS_env* env, int excl)
         // data owned by this process (me_close_readers and
         // our readers), and clear each reader atomically.
         for (i = env->me_close_readers; --i >= 0;)
-            if (env->me_txns->mti_readers[i].mr_pid == pid)
-                env->me_txns->mti_readers[i].mr_pid = 0;
+            if (env->me_txns->mti_readers[i].mrx.mrb_pid == pid)
+                env->me_txns->mti_readers[i].mrx.mrb_pid = 0;
 #ifdef FDS_WINDOWS
         if (env->me_rmutex != nullptr)
         {
@@ -1950,7 +1950,7 @@ auto ESECT fds_env_info(FDS_env* env, FDS_envinfo* stat) -> int
 
     stat->me_mapsize = env->me_mapsize;
     stat->me_maxreaders = env->me_maxreaders;
-    stat->me_numreaders = (env->me_txns != nullptr) ? env->me_txns->mti_numreaders : 0;
+    stat->me_numreaders = (env->me_txns != nullptr) ? env->me_txns->mtb.mtb_numreaders : 0;
     return FDS_SUCCESS;
 }
 
