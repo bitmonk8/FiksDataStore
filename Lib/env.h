@@ -141,7 +141,7 @@ struct FDS_env
     void* me_pbuf;                  // scratch area for put operations
     FDS_txn* me_txn;                // current write transaction
     FDS_txn* me_txn0;               // prealloc'd write transaction
-    size_t me_mapsize;          // size of the data memory map
+    size_t me_mapsize;              // size of the data memory map
     FDS_OFF_T me_size;              // current file size
     pgno_t me_maxpg;                // me_mapsize / me_psize
     FDS_dbx* me_dbxs;               // array of static DB info
@@ -150,7 +150,7 @@ struct FDS_env
     pthread_key_t me_txkey;         // thread-key for readers
     txnid_t me_pgoldest;            // ID of oldest reader last time we looked
     FDS_pgstate me_pgstate;         // state of old pages from freeDB
-    FDS_page* me_dpages;  // list of malloc'd blocks for re-use
+    FDS_page* me_dpages;            // list of malloc'd blocks for re-use
     // IDL of pages that became unused in a write txn
     FDS_IDL me_free_pgs;
     // ID2L of pages written during a write txn. Length FDS_IDL_UM_SIZE.
@@ -168,9 +168,9 @@ struct FDS_env
     OVERLAPPED* ov;   // Used for for overlapping I/O requests
     int ovs;          // Count of OVERLAPPEDs
 #endif
-#ifdef FDS_LINUX             /* Posix mutexes reside in shared mem */
+#ifdef FDS_LINUX                           /* Posix mutexes reside in shared mem */
 #define me_rmutex me_txns->mtb.mtb_rmutex  // Shared reader lock
-#define me_wmutex me_txns->mt2_wmutex  // Shared writer lock
+#define me_wmutex me_txns->mt2_wmutex      // Shared writer lock
 #else
     fds_mutex_t me_rmutex;
     fds_mutex_t me_wmutex;

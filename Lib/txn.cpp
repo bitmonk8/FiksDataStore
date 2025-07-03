@@ -290,7 +290,7 @@ auto fds_txn_begin(FDS_env* env, FDS_txn* parent, unsigned int flags, FDS_txn** 
     new_txn = (FDS_txn*)calloc(1, size);
     if (new_txn == nullptr)
         return ENOMEM;
-        
+
     new_txn->mt_dbxs = env->me_dbxs;  // static
     new_txn->mt_dbs = (FDS_db*)((char*)new_txn + tsize);
     new_txn->mt_dbflags = (unsigned char*)new_txn + size - env->me_maxdbs;

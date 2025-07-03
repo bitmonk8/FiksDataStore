@@ -1,8 +1,8 @@
 #pragma once
 
 #include "internal.h"
-#include "util.h"
 #include "midl.h"
+#include "util.h"
 
 // Common header for all page types. The page type depends on mp_flags.
 struct FDS_page

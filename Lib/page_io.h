@@ -1,9 +1,9 @@
 #pragma once
 
 #include "internal.h"
+#include "midl.h"
 #include "page.h"
 #include "util.h"
-#include "midl.h"
 
 // Forward declarations to avoid circular dependencies.
 struct FDS_cursor;

@@ -74,7 +74,8 @@ auto fds_node_search(FDS_cursor* mc, FDS_val* key, int* exactp) -> FDS_node*
         if (IS_LEAF(mp))
             DPRINTF(("found leaf index %u [%s], rc = %i", i, DKEY(&nodekey), compareResult));
         else
-            DPRINTF(("found branch index %u [%s -> %" Yu "], rc = %i", i, DKEY(&nodekey), NODEPGNO(node), compareResult));
+            DPRINTF(
+                ("found branch index %u [%s -> %" Yu "], rc = %i", i, DKEY(&nodekey), NODEPGNO(node), compareResult));
 #endif
         if (compareResult == 0)
             break;
@@ -98,7 +99,7 @@ auto fds_node_search(FDS_cursor* mc, FDS_val* key, int* exactp) -> FDS_node*
     // store the key index
     mc->mc_ki[mc->mc_top] = i;
     if (i >= nkeys)
-        return nullptr; // There is no entry larger or equal to the key.
+        return nullptr;  // There is no entry larger or equal to the key.
 
     return node;
 }
@@ -1058,12 +1059,12 @@ auto fds_cursor_put(FDS_cursor* cursor, FDS_val* key, FDS_val* data, unsigned in
     DDBUF;
     int rc = fds_cursor_put_impl(cursor, key, data, flags);
     DPRINTF(("%p, %" Z "u[%s], %" Z "u%s, %u",
-               cursor,
-               key ? key->mv_size : 0,
-               DKEY(key),
-               data ? data->mv_size : 0,
-               data ? fds_dval(cursor->mc_txn, cursor->mc_dbi, data, dbuf) : "",
-               flags));
+             cursor,
+             key ? key->mv_size : 0,
+             DKEY(key),
+             data ? data->mv_size : 0,
+             data ? fds_dval(cursor->mc_txn, cursor->mc_dbi, data, dbuf) : "",
+             flags));
     return rc;
 }
 

@@ -333,7 +333,8 @@ typedef mode_t fds_mode_t;
 // mode	The Unix permissions for the file, if we create it.
 // res	Resulting file handle.
 // Return 0 on success, non-zero on failure.
-static auto ESECT fds_fopen(const FDS_env* env, FDS_name* fname, enum fds_fopen_type which, fds_mode_t mode, HANDLE* res) -> int
+static auto ESECT
+fds_fopen(const FDS_env* env, FDS_name* fname, enum fds_fopen_type which, fds_mode_t mode, HANDLE* res) -> int
 {
     int rc = FDS_SUCCESS;
     HANDLE fd;
@@ -1504,7 +1505,8 @@ auto ESECT fds_env_setup_locks(FDS_env* env, FDS_name* fname, int mode, int* exc
         }
         if (env->me_txns->mtb.mtb_format != FDS_LOCK_FORMAT)
         {
-            DPRINTF(("lock region has format+version 0x%x, expected 0x%x", env->me_txns->mtb.mtb_format, FDS_LOCK_FORMAT));
+            DPRINTF(
+                ("lock region has format+version 0x%x, expected 0x%x", env->me_txns->mtb.mtb_format, FDS_LOCK_FORMAT));
             rc = FDS_VERSION_MISMATCH;
             goto fail;
         }

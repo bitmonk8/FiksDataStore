@@ -324,12 +324,12 @@ auto fds_del(FDS_txn* txn, FDS_dbi dbi, FDS_val* key, FDS_val* data) -> int
 
 #if FDS_DEBUG
     DPRINTF(("%p, %u, %" Z "u[%s], %" Z "u%s",
-               txn,
-               dbi,
-               key ? key->mv_size : 0,
-               DKEY(key),
-               data ? data->mv_size : 0,
-               data ? fds_dval(txn, dbi, data, dbuf) : ""));
+             txn,
+             dbi,
+             key ? key->mv_size : 0,
+             DKEY(key),
+             data ? data->mv_size : 0,
+             data ? fds_dval(txn, dbi, data, dbuf) : ""));
 #endif
     return fds_del0(txn, dbi, key, data, 0);
 }
@@ -406,13 +406,13 @@ auto fds_put(FDS_txn* txn, FDS_dbi dbi, FDS_val* key, FDS_val* data, unsigned in
 
 #if FDS_DEBUG
     DPRINTF(("%p, %u, %" Z "u[%s], %" Z "u%s, %u",
-               txn,
-               dbi,
-               key ? key->mv_size : 0,
-               DKEY(key),
-               data->mv_size,
-               fds_dval(txn, dbi, data, dbuf),
-               flags));
+             txn,
+             dbi,
+             key ? key->mv_size : 0,
+             DKEY(key),
+             data->mv_size,
+             fds_dval(txn, dbi, data, dbuf),
+             flags));
 #endif
     FDS_cursor mc{};
     fds_cursor_init(&mc, txn, dbi);

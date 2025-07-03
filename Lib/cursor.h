@@ -42,10 +42,10 @@ struct FDS_cursor
     FDS_dbx* mc_dbx;
     // The mt_dbflag for this database
     unsigned char* mc_dbflag;
-    unsigned short mc_snum;  // number of pushed pages
-    unsigned short mc_top;   // index of top page, normally mc_snum-1
-// Cursor Flags
-// Cursor state flags.
+    unsigned short mc_snum;                     // number of pushed pages
+    unsigned short mc_top;                      // index of top page, normally mc_snum-1
+                                                // Cursor Flags
+                                                // Cursor state flags.
     unsigned int mc_flags;                      // fds_cursor
     std::array<FDS_page*, CURSOR_STACK> mc_pg;  // stack of pushed pages
     std::array<indx_t, CURSOR_STACK> mc_ki;     // stack of page indices

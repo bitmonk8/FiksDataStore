@@ -247,7 +247,7 @@ auto fds_page_flush(FDS_txn* txn, int keep) -> int
                         const HANDLE event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
                         if (event == nullptr)
                             return ErrCode();
-                            
+
                         this_ov->hEvent = event;
                     }
                     if (WriteFile(fd, wdp, wsize, nullptr, this_ov) == 0)

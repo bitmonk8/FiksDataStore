@@ -43,11 +43,10 @@ struct FDS_reader
 {
     union
     {
-        FDS_rxbody mrx;       
-        char pad[(sizeof(FDS_rxbody) + CACHELINE - 1) & ~(CACHELINE - 1)]; // cache line alignment
+        FDS_rxbody mrx;
+        char pad[(sizeof(FDS_rxbody) + CACHELINE - 1) & ~(CACHELINE - 1)];  // cache line alignment
     };
 };
-
 
 #if defined(FDS_WINDOWS)
 
@@ -91,7 +90,6 @@ int fds_sem_wait(fds_mutexref_t sem);
 #error "Unknown platform for mutex locking"
 
 #endif
-
 
 // Lock mutex, handle any error, set rc = result.
 // Return 0 on success, nonzero (not rc) on error.

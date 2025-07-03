@@ -352,7 +352,7 @@ struct FDS_stat
 {
     unsigned int ms_psize;  // Size of a database page.
     // This is currently the same for all databases.
-    unsigned int ms_depth;         // Depth (height) of the B-tree
+    unsigned int ms_depth;     // Depth (height) of the B-tree
     size_t ms_branch_pages;    // Number of internal (non-leaf) pages
     size_t ms_leaf_pages;      // Number of leaf pages
     size_t ms_overflow_pages;  // Number of overflow pages
@@ -362,9 +362,9 @@ struct FDS_stat
 // @brief Information about the environment
 struct FDS_envinfo
 {
-    size_t me_mapsize;       // Size of the data memory map
-    size_t me_last_pgno;     // ID of the last used page
-    size_t me_last_txnid;    // ID of the last committed transaction
+    size_t me_mapsize;           // Size of the data memory map
+    size_t me_last_pgno;         // ID of the last used page
+    size_t me_last_txnid;        // ID of the last committed transaction
     unsigned int me_maxreaders;  // max reader slots in the environment
     unsigned int me_numreaders;  // max reader slots used in the environment
 };
