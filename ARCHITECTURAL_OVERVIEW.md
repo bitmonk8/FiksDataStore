@@ -33,7 +33,7 @@ The codebase is organized logically, with core functionalities separated into di
 | **Cursors** | [`Lib/fds_cursor.h`](Lib/fds_cursor.h), [`Lib/fds_cursor.cpp`](Lib/fds_cursor.cpp) | Defines and implements the `FDS_cursor` structure. Cursors are used to navigate the B+ tree, allowing for iteration, searching, and positioning within the database. |
 | **Page & Node Management** | [`Lib/fds_page.h`](Lib/fds_page.h), [`Lib/fds_page.cpp`](Lib/fds_page.cpp) | Defines the low-level structures for data storage: `FDS_page` (the nodes of the B+ tree) and `FDS_node` (the key/value entries within a page). This is where the logic for splitting, merging, and searching pages resides. |
 | **Database Operations** | [`Lib/fds_db.h`](Lib/fds_db.h), [`Lib/fds_db.cpp`](Lib/fds_db.cpp) | Manages individual databases within an environment. An environment can contain multiple named databases, which are themselves stored as key/value pairs in the main database. |
-| **Internal Definitions** | [`Lib/fds_internal.h`](Lib/fds_internal.h) | A central header containing common type definitions, constants, and macros used across the entire library, providing a consistent set of internal APIs. |
+| **Internal Definitions** | [`Lib/internal.h`](Lib/internal.h) | A central header containing common type definitions, constants, and macros used across the entire library, providing a consistent set of internal APIs. |
 | **Tests** | `Tests/` | Contains the test suite for verifying the correctness and performance of the database. |
 
 ### 4. Key Concepts for New Developers

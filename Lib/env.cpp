@@ -115,8 +115,7 @@ void NTAPI fds_tls_callback(PVOID module, DWORD reason, PVOID ptr)
     case DLL_THREAD_DETACH:
         for (i = 0; i < fds_tls_nkeys; i++)
         {
-// CODING_CONVENTION_VIOLATION: Variables should have one purpose. Use `const` where possible.
-            auto* r = (FDS_reader*)(pthread_getspecific(fds_tls_keys[i]));
+            auto* const r = (FDS_reader*)(pthread_getspecific(fds_tls_keys[i]));
             if (r != nullptr)
             {
                 fds_env_reader_dest(r);
@@ -756,13 +755,12 @@ int fds_env_write_meta(FDS_txn* txn)
         // (me_mfd goes to the same file as me_fd, but writing to it
         // also syncs to disk.  Avoids a separate fdatasync() call.)
         HANDLE mfd{(flags & (FDS_NOSYNC | FDS_NOMETASYNC)) ? env->me_fd : env->me_mfd};
-        int rc{};
-        rc = pwrite(mfd, ptr, len, off);
-        if (rc == len)
+        const auto bytes_written = pwrite(mfd, ptr, len, off);
+        if (bytes_written == len)
             break;
 
-        rc = rc < 0 ? ErrCode() : EIO;
-        if (rc == EINTR)
+        const int err_code = bytes_written < 0 ? ErrCode() : EIO;
+        if (err_code == EINTR)
             continue;
 
         DPUTS("write failed, disk error?");
@@ -773,7 +771,7 @@ int fds_env_write_meta(FDS_txn* txn)
         meta.mm_txnid = metab.mm_txnid;
         pwrite(env->me_fd, ptr, len, off);
         env->me_flags |= FDS_FATAL_ERROR;
-        return rc;
+        return err_code;
     }
 
     // Memory ordering issues are irrelevant; since the entire writer

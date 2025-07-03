@@ -21,14 +21,11 @@
 //
 // Share and Enjoy!	:-)
 
-// CODING_CONVENTION_VIOLATION: Use `//` for documentation.
-/*
- * Perform a 64-bit Fowler/Noll/Vo FNV-1a hash on a buffer.
- *
- * @param val: Value to hash.
- * @param len: Length of value.
- * @return: 64-bit hash.
- */
+// Perform a 64-bit Fowler/Noll/Vo FNV-1a hash on a buffer.
+//
+// @param val: Value to hash.
+// @param len: Length of value.
+// @return: 64-bit hash.
 auto fds_hash(const void* val, size_t len) -> fds_hash_t
 {
     const unsigned char* s{(const unsigned char*)val};
@@ -43,18 +40,15 @@ auto fds_hash(const void* val, size_t len) -> fds_hash_t
     return hval;
 }
 
-/* The ASCII-85 character set for encoding 64-bit integers */
+// The ASCII-85 character set for encoding 64-bit integers
 static const char fds_a85[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~";
 
-// CODING_CONVENTION_VIOLATION: Use `//` for documentation.
-/*
- * Pack a 64-bit integer into an ASCII-85 string.
- * This is a custom implementation, not fully compliant with Z85.
- * It is used for printing database names.
- *
- * @param l: The 64-bit value to pack.
- * @param out: The destination buffer. Must be at least 11 bytes.
- */
+// Pack a 64-bit integer into an ASCII-85 string.
+// This is a custom implementation, not fully compliant with Z85.
+// It is used for printing database names.
+//
+// @param l: The 64-bit value to pack.
+// @param out: The destination buffer. Must be at least 11 bytes.
 void fds_pack85(unsigned long long l, char* out)
 {
     for (int i{}; i < 10 && (l != 0U); ++i)

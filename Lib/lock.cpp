@@ -25,14 +25,12 @@ auto fds_reader_pid(FDS_env* env, enum Pidlock_op op, FDS_PID_T pid) -> int
 #if defined(FDS_WINDOWS)
     if (op == Pidcheck)
     {
-// CODING_CONVENTION_VIOLATION: Variables should have one purpose. Use `const` where possible.
-        HANDLE h{OpenProcess(env->me_pidquery, FALSE, pid)};
+        const HANDLE h{OpenProcess(env->me_pidquery, FALSE, pid)};
         // No documented "no such process" code, but other program use this:
         if (h == nullptr)
             return ErrCode() != ERROR_INVALID_PARAMETER;
         // A process exists until all handles to it close. Has it exited?
-// CODING_CONVENTION_VIOLATION: Variables should have one purpose. Use `const` where possible.
-        int ret{static_cast<int>(WaitForSingleObject(h, 0) != 0)};
+        const int ret{static_cast<int>(WaitForSingleObject(h, 0) != 0)};
         CloseHandle(h);
         return ret;
     }

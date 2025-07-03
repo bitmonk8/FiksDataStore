@@ -252,8 +252,8 @@ int fds_good_example(FDS_env *env)
 **Rules**:
 - All `.cpp` files must include their corresponding `.h` file first
 - **Exception**: `.cpp` files containing a `main` function do not need a corresponding header file.
-- All `Lib/*.h` files (except exceptions) must include `fds_internal.h`
-- **Exception**: `Lib/midl.h` does not need a to include include `fds_internal.h`.
+- All `Lib/*.h` files (except exceptions) must include `internal.h`
+- **Exception**: `Lib/midl.h` does not need a to include include `internal.h`.
 - Use `#pragma once` for include guards
 
 ## Validation
