@@ -154,7 +154,8 @@ void fds_page_list(FDS_page* mp)
 void fds_audit(FDS_txn* txn)
 {
     FDS_cursor mc{};
-    FDS_val key{}, data{};
+    FDS_val key{};
+    FDS_val data{};
 
     FDS_ID freecount{0};
     fds_cursor_init(&mc, txn, FREE_DBI);
@@ -166,7 +167,7 @@ void fds_audit(FDS_txn* txn)
     FDS_ID count{0};
     for (FDS_dbi i{0}; i < txn->mt_numdbs; i++)
     {
-        if (!(txn->mt_dbflags[i] & DB_VALID))
+        if ((txn->mt_dbflags[i] & DB_VALID) == 0)
             continue;
         fds_cursor_init(&mc, txn, i);
         if (txn->mt_dbs[i].md_root == P_INVALID)
