@@ -21,7 +21,7 @@ static void fds_default_cmp(FDS_txn* txn, FDS_dbi dbi)
 
 auto fds_dbi_open(FDS_txn* txn, const char* name, unsigned int flags, FDS_dbi* dbi) -> int
 {
-    if ((flags & ~VALID_FLAGS) != 0U)
+    if ((flags & ~(FDS_REVERSEKEY | FDS_CREATE)) != 0U)
         return EINVAL;
     if ((txn->mt_flags & FDS_TXN_BLOCKED) != 0U)
         return FDS_BAD_TXN;

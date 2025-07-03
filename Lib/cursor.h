@@ -1,9 +1,29 @@
 #pragma once
 
-#include "db.h"
 #include "internal.h"
+#include "db.h"
+#include "txn.h"
 
 #include <array>
+
+enum
+{
+    // Enough space for 2^32 nodes with minimum of 2 keys per node. I.e., plenty.
+    // At 4 keys per node, enough for 2^64 nodes, so there's probably no need to
+    // raise this on a 64 bit machine.
+    CURSOR_STACK = 32
+};
+
+/* for FDS_cursor */
+enum MCursorFlags : unsigned int
+{
+    C_INITIALIZED = 0x01,           // cursor has been initialized and is valid
+    C_EOF = 0x02,                   // No more data
+    C_DEL = 0x08,                   // last op was a cursor_del
+    C_UNTRACK = 0x40,               // Un-track cursor when closing
+    C_WRITEMAP = FDS_TXN_WRITEMAP,  // Copy of txn flag
+    C_ORIG_RDONLY = FDS_TXN_RDONLY
+};
 
 // Cursors are used for all DB operations.
 // A cursor holds a path of (page pointer, key index) from the DB
@@ -29,14 +49,6 @@ struct FDS_cursor
     unsigned short mc_top;   // index of top page, normally mc_snum-1
 // Cursor Flags
 // Cursor state flags.
-#define C_INITIALIZED 0x01           // cursor has been initialized and is valid
-#define C_EOF 0x02                   // No more data
-#define C_DEL 0x08                   // last op was a cursor_del
-#define C_UNTRACK 0x40               // Un-track cursor when closing
-#define C_WRITEMAP FDS_TXN_WRITEMAP  // Copy of txn flag
-// Read-only cursor into the txn's original snapshot in the map.
-// Set for read-only txns. Only implements code which is necessary for this.
-#define C_ORIG_RDONLY FDS_TXN_RDONLY
     unsigned int mc_flags;                      // fds_cursor
     std::array<FDS_page*, CURSOR_STACK> mc_pg;  // stack of pushed pages
     std::array<indx_t, CURSOR_STACK> mc_ki;     // stack of page indices

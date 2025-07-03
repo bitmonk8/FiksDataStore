@@ -9,6 +9,12 @@
 #include "lock.h"
 #include "txn.h"
 
+enum
+{
+    // Magic number for lockfile layout and features.
+    FDS_lock_desc = 42
+};
+
 // The version number for a database's lockfile format.
 enum
 {
@@ -803,6 +809,53 @@ auto fds_env_pick_meta(const FDS_env* env) -> FDS_meta*
     return metas[(metas[0]->mm_txnid < metas[1]->mm_txnid) ^ ((env->me_flags & FDS_PREVSNAPSHOT) != 0)];
 }
 
+enum
+{
+    // Reader Lock Table
+    // Readers don't acquire any locks for their data access. Instead, they
+    // simply record their transaction ID in the reader table. The reader
+    // mutex is needed just to find an empty slot in the reader table. The
+    // slot's address is saved in thread-specific data so that subsequent read
+    // transactions started by the same thread need no further locking to proceed.
+    //
+    // If FDS_NOTLS is set, the slot address is not saved in thread-specific data.
+    //
+    // No reader table is used if the database is on a read-only filesystem, or
+    // if FDS_NOLOCK is set.
+    //
+    // Since the database uses multi-version concurrency control, readers don't
+    // actually need any locking. This table is used to keep track of which
+    // readers are using data from which old transactions, so that we'll know
+    // when a particular old transaction is no longer in use. Old transactions
+    // that have discarded any data pages can then have those pages reclaimed
+    // for use by a later write transaction.
+    //
+    // The lock table is constructed such that reader slots are aligned with the
+    // processor's cache line size. Any slot is only ever used by one thread.
+    // This alignment guarantees that there will be no contention or cache
+    // thrashing as threads update their own slot info, and also eliminates
+    // any need for locking when accessing a slot.
+    //
+    // A writer thread will scan every slot in the table to determine the oldest
+    // outstanding reader transaction. Any freed pages older than this will be
+    // reclaimed by the writer. The writer doesn't use any locks when scanning
+    // this table. This means that there's no guarantee that the writer will
+    // see the most up-to-date reader info, but that's not required for correct
+    // operation - all we need is to know the upper bound on the oldest reader,
+    // we don't care at all about the newest reader. So the only consequence of
+    // reading stale information here is that old pages might hang around a
+    // while longer before being reclaimed. That's actually good anyway, because
+    // the longer we delay reclaiming old pages, the more likely it is that a
+    // string of contiguous pages can be found after coalescing old pages from
+    // many old transactions together.
+    //
+    // Number of slots in the reader table.
+    // This value was chosen somewhat arbitrarily. 126 readers plus a
+    // couple mutexes fit exactly into 8KB on my development machine.
+    // Applications should set the table size using fds_env_set_maxreaders().
+    DEFAULT_READERS = 126
+};
+
 auto ESECT fds_env_create(FDS_env** env) -> int
 {
     FDS_env* e;
@@ -1000,6 +1053,14 @@ auto ESECT fds_env_get_maxreaders(FDS_env* env, unsigned int* readers) -> int
     *readers = env->me_maxreaders;
     return FDS_SUCCESS;
 }
+
+enum
+{
+    // Default size of memory map.
+    // This is certainly too small for any actual applications. Apps should always set
+    // the size explicitly using fds_env_set_mapsize().
+    DEFAULT_MAPSIZE = 1048576
+};
 
 // Further setup required for opening an FiksDataStore environment
 auto ESECT fds_env_open2(FDS_env* env, int prev) -> int
@@ -1514,10 +1575,6 @@ fail:
 #define CHANGEABLE (FDS_NOSYNC | FDS_NOMETASYNC | FDS_MAPASYNC | FDS_NOMEMINIT)
 #define CHANGELESS                                                                                                     \
     (FDS_NOSUBDIR | FDS_RDONLY | FDS_WRITEMAP | FDS_NOTLS | FDS_NOLOCK | FDS_NORDAHEAD | FDS_PREVSNAPSHOT)
-
-#if VALID_FLAGS & PERSISTENT_FLAGS & (CHANGEABLE | CHANGELESS)
-#error "Persistent DB flags & env flags overlap, but both go in mm_flags"
-#endif
 
 auto ESECT fds_env_open(FDS_env* env, const char* path, unsigned int flags, fds_mode_t mode) -> int
 {

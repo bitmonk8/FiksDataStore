@@ -332,76 +332,10 @@ typedef pthread_mutex_t* fds_mutexref_t;
 #define ENV_MAXKEY(env) ((env)->me_maxkey)
 #endif
 
-// The maximum size of a data item.
-//
-// We only store a 32 bit value for node sizes.
-//
-enum
-{
-    MAXDATASIZE = 0xffffffffUL
-};
-
 // An invalid page number.
 // Mainly used to denote an empty tree.
 //
 #define P_INVALID (~(pgno_t)0)
-
-// Default size of memory map.
-// This is certainly too small for any actual applications. Apps should always set
-// the size explicitly using fds_env_set_mapsize().
-//
-enum
-{
-    DEFAULT_MAPSIZE = 1048576
-};
-
-// Reader Lock Table
-// Readers don't acquire any locks for their data access. Instead, they
-// simply record their transaction ID in the reader table. The reader
-// mutex is needed just to find an empty slot in the reader table. The
-// slot's address is saved in thread-specific data so that subsequent read
-// transactions started by the same thread need no further locking to proceed.
-//
-// If FDS_NOTLS is set, the slot address is not saved in thread-specific data.
-//
-// No reader table is used if the database is on a read-only filesystem, or
-// if FDS_NOLOCK is set.
-//
-// Since the database uses multi-version concurrency control, readers don't
-// actually need any locking. This table is used to keep track of which
-// readers are using data from which old transactions, so that we'll know
-// when a particular old transaction is no longer in use. Old transactions
-// that have discarded any data pages can then have those pages reclaimed
-// for use by a later write transaction.
-//
-// The lock table is constructed such that reader slots are aligned with the
-// processor's cache line size. Any slot is only ever used by one thread.
-// This alignment guarantees that there will be no contention or cache
-// thrashing as threads update their own slot info, and also eliminates
-// any need for locking when accessing a slot.
-//
-// A writer thread will scan every slot in the table to determine the oldest
-// outstanding reader transaction. Any freed pages older than this will be
-// reclaimed by the writer. The writer doesn't use any locks when scanning
-// this table. This means that there's no guarantee that the writer will
-// see the most up-to-date reader info, but that's not required for correct
-// operation - all we need is to know the upper bound on the oldest reader,
-// we don't care at all about the newest reader. So the only consequence of
-// reading stale information here is that old pages might hang around a
-// while longer before being reclaimed. That's actually good anyway, because
-// the longer we delay reclaiming old pages, the more likely it is that a
-// string of contiguous pages can be found after coalescing old pages from
-// many old transactions together.
-//
-// Number of slots in the reader table.
-// This value was chosen somewhat arbitrarily. 126 readers plus a
-// couple mutexes fit exactly into 8KB on my development machine.
-// Applications should set the table size using fds_env_set_maxreaders().
-//
-enum
-{
-    DEFAULT_READERS = 126
-};
 
 // The size of a CPU cache line in bytes. We want our lock structures
 // aligned to this size to avoid false cache line sharing in the
@@ -411,15 +345,6 @@ enum
 #ifndef CACHELINE
 #define CACHELINE 64
 #endif
-
-// Enough space for 2^32 nodes with minimum of 2 keys per node. I.e., plenty.
-// At 4 keys per node, enough for 2^64 nodes, so there's probably no need to
-// raise this on a 64 bit machine.
-//
-enum
-{
-    CURSOR_STACK = 32
-};
 
 // Lock type and layout. Values 0-119.
 // Some low values are reserved for future tweaks.
@@ -437,29 +362,9 @@ enum
 
 enum
 {
-    // Magic number for lockfile layout and features.
-    FDS_lock_desc = 42
-};
-//
-
-enum
-{
     FDS_VALID = 0x8000  // DB handle is valid, for me_dbflags
 };
 #define PERSISTENT_FLAGS (0xffff & ~(FDS_VALID))
-// fds_dbi_open() flags
-#define VALID_FLAGS (FDS_REVERSEKEY | FDS_CREATE)
-
-/* for FDS_cursor */
-enum MCursorFlags : unsigned int
-{
-    C_INITIALIZED = 0x01,  // cursor has been initialized and is valid
-    C_EOF = 0x02,          // No more data
-    C_DEL = 0x08,          // last op was a cursor_del
-    C_UNTRACK = 0x40       // Un-track cursor when closing
-};
-#define C_WRITEMAP FDS_TXN_WRITEMAP  // Copy of txn flag
-#define C_ORIG_RDONLY FDS_TXN_RDONLY
 
 // Handle for the DB used to track free pages.
 enum

@@ -60,21 +60,21 @@ struct FDS_txn
     // Transaction Flags
     // internal
 
-    // fds_txn_begin() flags
+// fds_txn_begin() flags
 #define FDS_TXN_BEGIN_FLAGS (FDS_NOMETASYNC | FDS_NOSYNC | FDS_RDONLY)
 #define FDS_TXN_NOMETASYNC FDS_NOMETASYNC  // don't sync meta for this txn on commit
 #define FDS_TXN_NOSYNC FDS_NOSYNC          // don't sync this txn on commit
-#define FDS_TXN_RDONLY                                                                                                 \
-    FDS_RDONLY                         // read-only transaction
-                                       // internal txn flags
+#define FDS_TXN_RDONLY FDS_RDONLY           // read-only transaction
+
+// internal txn flags
 #define FDS_TXN_WRITEMAP FDS_WRITEMAP  // copy of FDS_env flag in writers
 #define FDS_TXN_FINISHED 0x01          // txn is finished or never began
 #define FDS_TXN_ERROR 0x02             // txn is unusable after an error
 #define FDS_TXN_DIRTY 0x04             // must write, even if dirty list is empty
 #define FDS_TXN_SPILLS 0x08            // txn or a parent has spilled pages
-#define FDS_TXN_HAS_CHILD                                                                                              \
-    0x10  // txn has an FDS_txn.mt_child
-          // most operations on the txn are currently illegal
+#define FDS_TXN_HAS_CHILD 0x10         // txn has an FDS_txn.mt_child
+
+// most operations on the txn are currently illegal
 #define FDS_TXN_BLOCKED (FDS_TXN_FINISHED | FDS_TXN_ERROR | FDS_TXN_HAS_CHILD)
 
     unsigned int mt_flags;  // Transaction Flags
