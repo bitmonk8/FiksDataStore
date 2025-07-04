@@ -764,7 +764,7 @@ auto fds_cursor_put_impl(FDS_cursor* mc, FDS_val* key, FDS_val* data, unsigned i
     if ((mc->mc_txn->mt_flags & (FDS_TXN_RDONLY | FDS_TXN_BLOCKED)) != 0U)
         return ((mc->mc_txn->mt_flags & FDS_TXN_RDONLY) != 0U) ? EACCES : FDS_BAD_TXN;
 
-    if (key->mv_size - 1 >= ENV_MAXKEY(env))
+    if (key->mv_size - 1 >= FDS_MAXKEYSIZE)
         return FDS_BAD_VALSIZE;
 
     // No duplicate support - simplified size check

@@ -1954,5 +1954,5 @@ auto ESECT fds_env_info(FDS_env* env, FDS_envinfo* stat) -> int
 
 auto ESECT fds_env_get_maxkeysize(FDS_env* env) -> int
 {
-    return ENV_MAXKEY(env);
+    return FDS_MAXKEYSIZE;
 }

@@ -180,7 +180,6 @@ constexpr int MISALIGNED_OK = 1;
 // needed throughout the rest of the code. When the features this library
 // needs are similar enough to POSIX to be hidden in a one-or-two line
 // replacement, this macro approach is used.
-//
 
 #ifdef __GLIBC__
 #define GLIBC_VER ((__GLIBC__ << 16) | __GLIBC_MINOR__)
@@ -277,32 +276,28 @@ typedef pthread_mutex_t* fds_mutexref_t;
 #endif  // FDS_MACOS
 
 // Get the error code for the last failed system function.
-//
 #define ErrCode() errno
 
 // An abstraction for a file handle.
 // On POSIX systems file handles are small integers. On Windows
 // they're opaque pointers.
-//
 #define HANDLE int
 
 // A value for an invalid file handle.
 // Mainly used to initialize file variables and signify that they are
 // unused.
-//
 #define INVALID_HANDLE_VALUE (-1)
 
 // Get the size of a memory page for the system.
 // This is the basic size that the platform's memory manager uses, and is
 // fundamental to the use of memory-mapped files.
-//
 #define GET_PAGESIZE(x) ((x) = sysconf(_SC_PAGE_SIZE))
 #endif
 
 #ifdef FDS_MACOS
-#define MNAME_LEN (sizeof(int))
+constexpr size_t MNAME_LEN = sizeof(int);
 #else
-#define MNAME_LEN (sizeof(pthread_mutex_t))
+constexpr size_t MNAME_LEN = sizeof(pthread_mutex_t);
 #endif
 
 // A transaction ID.
@@ -336,12 +331,7 @@ using pgno_t = FDS_ID;
 // modifying a DB with keys bigger than its max.
 //
 // Keys must fit on a node in a regular page.
-#ifndef FDS_MAXKEYSIZE
-#define FDS_MAXKEYSIZE 511
-#endif
-
-// The maximum size of a key we can write to the environment.
-#define ENV_MAXKEY(env) (FDS_MAXKEYSIZE)
+constexpr int FDS_MAXKEYSIZE = 511;
 
 // An invalid page number.
 // Mainly used to denote an empty tree.

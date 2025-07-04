@@ -90,7 +90,7 @@ struct FDS_txninfo
     union
     {
         FDS_txbody mtb;
-        char pad[(sizeof(FDS_txbody) + CACHELINE - 1) & ~(CACHELINE - 1)];
+        char pad1[(sizeof(FDS_txbody) + CACHELINE - 1) & ~(CACHELINE - 1)];
     };
 
 #if !(defined(FDS_WINDOWS))
@@ -101,7 +101,7 @@ struct FDS_txninfo
 #else
         fds_mutex_t mt2_wmutex;
 #endif
-        char pad[(MNAME_LEN + CACHELINE - 1) & ~(CACHELINE - 1)];
+        char pad2[(MNAME_LEN + CACHELINE - 1) & ~(CACHELINE - 1)];
     };
 #endif
 
