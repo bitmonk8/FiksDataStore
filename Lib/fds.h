@@ -87,16 +87,6 @@
 // This does not use actual memory or disk space, but users may need
 // to understand the difference so they won't be scared off.
 
-// - By default, in versions before 0.9.10, unused portions of the data
-// file might receive garbage data from memory freed by other code.
-// (This does not happen when using the #FDS_WRITEMAP flag.) As of
-// 0.9.10 the default behavior is to initialize such memory before
-// writing to the data file. Since there may be a slight performance
-// cost due to this initialization, applications may disable it using
-// the #FDS_NOMEMINIT flag. Applications handling sensitive data
-// which must not be written should not use this flag. This flag is
-// irrelevant when using #FDS_WRITEMAP.
-
 // - A thread can only use one transaction at a time, plus any child
 // transactions. Each transaction belongs to one thread. See below.
 // The #FDS_NOTLS flag changes this for read-only transactions.
@@ -403,43 +393,6 @@ auto fds_env_create(FDS_env** env) -> int;
 // Open the environment in read-only mode. No write operations will be
 // allowed. FiksDataStore will still modify the lock file - except on read-only
 // filesystems, where FiksDataStore does not use locks.
-// #FDS_WRITEMAP
-// Use a writeable memory map unless FDS_RDONLY is set. This uses
-// fewer mallocs but loses protection from application bugs
-// like wild pointer writes and other bad updates into the database.
-// This may be slightly faster for DBs that fit entirely in RAM, but
-// is slower for DBs larger than RAM.
-// Incompatible with nested transactions.
-// Do not mix processes with and without FDS_WRITEMAP on the same
-// environment. This can defeat durability (#fds_env_sync etc).
-// #FDS_NOMETASYNC
-// Flush system buffers to disk only once per transaction, omit the
-// metadata flush. Defer that until the system flushes files to disk,
-// or next non-FDS_RDONLY commit or #fds_env_sync(). This optimization
-// maintains database integrity, but a system crash may undo the last
-// committed transaction. I.e. it preserves the ACI (atomicity,
-// consistency, isolation) but not D (durability) database property.
-// This flag may be changed at any time using #fds_env_set_flags().
-// #FDS_NOSYNC
-// Don't flush system buffers to disk when committing a transaction.
-// This optimization means a system crash can corrupt the database or
-// lose the last transactions if buffers are not yet flushed to disk.
-// The risk is governed by how often the system flushes dirty buffers
-// to disk and how often #fds_env_sync() is called. However, if the
-// filesystem preserves write order and the #FDS_WRITEMAP flag is not
-// used, transactions exhibit ACI (atomicity, consistency, isolation)
-// properties and only lose D (durability). I.e. database integrity
-// is maintained, but a system crash may undo the final transactions.
-// Note that (#FDS_NOSYNC | #FDS_WRITEMAP) leaves the system with no
-// hint for when to write transactions to disk, unless #fds_env_sync()
-// is called. (#FDS_MAPASYNC | #FDS_WRITEMAP) may be preferable.
-// This flag may be changed at any time using #fds_env_set_flags().
-// #FDS_MAPASYNC
-// When using #FDS_WRITEMAP, use asynchronous flushes to disk.
-// As with #FDS_NOSYNC, a system crash can then corrupt the
-// database or lose the last transactions. Calling #fds_env_sync()
-// ensures on-disk database integrity until next commit.
-// This flag may be changed at any time using #fds_env_set_flags().
 // #FDS_NOTLS
 // Don't use Thread-Local Storage. Tie reader locktable slots to
 // #FDS_txn objects instead of to threads. I.e. #fds_txn_reset() keeps
@@ -475,13 +428,10 @@ auto fds_env_create(FDS_env** env) -> int;
 // modest performance cost so some applications may want to disable
 // it using this flag. This option can be a problem for applications
 // which handle sensitive data like passwords, and it makes memory
-// checkers like Valgrind noisy. This flag is not needed with #FDS_WRITEMAP,
-// which writes directly to the mmap instead of using malloc for pages. The
-// initialization is also skipped if #FDS_RESERVE is used; the
+// checkers like Valgrind noisy. The
+// initialization is skipped if #FDS_RESERVE is used; the
 // caller is expected to overwrite all of the memory that was
 // reserved in that case.
-// This flag may be changed at any time using #fds_env_set_flags().
-// #FDS_PREVSNAPSHOT
 // Open the environment with the previous snapshot rather than the latest
 // one. This loses the latest transaction, but may help work around some
 // types of corruption. If opened with write access, this must be the
@@ -514,13 +464,10 @@ auto fds_env_info(FDS_env* env, FDS_envinfo* stat) -> int;
 // @brief Flush the data buffers to disk.
 // Data is always written to disk when #fds_txn_commit() is called,
 // but the operating system may keep it buffered. FiksDataStore always flushes
-// the OS buffers upon commit as well, unless the environment was
-// opened with #FDS_NOSYNC or in part #FDS_NOMETASYNC. This call is
+// the OS buffers upon commit as well. This call is
 // not valid if the environment was opened with #FDS_RDONLY.
 // @param[in] env An environment handle returned by #fds_env_create()
-// @param[in] force If non-zero, force a synchronous flush. Otherwise
-// if the environment has the #FDS_NOSYNC flag set the flushes
-// will be omitted, and with #FDS_MAPASYNC they will be asynchronous.
+// @param[in] force If non-zero, force a synchronous flush.
 // @return A non-zero error value on failure and 0 on success. Some possible
 // errors are:
 //
@@ -694,10 +641,6 @@ auto fds_env_set_assert(FDS_env* env, FDS_assert_func* func) -> int;
 //
 // #FDS_RDONLY
 // This transaction will not perform any write operations.
-// #FDS_NOSYNC
-// Don't flush system buffers to disk when committing this transaction.
-// #FDS_NOMETASYNC
-// Flush system buffers but omit metadata flush when committing this transaction.
 //
 // @param[out] txn Address where the new #FDS_txn handle will be stored
 // @return A non-zero error value on failure and 0 on success. Some possible

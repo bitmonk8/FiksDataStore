@@ -674,46 +674,6 @@ int fds_env_write_meta(FDS_txn* txn)
     if (mapsize < env->me_mapsize)
         mapsize = env->me_mapsize;
 
-    if (flags & FDS_WRITEMAP)
-    {
-        mp->mm_mapsize = mapsize;
-        mp->mm_dbs[FREE_DBI] = txn->mt_dbs[FREE_DBI];
-        mp->mm_dbs[MAIN_DBI] = txn->mt_dbs[MAIN_DBI];
-        mp->mm_last_pg = txn->mt_next_pgno - 1;
-#if (__GNUC__ * 100 + __GNUC_MINOR__ >= 404) && /* TODO: portability */                                                \
-    !(defined(__i386__) || defined(__x86_64__))
-        // LY: issue a memory barrier, if not x86. ITS#7969
-        __sync_synchronize();
-#endif
-        mp->mm_txnid = txn->mt_txnid;
-        if (!(flags & (FDS_NOMETASYNC | FDS_NOSYNC)))
-        {
-            unsigned meta_size = env->me_psize;
-            int rc = (env->me_flags & FDS_MAPASYNC) ? MS_ASYNC : MS_SYNC;
-            char* ptr = (char*)mp - PAGEHDRSZ;
-            // POSIX msync() requires ptr = start of OS page
-            int r2 = (ptr - env->me_map) & (env->me_os_psize - 1);
-            ptr -= r2;
-            meta_size += r2;
-            if (FDS_MSYNC(ptr, meta_size, rc))
-            {
-                rc = ErrCode();
-                env->me_flags |= FDS_FATAL_ERROR;
-                return rc;
-            }
-        }
-
-        // Memory ordering issues are irrelevant; since the entire writer
-        // is wrapped by wmutex, all of these changes will become visible
-        // after the wmutex is unlocked. Since the DB is multi-version,
-        // readers will get consistent data regardless of how fresh or
-        // how stale their view of these values is.
-        if (env->me_txns)
-            env->me_txns->mtb.mtb_txnid = txn->mt_txnid;
-
-        return FDS_SUCCESS;
-    }
-
     FDS_meta metab{};
     metab.mm_txnid = mp->mm_txnid;
     metab.mm_last_pg = mp->mm_last_pg;
@@ -732,10 +692,10 @@ int fds_env_write_meta(FDS_txn* txn)
 
     while (true)
     {
-        // Write to the SYNC fd unless FDS_NOSYNC/FDS_NOMETASYNC.
+        // Write to the SYNC fd.
         // (me_mfd goes to the same file as me_fd, but writing to it
         // also syncs to disk.  Avoids a separate fdatasync() call.)
-        HANDLE mfd{(flags & (FDS_NOSYNC | FDS_NOMETASYNC)) ? env->me_fd : env->me_mfd};
+        HANDLE mfd{env->me_mfd};
         const auto bytes_written = pwrite(mfd, ptr, len, off);
         if (bytes_written == len)
             break;
@@ -907,16 +867,6 @@ auto ESECT fds_env_map(FDS_env* env, void* addr) -> int
 #else
     int mmap_flags = MAP_SHARED;
     int prot = PROT_READ;
-#ifdef MAP_NOSYNC  // Used on FreeBSD
-    if (flags & FDS_NOSYNC)
-        mmap_flags |= MAP_NOSYNC;
-#endif
-    if (flags & FDS_WRITEMAP)
-    {
-        prot |= PROT_WRITE;
-        if (ftruncate(env->me_fd, env->me_mapsize) < 0)
-            return ErrCode();
-    }
     env->me_map = (char*)mmap(addr, env->me_mapsize, prot, mmap_flags, env->me_fd, 0);
     if (env->me_map == MAP_FAILED)
     {
@@ -1599,8 +1549,7 @@ auto ESECT fds_env_open(FDS_env* env, const char* path, unsigned int flags) -> i
     rc = fds_env_open2(env, 0);
     if (rc == FDS_SUCCESS)
     {
-        // Synchronous fd for meta writes. Needed even with
-        // FDS_NOSYNC/FDS_NOMETASYNC, in case these get reset.
+        // Synchronous fd for meta writes.
         if ((flags & FDS_RDONLY) == 0U)
         {
             rc = fds_fopen(env, &fname, FDS_O_META, mode, &env->me_mfd);

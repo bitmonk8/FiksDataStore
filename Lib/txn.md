@@ -66,7 +66,7 @@ This structure is used for nested transactions. It embeds an `FDS_txn` and adds 
         1.  **Update DB Roots**: If any named databases were modified, their root page info is updated in the main database.
         2.  **Save Freelist**: The list of freed pages (`mt_free_pgs`) is written to the free database (`FREE_DBI`).
         3.  **Flush Pages**: All pages in the dirty list are written to the database file via `fds_page_flush()`.
-        4.  **Sync (Optional)**: If not disabled (`FDS_NOSYNC`), the memory-mapped file is synchronized to disk to ensure durability.
+        4.  **Sync**: The memory-mapped file is synchronized to disk to ensure durability.
         5.  **Write Meta Pages**: The two meta pages are updated alternately with the new transaction ID and root page numbers. This is the atomic point of the commit.
         6.  **Release Locks**: The write lock is released.
 

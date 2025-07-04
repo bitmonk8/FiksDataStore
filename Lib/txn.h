@@ -28,7 +28,7 @@ struct FDS_txn
     FDS_IDL mt_spill_pgs;
     union
     {
-        // For write txns: Modified pages. Sorted when not FDS_WRITEMAP.
+        // For write txns: Modified pages.
         FDS_ID2L dirty_list;
         // For read txns: This thread/txn's reader table slot, or NULL.
         FDS_reader* reader;
@@ -65,7 +65,6 @@ struct FDS_txn
 #define FDS_TXN_RDONLY FDS_RDONLY          // read-only transaction
 
 // internal txn flags
-#define FDS_TXN_WRITEMAP FDS_WRITEMAP  // copy of FDS_env flag in writers
 #define FDS_TXN_FINISHED 0x01          // txn is finished or never began
 #define FDS_TXN_ERROR 0x02             // txn is unusable after an error
 #define FDS_TXN_DIRTY 0x04             // must write, even if dirty list is empty

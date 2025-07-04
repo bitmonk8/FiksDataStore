@@ -25,7 +25,7 @@ Defined in [`Lib/env.h:120`](Lib/env.h:120), this is the opaque handle that repr
 *   `me_map`, `me_mapsize`: The base address and size of the memory-mapped data file.
 *   `me_txns`: A pointer to the memory-mapped lock file, which contains the reader table and writer mutex.
 *   `me_metas[NUM_METAS]`: An array of two pointers, each pointing to one of the two meta pages within the mapped data file. This is central to the MVCC mechanism.
-*   `me_flags`: A bitmask of flags that define the environment's behavior (e.g., `FDS_RDONLY`, `FDS_WRITEMAP`, `FDS_NOSYNC`).
+*   `me_flags`: A bitmask of flags that define the environment's behavior (e.g., `FDS_RDONLY`).
 *   `me_psize`: The page size used by the database.
 *   `me_txn`, `me_txn0`: Pointers related to the single, pre-allocated write transaction structure.
 *   `me_free_pgs`, `me_dirty_list`: Data structures (`FDS_IDL`, `FDS_ID2L`) for managing free and dirty pages within a write transaction.
@@ -75,7 +75,7 @@ This is the primary function for initializing the database environment. It is a 
     *   It opens (or creates) the data file (`data.mdb`).
     *   **Header Reading (`fds_env_read_header`)**: It reads both meta pages (0 and 1) to determine which is newer by comparing their `mm_txnid` values.
     *   **Initialization**: If the data file is new, it calls `fds_env_init_meta` to create the initial two meta pages.
-    *   **Memory Mapping (`fds_env_map`)**: It memory-maps the data file using `mmap` (POSIX) or `NtMapViewOfSection` (Windows). The `FDS_WRITEMAP` flag determines if the mapping is read-write or read-only.
+    *   **Memory Mapping (`fds_env_map`)**: It memory-maps the data file using `mmap` (POSIX) or `NtMapViewOfSection` (Windows).
     *   It sets up internal environment parameters (`me_maxpg`, `me_nodemax`, etc.) based on the page size.
 
 ### 3.2. Transactional Commit (`fds_env_write_meta`)
