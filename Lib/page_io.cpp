@@ -554,16 +554,10 @@ auto fds_page_spill(FDS_cursor* m0, FDS_val* key, FDS_val* data) -> int
 // Add a page to the txn's dirty list
 void fds_page_dirty(FDS_txn* txn, FDS_page* mp)
 {
-#ifdef FDS_WINDOWS  // With Windows we always write dirty pages with WriteFile, so we always want them ordered
-    const auto insert = fds_mid2l_insert;
-#else  // but otherwise with writemaps, we just use msync, we don't need the ordering and just append
-    const auto insert = (txn->mt_flags & FDS_TXN_WRITEMAP) ? fds_mid2l_append : fds_mid2l_insert;
-#endif
-
     FDS_ID2 mid;
     mid.mid = mp->mp_pgno;
     mid.mptr = mp;
-    const auto rc = insert(txn->mt_u.dirty_list, &mid);
+    const auto rc = fds_mid2l_insert(txn->mt_u.dirty_list, &mid);
     fds_tassert(txn, rc == 0);
     txn->mt_dirty_room--;
 }
