@@ -18,7 +18,6 @@ enum MCursorFlags : unsigned int
     C_EOF = 0x02,                   // No more data
     C_DEL = 0x08,                   // last op was a cursor_del
     C_UNTRACK = 0x40,               // Un-track cursor when closing
-    C_WRITEMAP = FDS_TXN_WRITEMAP,  // Copy of txn flag
     C_ORIG_RDONLY = FDS_TXN_RDONLY
 };
 

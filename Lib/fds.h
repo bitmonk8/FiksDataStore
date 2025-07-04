@@ -234,26 +234,12 @@ using FDS_cmp_func = int (*)(const FDS_val* a, const FDS_val* b);
 
 // no environment directory
 constexpr int FDS_NOSUBDIR = 0x4000;
-// don't fsync after commit
-constexpr int FDS_NOSYNC = 0x10000;
 // read only
 constexpr int FDS_RDONLY = 0x20000;
-// don't fsync metapage after commit
-constexpr int FDS_NOMETASYNC = 0x40000;
-// use writable mmap
-constexpr int FDS_WRITEMAP = 0x80000;
-// use asynchronous msync when #FDS_WRITEMAP is used
-constexpr int FDS_MAPASYNC = 0x100000;
 // tie reader locktable slots to #FDS_txn objects instead of to threads
-constexpr int FDS_NOTLS = 0x200000;
-// don't do any locking, caller must manage their own locks
-constexpr int FDS_NOLOCK = 0x400000;
+constexpr int FDS_NOTLS = 0x200000; // SHOULD POSSIBLE BE ENABLED BY DEFAULT, AND FLAG REMOVED
 // don't do readahead (no effect on Windows)
-constexpr int FDS_NORDAHEAD = 0x800000;
-// don't initialize malloc'd memory before writing to datafile
-constexpr int FDS_NOMEMINIT = 0x1000000;
-// use the previous snapshot rather than the latest one
-constexpr int FDS_PREVSNAPSHOT = 0x2000000;
+constexpr int FDS_NORDAHEAD = 0x800000; // SHOULD POSSIBLE BE ENABLED BY DEFAULT, AND FLAG REMOVED
 // @}
 
 // @defgroup fds_dbi_open Database Flags

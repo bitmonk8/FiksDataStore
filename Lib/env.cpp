@@ -280,7 +280,7 @@ static auto ESECT utf8_to_utf16(const char* src, FDS_name* dst, int xtra) -> int
 // fname Resulting filename, with room for a suffix if necessary.
 static auto ESECT fds_fname_init(const char* path, unsigned envflags, FDS_name* fname) -> int
 {
-    int no_suffix = F_ISSET(envflags, FDS_NOSUBDIR | FDS_NOLOCK);
+    int no_suffix = F_ISSET(envflags, FDS_NOSUBDIR);
     fname->mn_alloced = 0;
 #ifdef FDS_WINDOWS
     return utf8_to_utf16(path, fname, (no_suffix != 0) ? 0 : FDS_SUFFLEN);
@@ -418,33 +418,17 @@ fds_fopen(const FDS_env* env, FDS_name* fname, enum fds_fopen_type which, fds_mo
 
 auto fds_env_sync0(FDS_env* env, int force, pgno_t numpgs) -> int
 {
-    int rc = 0;
     if ((env->me_flags & FDS_RDONLY) != 0U)
         return EACCES;
-    if (force != 0
-#ifndef FDS_WINDOWS  // Sync is normally achieved in Windows by doing WRITE_THROUGH writes
-        || !(env->me_flags & FDS_NOSYNC)
+
+#ifdef FDS_WINDOWS  // Sync is normally achieved in Windows by doing WRITE_THROUGH writes
+    if (force != 0)
 #endif
-    )
     {
-        if ((env->me_flags & FDS_WRITEMAP) != 0U)
-        {
-            int flags = (((env->me_flags & FDS_MAPASYNC) != 0U) && (force == 0)) ? MS_ASYNC : MS_SYNC;
-            if (FDS_MSYNC(env->me_map, env->me_psize * numpgs, flags)
-#if defined(FDS_WINDOWS) || defined(__APPLE__)
-                || (flags == MS_SYNC && FDS_FDATASYNC(env->me_fd))
-#endif
-            )
-            {
-                rc = ErrCode();
-            }
-        }
-        else if (FDS_FDATASYNC(env->me_fd))
-        {
-            rc = ErrCode();
-        }
+        if (FDS_FDATASYNC(env->me_fd))
+            return ErrCode();
     }
-    return rc;
+    return 0;
 }
 
 auto fds_env_sync(FDS_env* env, int force) -> int
@@ -640,10 +624,7 @@ auto fds_env_write_meta(FDS_txn* txn) -> int
     int len{static_cast<int>(sizeof(FDS_meta) - off)};
     off += (char*)mp - env->me_map;
 
-    // Write to the SYNC fd unless FDS_NOSYNC/FDS_NOMETASYNC.
-    // (me_mfd goes to the same file as me_fd, but writing to it
-    // also syncs to disk.  Avoids a separate fdatasync() call.)
-    HANDLE mfd{((flags & (FDS_NOSYNC | FDS_NOMETASYNC)) != 0U) ? env->me_fd : env->me_mfd};
+    HANDLE mfd{env->me_mfd};
     int rc{};
     {
         OVERLAPPED ov;
@@ -792,7 +773,7 @@ int fds_env_write_meta(FDS_txn* txn)
 auto fds_env_pick_meta(const FDS_env* env) -> FDS_meta*
 {
     FDS_meta* const* metas = env->me_metas;
-    return metas[(metas[0]->mm_txnid < metas[1]->mm_txnid) ^ ((env->me_flags & FDS_PREVSNAPSHOT) != 0)];
+    return metas[metas[0]->mm_txnid < metas[1]->mm_txnid ? 1 : 0];
 }
 
 // Reader Lock Table
@@ -890,11 +871,6 @@ auto ESECT fds_env_map(FDS_env* env, void* addr) -> int
     ULONG secprot;
     ULONG alloctype;
 
-    if ((flags & FDS_WRITEMAP) != 0U)
-    {
-        access |= SECTION_MAP_WRITE;
-        pageprot = PAGE_READWRITE;
-    }
     if ((flags & FDS_RDONLY) != 0U)
     {
         secprot = PAGE_READONLY;
@@ -1550,9 +1526,8 @@ fail:
 // Only a subset of the fds_env flags can be changed
 // at runtime. Changing other flags requires closing the
 // environment and re-opening it with the new flags.
-#define CHANGEABLE (FDS_NOSYNC | FDS_NOMETASYNC | FDS_MAPASYNC | FDS_NOMEMINIT)
-#define CHANGELESS                                                                                                     \
-    (FDS_NOSUBDIR | FDS_RDONLY | FDS_WRITEMAP | FDS_NOTLS | FDS_NOLOCK | FDS_NORDAHEAD | FDS_PREVSNAPSHOT)
+#define CHANGEABLE 0
+#define CHANGELESS (FDS_NOSUBDIR | FDS_RDONLY | FDS_NOTLS | FDS_NORDAHEAD)
 
 auto ESECT fds_env_open(FDS_env* env, const char* path, unsigned int flags) -> int
 {
@@ -1573,12 +1548,7 @@ auto ESECT fds_env_open(FDS_env* env, const char* path, unsigned int flags) -> i
 
     flags |= FDS_ENV_ACTIVE;  // tell fds_env_close0() to clean up
 
-    if ((flags & FDS_RDONLY) != 0U)
-    {
-        // silently ignore WRITEMAP when we're only getting read access
-        flags &= ~FDS_WRITEMAP;
-    }
-    else
+    if ((flags & FDS_RDONLY) == 0U)
     {
         env->me_free_pgs = fds_midl_alloc(FDS_IDL_UM_MAX);
         env->me_dirty_list = (FDS_ID2L)calloc(FDS_IDL_UM_SIZE, sizeof(FDS_ID2));
@@ -1603,16 +1573,11 @@ auto ESECT fds_env_open(FDS_env* env, const char* path, unsigned int flags) -> i
     env->me_dbxs[FREE_DBI].md_cmp = fds_cmp_long;  // aligned FDS_INTEGERKEY
 
     // For RDONLY, get lockfile after we know datafile exists
-    if ((flags & (FDS_RDONLY | FDS_NOLOCK)) == 0U)
+    if ((flags & FDS_RDONLY) == 0U)
     {
         rc = fds_env_setup_locks(env, &fname, mode, &excl);
         if (rc != 0)
             goto leave;
-        if (((flags & FDS_PREVSNAPSHOT) != 0U) && (excl == 0))
-        {
-            rc = EAGAIN;
-            goto leave;
-        }
     }
 
     rc = fds_fopen(env, &fname, ((flags & FDS_RDONLY) != 0U) ? FDS_O_RDONLY : FDS_O_RDWR, mode, &env->me_fd);
@@ -1624,26 +1589,26 @@ auto ESECT fds_env_open(FDS_env* env, const char* path, unsigned int flags) -> i
         goto leave;
 #endif
 
-    if ((flags & (FDS_RDONLY | FDS_NOLOCK)) == FDS_RDONLY)
+    if ((flags & FDS_RDONLY) == FDS_RDONLY)
     {
         rc = fds_env_setup_locks(env, &fname, mode, &excl);
         if (rc != 0)
             goto leave;
     }
 
-    rc = fds_env_open2(env, flags & FDS_PREVSNAPSHOT);
+    rc = fds_env_open2(env, 0);
     if (rc == FDS_SUCCESS)
     {
         // Synchronous fd for meta writes. Needed even with
         // FDS_NOSYNC/FDS_NOMETASYNC, in case these get reset.
-        if ((flags & (FDS_RDONLY | FDS_WRITEMAP)) == 0U)
+        if ((flags & FDS_RDONLY) == 0U)
         {
             rc = fds_fopen(env, &fname, FDS_O_META, mode, &env->me_mfd);
             if (rc != 0)
                 goto leave;
         }
         DPRINTF(("opened dbenv %p", (void*)env));
-        if (excl > 0 && ((flags & FDS_PREVSNAPSHOT) == 0U))
+        if (excl > 0)
         {
             rc = fds_env_share_locks(env, &excl);
             if (rc != 0)

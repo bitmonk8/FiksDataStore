@@ -258,7 +258,6 @@ auto fds_txn_begin(FDS_env* env, FDS_txn* parent, unsigned int flags, FDS_txn** 
     int tsize{};
 
     flags &= FDS_TXN_BEGIN_FLAGS;
-    flags |= env->me_flags & FDS_WRITEMAP;
 
     if ((env->me_flags & FDS_RDONLY & ~flags) != 0U) /* write txn in RDONLY env */
         return EACCES;
@@ -267,7 +266,7 @@ auto fds_txn_begin(FDS_env* env, FDS_txn* parent, unsigned int flags, FDS_txn** 
     {
         // Nested transactions: Max 1 child, write txns only, no writemap
         flags |= parent->mt_flags;
-        if ((flags & (FDS_RDONLY | FDS_WRITEMAP | FDS_TXN_BLOCKED)) != 0U)
+        if ((flags & (FDS_RDONLY | FDS_TXN_BLOCKED)) != 0U)
         {
             return ((parent->mt_flags & FDS_TXN_RDONLY) != 0U) ? EINVAL : FDS_BAD_TXN;
         }
@@ -525,10 +524,8 @@ void fds_txn_end(FDS_txn* txn, unsigned mode)
 
         if ((mode & FDS_END_UPDATE) == 0U)  // !(already closed cursors)
             fds_cursors_close(txn, 0);
-        if ((env->me_flags & FDS_WRITEMAP) == 0U)
-        {
-            fds_dlist_free(txn);
-        }
+
+        fds_dlist_free(txn);
 
         txn->mt_numdbs = 0;
         txn->mt_flags = FDS_TXN_FINISHED;
@@ -641,19 +638,9 @@ auto fds_freelist_save(FDS_txn* txn) -> int
         {
             fds_midl_xappend(txn->mt_free_pgs, mp->mp_pgno);
             // must also remove from dirty list
-            if ((txn->mt_flags & FDS_TXN_WRITEMAP) != 0U)
-            {
-                for (x = 1; x <= dl[0].mid; x++)
-                    if (dl[x].mid == mp->mp_pgno)
-                        break;
-                fds_tassert(txn, x <= dl[0].mid);
-            }
-            else
-            {
-                x = fds_mid2l_search(dl, mp->mp_pgno);
-                fds_tassert(txn, dl[x].mid == mp->mp_pgno);
-                fds_dpage_free(env, mp);
-            }
+            x = fds_mid2l_search(dl, mp->mp_pgno);
+            fds_tassert(txn, dl[x].mid == mp->mp_pgno);
+            fds_dpage_free(env, mp);
             dl[x].mptr = nullptr;
         }
         {
@@ -684,7 +671,7 @@ auto fds_freelist_save(FDS_txn* txn) -> int
     }
 
     // FDS_RESERVE cancels meminit in ovpage malloc (when no WRITEMAP)
-    clean_limit = ((env->me_flags & (FDS_NOMEMINIT | FDS_WRITEMAP)) != 0U) ? SSIZE_MAX : maxfree_1pg;
+    clean_limit = maxfree_1pg;
 
     for (;;)
     {
@@ -1109,28 +1096,13 @@ auto fds_txn_commit_impl(FDS_txn* txn) -> int
     rc = fds_page_flush(txn, 0);
     if (rc != 0)
         goto fail;
-    if (!F_ISSET(txn->mt_flags, FDS_TXN_NOSYNC))
-    {
-        rc = fds_env_sync0(env, 0, txn->mt_next_pgno);
-        if (rc != 0)
-            goto fail;
-    }
+    rc = fds_env_sync0(env, 0, txn->mt_next_pgno);
+    if (rc != 0)
+        goto fail;
     rc = fds_env_write_meta(txn);
     if (rc != 0)
         goto fail;
     end_mode = static_cast<unsigned>(FDS_END_COMMITTED) | static_cast<unsigned>(FDS_END_UPDATE);
-    if ((env->me_flags & FDS_PREVSNAPSHOT) != 0U)
-    {
-        if ((env->me_flags & FDS_NOLOCK) == 0U)
-        {
-            int excl;
-            rc = fds_env_share_locks(env, &excl);
-            if (rc != 0)
-                goto fail;
-        }
-        env->me_flags ^= FDS_PREVSNAPSHOT;
-    }
-
 done:
     fds_txn_end(txn, end_mode);
     return FDS_SUCCESS;

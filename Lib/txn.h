@@ -61,9 +61,7 @@ struct FDS_txn
     // internal
 
 // fds_txn_begin() flags
-#define FDS_TXN_BEGIN_FLAGS (FDS_NOMETASYNC | FDS_NOSYNC | FDS_RDONLY)
-#define FDS_TXN_NOMETASYNC FDS_NOMETASYNC  // don't sync meta for this txn on commit
-#define FDS_TXN_NOSYNC FDS_NOSYNC          // don't sync this txn on commit
+#define FDS_TXN_BEGIN_FLAGS FDS_RDONLY
 #define FDS_TXN_RDONLY FDS_RDONLY          // read-only transaction
 
 // internal txn flags

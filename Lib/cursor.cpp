@@ -931,7 +931,7 @@ auto fds_cursor_put_impl(FDS_cursor* mc, FDS_val* key, FDS_val* data, unsigned i
             // Is the ov page large enough?
             if (ovpages >= dpages)
             {
-                if (((omp->mp_flags & P_DIRTY) == 0) && ((level != 0) || ((env->me_flags & FDS_WRITEMAP) != 0U)))
+                if (((omp->mp_flags & P_DIRTY) == 0) && ((level != 0)))
                 {
                     rc = fds_page_unspill(mc->mc_txn, omp, &omp);
                     if (rc != 0)
@@ -1155,7 +1155,7 @@ void fds_cursor_init(FDS_cursor* mc, FDS_txn* txn, FDS_dbi dbi)
     mc->mc_pg[0] = nullptr;
     mc->mc_ki[0] = 0;
     MC_SET_OVPG(mc, NULL);
-    mc->mc_flags = txn->mt_flags & (C_ORIG_RDONLY | C_WRITEMAP);
+    mc->mc_flags = txn->mt_flags & C_ORIG_RDONLY;
     if ((*mc->mc_dbflag & DB_STALE) != 0)
     {
         fds_page_search(mc, nullptr, FDS_PS_ROOTONLY);

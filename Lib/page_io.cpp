@@ -51,23 +51,19 @@ auto fds_page_malloc(FDS_txn* txn, unsigned num) -> FDS_page*
     {
         VGMEMP_ALLOC(env, new_page, total_alloc_size);
 
-        // If memory initialization is not disabled, clear the relevant part of the memory.
-        if ((env->me_flags & FDS_NOMEMINIT) == 0U)
-        {
-            // The logic for what to initialize is complex. We calculate the offset
-            // and size to initialize without reusing variables.
-            // For a single page, we clear everything after the header.
-            // For multiple pages, we only clear the last page.
-            const auto init_offset = (num == 1) ? PAGEHDRSZ : total_alloc_size - page_size;
+        // The logic for what to initialize is complex. We calculate the offset
+        // and size to initialize without reusing variables.
+        // For a single page, we clear everything after the header.
+        // For multiple pages, we only clear the last page.
+        const auto init_offset = (num == 1) ? PAGEHDRSZ : total_alloc_size - page_size;
 
-            const auto init_size = (num == 1) ? page_size - PAGEHDRSZ : page_size;
+        const auto init_size = (num == 1) ? page_size - PAGEHDRSZ : page_size;
 
-            // Use reinterpret_cast for low-level, type-punned pointer manipulation.
-            memset(reinterpret_cast<char*>(new_page) + init_offset, 0, init_size);
+        // Use reinterpret_cast for low-level, type-punned pointer manipulation.
+        memset(reinterpret_cast<char*>(new_page) + init_offset, 0, init_size);
 
-            // This field is only set during initialization.
-            new_page->mp_pad = 0;
-        }
+        // This field is only set during initialization.
+        new_page->mp_pad = 0;
     }
     else
     {
@@ -120,37 +116,13 @@ auto fds_page_flush(FDS_txn* txn, int keep) -> int
     int rc{};
 #ifdef FDS_WINDOWS
     auto* ov = env->ov;
-    const HANDLE fd = ((env->me_flags & FDS_NOSYNC) != 0U) ? env->me_fd : env->me_ovfd;
+    const HANDLE fd = env->me_ovfd;
 #else
     const HANDLE fd = env->me_fd;
 #endif
     const int initial_keep_count = keep;
     int dirty_list_write_pos = initial_keep_count;
     int page_write_index = initial_keep_count;
-
-    if (((env->me_flags & FDS_WRITEMAP) != 0U)
-#ifdef FDS_WINDOWS
-        // In windows, we still do writes to the file (with write-through enabled in sync mode),
-        // as this is faster than FlushViewOfFile/FlushFileBuffers
-        && ((env->me_flags & FDS_NOSYNC) != 0U)
-#endif
-    )
-    {
-        // Clear dirty flags
-        for (int i = initial_keep_count + 1; i <= pagecount; ++i)
-        {
-            auto* const page_to_clear = (FDS_page*)dl[i].mptr;
-            // Don't flush this page yet
-            if ((page_to_clear->mp_flags & (P_LOOSE | P_KEEP)) != 0)
-            {
-                page_to_clear->mp_flags &= ~P_KEEP;
-                dl[++dirty_list_write_pos] = dl[i];
-                continue;
-            }
-            page_to_clear->mp_flags &= ~P_DIRTY;
-        }
-        goto done;
-    }
 
 #ifdef FDS_WINDOWS
     if (pagecount - keep >= env->ovs)
@@ -227,7 +199,7 @@ auto fds_page_flush(FDS_txn* txn, int keep) -> int
                 // write pages one at a time. We use the ov structure to set
                 // the write offset, to at least save the overhead of a Seek
                 // system call.
-                || ((env->me_flags & FDS_WRITEMAP) == 0U)
+                || true
 #endif
             )
             {
@@ -242,7 +214,7 @@ auto fds_page_flush(FDS_txn* txn, int keep) -> int
                     this_ov->Internal = 0;
                     this_ov->Offset = wpos & 0xffffffff;
                     this_ov->OffsetHigh = wpos >> 16 >> 16;
-                    if (!F_ISSET(env->me_flags, FDS_NOSYNC) && (this_ov->hEvent == nullptr))
+                    if (this_ov->hEvent == nullptr)
                     {
                         const HANDLE event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
                         if (event == nullptr)
@@ -317,47 +289,41 @@ auto fds_page_flush(FDS_txn* txn, int keep) -> int
         }
 
 #ifdef FDS_WINDOWS
-        if (!F_ISSET(env->me_flags, FDS_NOSYNC))
+        // Now wait for all the asynchronous/overlapped sync/write-through writes to complete.
+        // We start with the last one so that all the others should already be complete and
+        // we reduce thread suspend/resuming (in practice, typically about 99.5% of writes are
+        // done after the last write is done)
+        rc = 0;
+        while (--async_i >= 0)
         {
-            // Now wait for all the asynchronous/overlapped sync/write-through writes to complete.
-            // We start with the last one so that all the others should already be complete and
-            // we reduce thread suspend/resuming (in practice, typically about 99.5% of writes are
-            // done after the last write is done)
-            rc = 0;
-            while (--async_i >= 0)
+            if (ov[async_i].hEvent != nullptr)
             {
-                if (ov[async_i].hEvent != nullptr)
+                DWORD bytes_written;
+                if (GetOverlappedResult(fd, &ov[async_i], &bytes_written, TRUE) == 0)
                 {
-                    DWORD bytes_written;
-                    if (GetOverlappedResult(fd, &ov[async_i], &bytes_written, TRUE) == 0)
-                    {
-                        rc = ErrCode();  // Continue on so that all the event signals are reset
-                    }
-                    [[maybe_unused]] const ssize_t wres = bytes_written;
+                    rc = ErrCode();  // Continue on so that all the event signals are reset
                 }
+                [[maybe_unused]] const ssize_t wres = bytes_written;
             }
-            if (rc != 0)
-            {  // any error on GetOverlappedResult, exit now
-                return rc;
-            }
+        }
+        if (rc != 0)
+        {  // any error on GetOverlappedResult, exit now
+            return rc;
         }
 #endif  // FDS_WINDOWS
     }
 
-    if ((env->me_flags & FDS_WRITEMAP) == 0U)
+    for (int i = initial_keep_count + 1; i <= pagecount; ++i)
     {
-        for (int i = initial_keep_count + 1; i <= pagecount; ++i)
+        auto* const page_to_cleanup = (FDS_page*)dl[i].mptr;
+        // This is a page we skipped above
+        if (dl[i].mid == 0U)
         {
-            auto* const page_to_cleanup = (FDS_page*)dl[i].mptr;
-            // This is a page we skipped above
-            if (dl[i].mid == 0U)
-            {
-                dl[++dirty_list_write_pos] = dl[i];
-                dl[dirty_list_write_pos].mid = page_to_cleanup->mp_pgno;
-                continue;
-            }
-            fds_dpage_free(env, page_to_cleanup);
+            dl[++dirty_list_write_pos] = dl[i];
+            dl[dirty_list_write_pos].mid = page_to_cleanup->mp_pgno;
+            continue;
         }
+        fds_dpage_free(env, page_to_cleanup);
     }
 
 done:
@@ -816,16 +782,9 @@ search_complete:
         // --- A suitable block was found in the freelist ---
         final_pgno = found_freelist_pgno;
 
-        if ((env->me_flags & FDS_WRITEMAP) != 0U)
-        {
-            result_page = reinterpret_cast<FDS_page*>(env->me_map + (env->me_psize * final_pgno));
-        }
-        else
-        {
-            result_page = fds_page_malloc(txn, num);
-            if (result_page == nullptr)
-                return set_error_and_return(ENOMEM);
-        }
+        result_page = fds_page_malloc(txn, num);
+        if (result_page == nullptr)
+            return set_error_and_return(ENOMEM);
 
         // Remove the allocated pages from the in-memory freelist.
         pgno_t* mop = env->me_pgstate.mf_pghead;
@@ -860,7 +819,7 @@ search_complete:
             void* p = VirtualAlloc(env->me_map + (env->me_psize * new_pgno),
                                    static_cast<SIZE_T>(env->me_psize) * num,
                                    MEM_COMMIT,
-                                   ((env->me_flags & FDS_WRITEMAP) != 0U) ? PAGE_READWRITE : PAGE_READONLY);
+                                   PAGE_READONLY);
             if (p == nullptr)
             {
                 DPUTS("VirtualAlloc failed");
@@ -868,16 +827,9 @@ search_complete:
             }
         }
 #endif
-        if ((env->me_flags & FDS_WRITEMAP) != 0U)
-        {
-            result_page = reinterpret_cast<FDS_page*>(env->me_map + (env->me_psize * final_pgno));
-        }
-        else
-        {
-            result_page = fds_page_malloc(txn, num);
-            if (result_page == nullptr)
-                return set_error_and_return(ENOMEM);
-        }
+        result_page = fds_page_malloc(txn, num);
+        if (result_page == nullptr)
+            return set_error_and_return(ENOMEM);
 
         txn->mt_next_pgno = new_pgno + num;
     }
@@ -915,22 +867,15 @@ auto fds_page_unspill(FDS_txn* txn, FDS_page* mp, FDS_page** ret) -> int
 
             const auto num = IS_OVERFLOW(mp) ? mp->mp_pages : 1;
 
-            FDS_page* np;
-            if ((env->me_flags & FDS_WRITEMAP) != 0U)
-            {
-                np = mp;
-            }
-            else
-            {
-                np = fds_page_malloc(txn, num);
-                if (np == nullptr)
-                    return ENOMEM;
+            FDS_page* np = fds_page_malloc(txn, num);
+            if (np == nullptr)
+                return ENOMEM;
 
-                if (num > 1)
-                    memcpy(np, mp, static_cast<size_t>(num) * env->me_psize);
-                else
-                    fds_page_copy(np, mp, env->me_psize);
-            }
+            if (num > 1)
+                memcpy(np, mp, static_cast<size_t>(num) * env->me_psize);
+            else
+                fds_page_copy(np, mp, env->me_psize);
+
             if (tx2 == txn)
             {
                 // If in current txn, this page is no longer spilled.
@@ -964,7 +909,7 @@ auto fds_page_get(FDS_cursor* mc, pgno_t pgno, FDS_page** mp, int* lvl) -> int
 {
     auto* const txn = mc->mc_txn;
 
-    if ((mc->mc_flags & (C_ORIG_RDONLY | C_WRITEMAP)) == 0U)
+    if ((mc->mc_flags & C_ORIG_RDONLY) == 0U)
     {
         auto* tx2 = txn;
         int search_level = 1;
@@ -1070,8 +1015,7 @@ auto fds_ovpage_free(FDS_cursor* mc, FDS_page* mp) -> int
                 }
             }
             txn->mt_dirty_room++;
-            if ((env->me_flags & FDS_WRITEMAP) == 0U)
-                fds_dpage_free(env, mp);
+            fds_dpage_free(env, mp);
         }
         else
         {
