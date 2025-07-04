@@ -1156,9 +1156,6 @@ auto ESECT fds_env_open2(FDS_env* env, int prev) -> int
 
     env->me_maxfree_1pg = (env->me_psize - PAGEHDRSZ) / sizeof(pgno_t) - 1;
     env->me_nodemax = (((env->me_psize - PAGEHDRSZ) / FDS_MINKEYS) & -2) - sizeof(indx_t);
-#if !(FDS_MAXKEYSIZE)
-    env->me_maxkey = env->me_nodemax - (NODESIZE + sizeof(FDS_db));
-#endif
     env->me_maxpg = env->me_mapsize / env->me_psize;
 
     if ((prev != 0) && (env->me_txns != nullptr))

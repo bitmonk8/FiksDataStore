@@ -305,6 +305,24 @@ typedef pthread_mutex_t* fds_mutexref_t;
 #define MNAME_LEN (sizeof(pthread_mutex_t))
 #endif
 
+// A transaction ID.
+// See struct FDS_txn.mt_txnid for details.
+using txnid_t = FDS_ID;
+
+// Used for offsets within a single page.
+// Since memory pages are typically 4 or 8KB in size, 12-13 bits,
+// this is plenty.
+using indx_t = uint16_t;
+
+// A page number in the database.
+// Note that 64 bit page numbers are overkill, since pages themselves
+// already represent 12-13 bits of addressable memory, and the OS will
+// always limit applications to a maximum of 63 bits of address space.
+//
+// In the FDS_node structure, we only store 48 bits of this value,
+// which thus limits us to only 60 bits of addressable data.
+using pgno_t = FDS_ID;
+
 // The max size of a key we can write, or 0 for computed max.
 //
 // This macro should normally be left alone or set to 0.
@@ -318,48 +336,27 @@ typedef pthread_mutex_t* fds_mutexref_t;
 // modifying a DB with keys bigger than its max.
 //
 // Keys must fit on a node in a regular page.
-//
 #ifndef FDS_MAXKEYSIZE
 #define FDS_MAXKEYSIZE 511
 #endif
 
 // The maximum size of a key we can write to the environment.
-#if FDS_MAXKEYSIZE
 #define ENV_MAXKEY(env) (FDS_MAXKEYSIZE)
-#else
-#define ENV_MAXKEY(env) ((env)->me_maxkey)
-#endif
 
 // An invalid page number.
 // Mainly used to denote an empty tree.
-//
-#define P_INVALID (~(pgno_t)0)
+constexpr pgno_t P_INVALID = ~(pgno_t)0;
 
 // The size of a CPU cache line in bytes. We want our lock structures
 // aligned to this size to avoid false cache line sharing in the
 // lock table.
 // This value works for most CPUs. For Itanium this should be 128.
-//
 #ifndef CACHELINE
 #define CACHELINE 64
 #endif
 
-// Lock type and layout. Values 0-119.
-// Some low values are reserved for future tweaks.
-//
-#ifdef FDS_WINDOWS
-#define FDS_LOCK_TYPE (0 + ALIGNOF2(fds_hash_t) / 8 % 2)
-#elif defined FDS_MACOS
-#define FDS_LOCK_TYPE (8)
-#elif defined FDS_LINUX
-// We do not know the inside of a POSIX mutex and how to check if mutexes
-// used by two executables are compatible. Just check alignment and size.
-//
-#define FDS_LOCK_TYPE (10 + LOG2_MOD(ALIGNOF2(pthread_mutex_t), 5) + sizeof(pthread_mutex_t) / 4U % 22 * 5)
-#endif
-
 constexpr int FDS_VALID = 0x8000;  // DB handle is valid, for me_dbflags
-#define PERSISTENT_FLAGS (0xffff & ~(FDS_VALID))
+constexpr int PERSISTENT_FLAGS = 0xffff & ~(FDS_VALID);
 
 // Handle for the DB used to track free pages.
 constexpr int FREE_DBI = 0;
@@ -370,24 +367,3 @@ constexpr int CORE_DBS = 2;
 
 // Number of meta pages - also hardcoded elsewhere
 constexpr int NUM_METAS = 2;
-
-// A transaction ID.
-// See struct FDS_txn.mt_txnid for details.
-//
-using txnid_t = FDS_ID;
-
-// Used for offsets within a single page.
-// Since memory pages are typically 4 or 8KB in size, 12-13 bits,
-// this is plenty.
-//
-using indx_t = uint16_t;
-
-// A page number in the database.
-// Note that 64 bit page numbers are overkill, since pages themselves
-// already represent 12-13 bits of addressable memory, and the OS will
-// always limit applications to a maximum of 63 bits of address space.
-//
-// In the FDS_node structure, we only store 48 bits of this value,
-// which thus limits us to only 60 bits of addressable data.
-//
-using pgno_t = FDS_ID;

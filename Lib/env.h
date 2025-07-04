@@ -159,9 +159,6 @@ struct FDS_env
     int me_maxfree_1pg;
     // Max size of a node on a page
     unsigned int me_nodemax;
-#if !(FDS_MAXKEYSIZE)
-    unsigned int me_maxkey;  // max size of a key
-#endif
     int me_live_reader;  // have liveness lock in reader table
 #ifdef FDS_WINDOWS
     int me_pidquery;  // Used in OpenProcess
